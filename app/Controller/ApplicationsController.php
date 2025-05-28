@@ -25,6 +25,8 @@ class ApplicationsController extends AppController
         parent::beforeFilter();
 
         $this->Auth->allow('index', 'admin_extra', 'report_invoice', 'applicant_submitall', 'admin_suspend', 'manager_amendment_summary', 'genereateQRCode', 'manager_stages_summary', 'view', 'view.pdf', 'apl',  'study_title', 'myindex', 'download_invoice');
+    
+        // $this->Security->unlockedFields = array('submit_type');
     }
     public function admin_extra($id = null)
     {
@@ -580,8 +582,8 @@ class ApplicationsController extends AppController
                     )
                 ));
                 $this->request->data = $response;
-                debug($response);
-                exit;
+                // debug($response);
+                // exit;
                 $this->Session->setFlash(__('Please provide file date for each amendment attached. '), 'alerts/flash_error');
                 $this->redirect(array('action' => 'view', $this->Application->id));
             }
