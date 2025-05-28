@@ -46,7 +46,7 @@ class Ciom extends AppModel {
 			'size'       => array('rule' => array('checkSize', '25M')),
 			// 'pixels'     => array('rule' => array('checkPixels', '1600x1600')),  // removed image restriction
 			'extension'  => array(
-				'rule' => array('checkExtension', false, array('xml', 'tmp', 'Xml')),
+				'rule' => array('checkExtension', false, array('xml', 'tmp', 'Xml','XML')),
 				'message' => 'Please attach a valid E2B file'),
 			// 'mimeType'   => array('rule' => array('checkMimeType', false, array(
 			// 	'image/jpeg', 'image/png', 'image/tiff', 'image/gif', 'application/pdf'	)))
