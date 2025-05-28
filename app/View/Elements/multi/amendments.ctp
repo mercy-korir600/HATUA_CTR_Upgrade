@@ -632,99 +632,7 @@ if ($redir == 'applicant') {
                             <th width="15%">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <?php
-                        if (!empty($this->request->data['AmendmentChecklist'])) {
-                            for ($i = 0; $i <= count($this->request->data['AmendmentChecklist']) - 1; $i++) {
-                        ?>
-                                <tr>
-                                    <td><?php echo $i + 1; ?></td>
-                                    <td>
-                                        <div class="control-group"><?php
-                                                                    echo $this->Form->input('AmendmentChecklist.' . $i . '.id');
-                                                                    echo $this->Form->input('AmendmentChecklist.' . $i . '.model', array('type' => 'hidden', 'value' => 'Application'));
-                                                                    echo $this->Form->input('AmendmentChecklist.' . $i . '.group', array('type' => 'hidden', 'value' => 'attachment'));
-                                                                    echo $this->Form->input('AmendmentChecklist.' . $i . '.filesize', array('type' => 'hidden'));
-                                                                    echo $this->Form->input('AmendmentChecklist.' . $i . '.basename', array('type' => 'hidden'));
-                                                                    echo $this->Form->input('AmendmentChecklist.' . $i . '.checksum', array('type' => 'hidden'));
-                                                                    if (
-                                                                        !empty($this->request->data['AmendmentChecklist'][$i]['id']) &&
-                                                                        !empty($this->request->data['AmendmentChecklist'][$i]['basename'])
-                                                                    ) {
-                                                                        echo $this->Html->link(
-                                                                            __($this->request->data['AmendmentChecklist'][$i]['basename']),
-                                                                            array(
-                                                                                'controller' => 'attachments',
-                                                                                'action' => 'download',
-                                                                                $this->request->data['AmendmentChecklist'][$i]['id'],
-                                                                                'full_base' => true
-                                                                            ),
-                                                                            array('class' => 'btn btn-info')
-                                                                        );
-                                                                        // echo $this->Form->input('AmendmentChecklist.'.$i.'.filename', array('type' => 'hidden'));
-                                                                    } else {
-                                                                        echo $this->Form->input('AmendmentChecklist.' . $i . '.file', array(
-                                                                            'label' => false,
-                                                                            'between' => false,
-                                                                            'after' => false,
-                                                                            'class' => 'span12 input-file',
-                                                                            'error' => array('escape' => false, 'attributes' => array('class' => 'help-block')),
-                                                                            'type' => 'file',
-                                                                        ));
-                                                                    }
-                                                                    ?>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        if (
-                                            !empty($this->request->data['AmendmentChecklist'][$i]['id']) &&
-                                            !empty($this->request->data['AmendmentChecklist'][$i]['basename'])
-                                        ) {
-                                            echo $this->request->data['AmendmentChecklist'][$i]['description'];
-                                            echo $this->Form->input('AmendmentChecklist.' . $i . '.description', array('type' => 'hidden'));
-                                        } else {
-                                            echo $this->Form->input('AmendmentChecklist.' . $i . '.description', array(
-                                                'label' => false,
-                                                'between' => false,
-                                                'rows' => '1',
-                                                'after' => false,
-                                                'class' => 'span11',
-                                            ));
-                                        }
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <?php echo $this->Form->input('AmendmentChecklist.' . $i . '.version_no', array(
-                                            'label' => false,
-                                            'between' => false,
-                                            'rows' => '1',
-                                            'after' => false,
-                                            'class' => 'span11',
-                                        )); ?>
-                                    </td>
-                                    <td>
-                                        <?php echo $this->Form->input('AmendmentChecklist.' . $i . '.file_date', array(
-                                            'label' => false,
-                                            'between' => false,
-                                            'rows' => '1',
-                                            'after' => false,
-                                            'class' => 'span11',
-                                        )); ?>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn-mini remove-row" value="<?php if (isset($this->request->data['AmendmentChecklist'][$i]['id'])) {
-                                                                                                        echo $this->request->data['AmendmentChecklist'][$i]['id'];
-                                                                                                    } ?>">
-                                            &nbsp;<i class="icon-minus"></i>&nbsp;
-                                        </button>
-                                    </td>
-                                </tr>
-                        <?php }
-                        }; ?>
-
-
-                    </tbody>
+                    
                 </table>
             </div>
         </div>
@@ -788,7 +696,7 @@ if ($redir == 'applicant') {
     document.addEventListener('DOMContentLoaded', function() {
         // Get the button element
         var submitButton = document.getElementById('submit-all-button');
-        
+
         // Attach a click event listener to the button
         submitButton.addEventListener('click', function(event) {
             // Prevent the default action (stopping the link from navigating immediately)
@@ -796,7 +704,7 @@ if ($redir == 'applicant') {
 
             // Get the protocol ID (this value comes from PHP)
             var protocolId = '<?php echo $application['Application']['id']; ?>'; // Example: '77'
-            
+
             // Get the value from the <p> element (the selected year)
             var selectedYear = document.querySelector('.selected-year-name').textContent.trim();
 
@@ -807,7 +715,7 @@ if ($redir == 'applicant') {
             if (confirmation && selectedYear) {
                 // Construct the correct URL format: /submitall/{protocolId}/{selectedYear}
                 var newHref = '/applicant/applications/submitall/' + protocolId + '/' + encodeURIComponent(selectedYear);
-                
+
                 // Navigate to the constructed URL
                 window.location.href = newHref;
             } else if (!selectedYear) {

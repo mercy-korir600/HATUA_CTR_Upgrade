@@ -5,6 +5,7 @@ $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
 $this->Html->script('jUpload/vendor/jquery.ui.widget.js', array('inline' => false));
 $this->Html->script('jUpload/jquery.iframe-transport.js', array('inline' => false));
 $this->Html->script('jUpload/jquery.fileupload.js', array('inline' => false));
+$this->Html->script('save', array('inline' => false));
 // pr($this->request->data);
 ?>
 <div class="row-fluid">
@@ -2108,7 +2109,9 @@ $this->Html->script('jUpload/jquery.fileupload.js', array('inline' => false));
     <div data-spy="affix" class="my-sidebar">
       <div class="well">
         <?php
-        echo $this->Form->hidden('submit_type', array('value' => ''));
+        echo $this->Form->hidden('submit_type', array(
+          'value' => '',
+          'id' => 'ApplicationSubmitType'));
         // echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
         //   'name' => 'saveChanges',
         //   'formnovalidate' => 'formnovalidate',
@@ -2134,13 +2137,9 @@ $this->Html->script('jUpload/jquery.fileupload.js', array('inline' => false));
         echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
           'type' => 'submit',
           'escape' => false,
+          'name' => 'saveChanges',
           'class' => 'btn btn-primary',
-          'id' => 'ApplicationSaveChanges',
-          'onclick' => "
-        document.getElementById('ApplicationSubmitType').value = 'saveChanges';
-        return true;
-    "
-        ));
+          'id' => 'ApplicationSaveChanges'));
 
 
         ?>
@@ -2149,17 +2148,9 @@ $this->Html->script('jUpload/jquery.fileupload.js', array('inline' => false));
         echo $this->Form->button('<i class="icon-thumbs-up"></i> Submit', array(
           'type' => 'submit',
           'escape' => false,
+          'name' => 'submitReport',
           'class' => 'btn btn-info',
-          'id' => 'ApplicationSubmitReport',
-          'onclick' => "
-        if (confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.')) {
-            document.getElementById('ApplicationSubmitType').value = 'submitReport';
-            return true;
-        } else {
-            return false;
-        }
-    "
-        ));
+          'id' => 'ApplicationSubmitReport'));
 
 
         // echo $this->Form->button('<i class="icon-thumbs-up"></i> Submit', array(
@@ -2572,14 +2563,4 @@ $this->Html->script('jUpload/jquery.fileupload.js', array('inline' => false));
   CKEDITOR.replace('data[Application][principal_exclusion_criteria]');
   // CKEDITOR.replace( 'data[Application][staff_numbers]');
   CKEDITOR.replace('data[Application][other_details_explanation]');
-</script>
-
-<script>
-  document.getElementById('ApplicationSubmitReport').addEventListener('click', function(e) {
-    if (!confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.')) {
-      e.preventDefault(); // cancel form
-      return false;
-    }
-    document.getElementById('ReportSubmitType').value = 'submitReport';
-  });
-</script>
+</script> 
