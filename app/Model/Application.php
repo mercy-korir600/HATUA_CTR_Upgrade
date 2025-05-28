@@ -32,6 +32,7 @@ class Application extends AppModel
         'trial_therapeutic_exploratory' => array('type' => 'value'),
         'trial_therapeutic_confirmatory' => array('type' => 'value'),
         'trial_therapeutic_use' => array('type' => 'value'),
+        'approvedrange' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Application.approval_date BETWEEN ? AND ?'),
         'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Application.date_submitted BETWEEN ? AND ?'),
         'investigator' => array('type' => 'query', 'method' => 'findByInvestigators', 'encode' => true),
         'users' => array('type' => 'query', 'method' => 'findByReviewer', 'encode' => true),

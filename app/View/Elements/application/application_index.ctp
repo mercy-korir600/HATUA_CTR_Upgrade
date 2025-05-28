@@ -259,6 +259,14 @@
                         ),
                         'label' => array('class' => 'required', 'text' => 'Status'),
                       ));
+                      echo $this->Form->input('trial_status_id', array(
+                        'type' => 'select',
+                        'div' => false,
+                        'class' => 'span12',
+                        'empty' => true,
+                        'options' => $trial_statuses,
+                        'label' => array('class' => 'required', 'text' => 'Trial Status'),
+                      ));
                     }
                     ?>
                   </td>
