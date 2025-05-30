@@ -20,7 +20,7 @@ class AttachmentsController extends AppController
     public function beforeFilter()
     {
         parent::beforeFilter();
-        $this->Auth->allow('applicant_upload', 'auto_delete', 'genereateQRCode', 'approve', 'update_amendment');
+        $this->Auth->allow('applicant_upload','update_description', 'auto_delete', 'genereateQRCode', 'approve', 'update_amendment');
     }
 
 
@@ -482,4 +482,43 @@ class AttachmentsController extends AppController
             $this->set('_serialize', 'message');
         }
     }
+
+    public function update_description($id = null) {
+        if (!$this->request->is('post')) {
+            throw new MethodNotAllowedException();
+        }
+    
+        $this->Attachment->id = $id;
+        if (!$this->Attachment->exists()) {
+            throw new NotFoundException(__('Invalid Attachment'));
+        }
+    
+        // Extract description from POST data
+        $description = $this->request->data('description');
+        if (empty($description)) {
+            // You can handle empty description as needed
+            $this->set([
+                'success' => false,
+                'message' => 'Description cannot be empty',
+                '_serialize' => ['success', 'message']
+            ]);
+            return;
+        }
+    
+        // Update the description field
+        if ($this->Attachment->saveField('description', $description)) {
+            $this->set([
+                'success' => true,
+                'message' => 'Description updated successfully',
+                '_serialize' => ['success', 'message']
+            ]);
+        } else {
+            $this->set([
+                'success' => false,
+                'message' => 'Failed to update description',
+                '_serialize' => ['success', 'message']
+            ]);
+        }
+    }
+    
 }
