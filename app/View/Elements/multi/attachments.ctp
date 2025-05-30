@@ -16,7 +16,7 @@
 				<th>#</th>
 				<th width="45%">File</th>
 				<th width="45%">Text Description</th>
-				<th>	</th>
+				<th> 	</th>
 			  </tr>
 			</thead>
 			<tbody>

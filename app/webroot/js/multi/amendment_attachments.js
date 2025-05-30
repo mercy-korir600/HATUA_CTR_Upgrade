@@ -36,7 +36,8 @@ $(function() {
         var dir = $('<input type="hidden" id="Attachment' + intId + 'Checksum" name="data[Attachment][' + intId + '][checksum]">');
         var filename = $('<td><div class="control-group"><input type="file" id="Attachment' + intId + 'File" class="span12 autosave-ignore input-file" name="data[Attachment][' + intId + '][file]"  data-items="4"  autocomplete="off" ></div></td>');
         var description = $('<td><div class="control-group"><textarea id="Attachment' + intId + 'Description"  rows="1" cols="30" name="data[Attachment][' + intId + '][description]" class="span11 autosave-ignore"></textarea></div></td>');
-            var removeButton_ = $('<button  type="button" class="btn-mini">&nbsp;<i class="icon-minus"></i>&nbsp;</button>"');
+            var removeButton_ = $('<button  type="button" class="btn-mini">&nbsp;<i class="icon-plus"></i>&nbsp;</button>"');
+            var updateButton_ = $('<button  type="button" class="btn-mini">&nbsp;<i class="icon-cloud"></i>&nbsp;</button>"');
         removeButton_.tooltip();
             removeButton_.click(function() {
           if ( typeof $(this).attr('id') !== 'undefined' && $(this).attr('id') !== false && $(this).attr('id') !== "") {
@@ -63,6 +64,7 @@ $(function() {
             fieldWrapper.append(filename);
             fieldWrapper.append(description);
             fieldWrapper.append(removeButton);
+            fieldWrapper.append(updateButton_);
 
         return fieldWrapper;
       }

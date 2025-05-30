@@ -2426,7 +2426,9 @@
                       echo $this->Html->link(
                         __($value['basename']),
                         array(
-                          'controller' => 'attachments',  'action' => 'download', $value['id'],
+                          'controller' => 'attachments',
+                          'action' => 'download',
+                          $value['id'],
                           'full_base' => true
                         ),
                         array('class' => 'btn btn-info')
@@ -2530,8 +2532,9 @@
       </table>
     </div>
     <div id="tabs-14">
-      <?php
-      echo $this->element('multi/amendment_attachments'); ?>
+      <?php echo $this->element('multi/amendment_attachments');
+       ?>
+
       <div style="background-color: #F9F9F9;">
         <table class="table  table-condensed">
           <tbody>
@@ -2563,8 +2566,10 @@
                                   echo $this->Html->link(
                                     __($amendment['Attachment'][$i]['basename']),
                                     array(
-                                      'controller' => 'attachments',  'action' => 'download',
-                                      $amendment['Attachment'][$i]['id'], 'full_base' => true
+                                      'controller' => 'attachments',
+                                      'action' => 'download',
+                                      $amendment['Attachment'][$i]['id'],
+                                      'full_base' => true
                                     ),
                                     array('class' => 'btn btn-info')
                                   );
@@ -2626,7 +2631,7 @@
 
   <?php echo $this->fetch('view-rightbar'); ?>
 </div>
- 
+
 <?php echo $this->fetch('endjs');  ?>
 
 <script text="type/javascript">

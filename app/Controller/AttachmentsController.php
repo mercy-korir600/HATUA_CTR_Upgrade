@@ -20,25 +20,25 @@ class AttachmentsController extends AppController
     public function beforeFilter()
     {
         parent::beforeFilter();
-        $this->Auth->allow('applicant_upload', 'genereateQRCode', 'approve','update_amendment');
+        $this->Auth->allow('applicant_upload', 'auto_delete', 'genereateQRCode', 'approve', 'update_amendment');
     }
 
 
-    public function update_amendment($id=null ){
+    public function update_amendment($id = null)
+    {
         $this->Attachment->id = $id;
 
-        $data=$this->request->data;
+        $data = $this->request->data;
 
-        $this->Attachment->saveField('description',$data['description']);
-        $this->Attachment->saveField('file_date',$data['date']);
-        $this->Attachment->saveField('version_no',$data['version']);
-        $this->Attachment->saveField('year',$data['amendmentId']);
+        $this->Attachment->saveField('description', $data['description']);
+        $this->Attachment->saveField('file_date', $data['date']);
+        $this->Attachment->saveField('version_no', $data['version']);
+        $this->Attachment->saveField('year', $data['amendmentId']);
         $this->set([
             'status' => 'success',
-            'message' => 'File updated Successfully',            
+            'message' => 'File updated Successfully',
             '_serialize' => ['status', 'message']
         ]);
-
     }
     public function genereateQRCode($id = null)
     {
@@ -111,14 +111,13 @@ class AttachmentsController extends AppController
             'recursive' => 0
         ));
 
-     
+
         $checkstring = '';
-        $num = 0; 
-        foreach ($checklist as $kech => $check) {             
-            $num++;            
+        $num = 0;
+        foreach ($checklist as $kech => $check) {
+            $num++;
             // $checkstring .= $num . '. ' . $deeds[$kech] . '<br>' . $check;
             $checkstring .= $num . '. ' . (isset($deeds[$kech]) ? $deeds[$kech] : $kech) . '<br>' . $check;
-
         }
         // debug($checkstring);
         // exit;
@@ -138,7 +137,8 @@ class AttachmentsController extends AppController
             $telephone = $application['InvestigatorContact'][0]['telephone'];
         }
         $variables = array(
-            'approval_no' => $approval_no, 'protocol_no' => $application['Application']['protocol_no'],
+            'approval_no' => $approval_no,
+            'protocol_no' => $application['Application']['protocol_no'],
             'letter_date' => date('jS F Y', strtotime($application['Application']['approval_date'])),
             'qualification' => $qualification,
             'names' => $names,
@@ -175,22 +175,26 @@ class AttachmentsController extends AppController
         $users = $this->User->find('all', array(
             'contain' => array('Group'),
             'conditions' => array('OR' => array('User.id' => $application['Application']['user_id'], 'User.group_id' => 2)) //Applicant and managers
-            
+
         ));
         foreach ($users as $user) {
             $variables = array(
-                'name' => $user['User']['name'], 
-                'approval_no' => $approval_no, 
+                'name' => $user['User']['name'],
+                'approval_no' => $approval_no,
                 'protocol_no' => $application['Application']['protocol_no'],
                 'protocol_link' => $html->link($application['Application']['protocol_no'], array(
-                    'controller' => 'applications', 'action' => 'view', $application['Application']['id'], $user['Group']['redir'] => true,
+                    'controller' => 'applications',
+                    'action' => 'view',
+                    $application['Application']['id'],
+                    $user['Group']['redir'] => true,
                     'full_base' => true
                 ), array('escape' => false)),
                 'approval_date' => $application['Application']['approval_date']
             );
             $datum = array(
                 'email' => $user['User']['email'],
-                'id' => $id, 'user_id' => $user['User']['id'],
+                'id' => $id,
+                'user_id' => $user['User']['id'],
                 'type' => 'manager_approve_amendment_letter',
                 'model' => 'AmendmentLetter',
                 'subject' => String::insert($message['Message']['subject'], $variables),
@@ -206,7 +210,7 @@ class AttachmentsController extends AppController
         $this->loadModel('AuditTrail');
         $audit = array(
             'AuditTrail' => array(
-                'foreign_key' => $application['Application']['id'] ,
+                'foreign_key' => $application['Application']['id'],
                 'model' => 'Application',
                 'message' => 'Amendment for the report with protocol number ' .  $application['Application']['protocol_no'] . ' has been successfully approved by ' . $this->Auth->user('username'),
                 'ip' =>  $application['Application']['protocol_no']
@@ -275,7 +279,7 @@ class AttachmentsController extends AppController
         }
         $this->set('attachment', $this->Attachment->read(null, $id));
     }
- 
+
 
     public function download($id = null)
     {
@@ -458,6 +462,24 @@ class AttachmentsController extends AppController
                 $this->set('message', 'Attachment was not deleted');
                 $this->set('_serialize', 'message');
             }
+        }
+    }
+    public function auto_delete($id = null)
+    {
+        if (!$this->request->is('post')) {
+            throw new MethodNotAllowedException();
+        }
+        $this->Attachment->id = $id;
+        if (!$this->Attachment->exists()) {
+            throw new NotFoundException(__('Invalid Attachment'));
+        }
+
+        if ($this->Attachment->delete()) {
+            $this->set('message', 'Attachment deleted');
+            $this->set('_serialize', 'message');
+        } else {
+            $this->set('message', 'Attachment was not deleted');
+            $this->set('_serialize', 'message');
         }
     }
 }
