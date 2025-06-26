@@ -26,7 +26,7 @@ if ($redir == 'admin') {
 					<th>#</th>
 					<th>File</th>
 					<th>Text Description</th>
-					<th><?php if ($redir == 'admin') { ?> Action <?php } ?></th>
+					<th><?php if ($redir != 'admin') { ?> Action <?php } ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -71,7 +71,7 @@ if ($redir == 'admin') {
 
 						 
 								<!-- Action to delete the attachment -->
-								<?php if ($redir == 'admin') { ?>
+								<?php if ($redir != 'admin') { ?>
 									<button type="button" class="btn-mini btn-danger remove-row-amendment" value="<?php if (isset($application['Attachment'][$i]['id'])) {
 																														echo $application['Attachment'][$i]['id'];
 																													} ?>">

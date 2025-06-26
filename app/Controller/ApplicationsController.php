@@ -25,7 +25,7 @@ class ApplicationsController extends AppController
         parent::beforeFilter();
 
         $this->Auth->allow('index', 'admin_extra', 'report_invoice', 'applicant_submitall', 'admin_suspend', 'manager_amendment_summary', 'genereateQRCode', 'manager_stages_summary', 'view', 'view.pdf', 'apl',  'study_title', 'myindex', 'download_invoice');
-    
+
         // $this->Security->unlockedFields = array('submit_type');
     }
     public function admin_extra($id = null)
@@ -51,9 +51,9 @@ class ApplicationsController extends AppController
                 )
             );
 
-            CakeResque::enqueue('default', 'NotificationShell', array('generate_report_missed_invoice', $invoice));
+            CakeResque::enqueue('default', 'NotificationShell', array('generate_report_invoice', $invoice));
         }
-        $this->Session->setFlash(__('The outsourced request has been revoked'), 'alerts/flash_success');
+        $this->Session->setFlash(__('An additional site has been created and invoice sent'), 'alerts/flash_success');
         $this->redirect(array('controller' => 'applications', 'action' => 'view', $id));
     }
 
@@ -262,6 +262,8 @@ class ApplicationsController extends AppController
                 // Extract the parent data
                 $parentData = $this->request->data['Application'];
 
+                $total_sites = $this->request->data['Application']['total_sites'];
+
                 // Extract the associated data
                 $associatedData = $this->request->data;
                 unset($associatedData['Application']);
@@ -322,6 +324,7 @@ class ApplicationsController extends AppController
                                 'function' => 'ppbNewApplication',
                                 'Application' => array(
                                     'id' => $this->Application->id,
+                                    'total_sites' => $total_sites,
                                     'name' => $this->Auth->user('name'),
                                     'email' => $this->Auth->user('email'),
                                     'protocol_no' =>  $this->Application->protocol_no

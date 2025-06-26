@@ -24,7 +24,7 @@ class PocketsController extends AppController {
     }
     public function admin_aindex() {
         $this->Pocket->recursive = 0;
-        $this->paginate = array('conditions' => array('Pocket.type' => 'annual'), 'order' => array('Pocket.item_number' => 'ASC'));
+        $this->paginate = array('conditions' => array('Pocket.type' => 'amendment'), 'order' => array('Pocket.item_number' => 'ASC'));
         $this->set('pockets', $this->paginate());
     }
     public function admin_cindex() {
