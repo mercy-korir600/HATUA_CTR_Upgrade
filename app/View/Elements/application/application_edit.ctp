@@ -2112,15 +2112,15 @@ $this->Html->script('save', array('inline' => false));
         echo $this->Form->hidden('submit_type', array(
           'value' => '',
           'id' => 'ApplicationSubmitType'));
-        // echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
-        //   'name' => 'saveChanges',
-        //   'formnovalidate' => 'formnovalidate',
-        //   'class' => 'btn btn-success btn-block mapop',
-        //   'id' => 'SadrSaveChanges', 'title' => 'Save & continue editing',
-        //   'data-content' => 'Save changes to form without submitting it.
-        //                                 The form will still be available for further editing.',
-        //   'div' => false,
-        // ));
+        echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
+          'name' => 'saveChanges',
+          'formnovalidate' => 'formnovalidate',
+          'class' => 'btn btn-success btn-block mapop',
+          'id' => 'SadrSaveChanges', 'title' => 'Save & continue editing',
+          'data-content' => 'Save changes to form without submitting it.
+                                        The form will still be available for further editing.',
+          'div' => false,
+        ));
         //     echo $this->Form->button('<i class="icon-save"></i>Save Changes', array(
         //       // 'name' => 'saveChanges',
         // 'onclick' => "this.form.submit_type.value='saveChanges';",
@@ -2134,12 +2134,12 @@ $this->Html->script('save', array('inline' => false));
         //       'type' => 'submit', 
         //     ));
 
-        echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
-          'type' => 'submit',
-          'escape' => false,
-          'name' => 'saveChanges',
-          'class' => 'btn btn-primary',
-          'id' => 'ApplicationSaveChanges'));
+        // echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
+        //   'type' => 'submit',
+        //   'escape' => false,
+        //   'name' => 'saveChanges',
+        //   'class' => 'btn btn-primary',
+        //   'id' => 'ApplicationSaveChanges'));
 
 
         ?>
