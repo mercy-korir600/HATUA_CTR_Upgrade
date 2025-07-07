@@ -20,7 +20,7 @@ class AttachmentsController extends AppController
     public function beforeFilter()
     {
         parent::beforeFilter();
-        $this->Auth->allow('applicant_upload','update_description', 'auto_delete', 'genereateQRCode', 'approve', 'update_amendment');
+        $this->Auth->allow('applicant_upload', 'update_description', 'auto_delete', 'genereateQRCode', 'approve', 'update_amendment');
     }
 
 
@@ -464,6 +464,41 @@ class AttachmentsController extends AppController
             }
         }
     }
+    public function applicant_delete($id)
+    {
+         
+        $this->Attachment->id = $id;
+        if (!$this->Attachment->exists()) {
+            throw new NotFoundException(__('Invalid Attachment'));
+        }
+        if ($this->Attachment->delete()) {
+            $this->set('message', 'Attachment deleted');
+            $this->set('_serialize', 'message');
+
+            // Log Audit Trail
+            $this->loadModel('AuditTrail');
+            $audit = array(
+                'AuditTrail' => array(
+                    'foreign_key' => $id,
+                    'model' => 'Attachment',
+                    'message' => 'Attachment with ID ' . $id . ' has been deleted by user ID ' . $this->Auth->user('id'),
+                    'ip' => $this->request->clientIp()
+                )
+            );
+            $this->AuditTrail->Create();
+            if ($this->AuditTrail->save($audit)) {
+                $this->log('Attachment deletion audit trail created successfully', 'audit_success');
+            } else {
+                $this->log('Error creating audit trail for attachment deletion', 'audit_error');
+            }
+        } else {
+            $this->set('message', 'Attachment was not deleted');
+            $this->set('_serialize', 'message');
+        }
+
+        // return to referer
+        $this->redirect($this->referer());
+    }
     public function auto_delete($id = null)
     {
         if (!$this->request->is('post')) {
@@ -483,16 +518,17 @@ class AttachmentsController extends AppController
         }
     }
 
-    public function update_description($id = null) {
+    public function update_description($id = null)
+    {
         if (!$this->request->is('post')) {
             throw new MethodNotAllowedException();
         }
-    
+
         $this->Attachment->id = $id;
         if (!$this->Attachment->exists()) {
             throw new NotFoundException(__('Invalid Attachment'));
         }
-    
+
         // Extract description from POST data
         $description = $this->request->data('description');
         if (empty($description)) {
@@ -504,7 +540,7 @@ class AttachmentsController extends AppController
             ]);
             return;
         }
-    
+
         // Update the description field
         if ($this->Attachment->saveField('description', $description)) {
             $this->set([
@@ -520,5 +556,4 @@ class AttachmentsController extends AppController
             ]);
         }
     }
-    
 }

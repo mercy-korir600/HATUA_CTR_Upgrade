@@ -78,9 +78,17 @@ if ($redir === 'applicant') {
 
                             echo "</span>&nbsp;
                       <span id='version$id' style='margin-left:10px;'>Version: $version_no</span>
-                      <span id='fileDate$id' style='margin-left:10px;'>Dated: $file_date</span>
-                      <span id='AmendmentChecklist$id' style='margin-left:10px;' class='btn btn-mini'><i class='icon-remove'></i></span>
-                      <br>";
+                      <span id='fileDate$id' style='margin-left:10px;'>Dated: $file_date</span>";
+                            echo $this->Html->link(
+                                "<span id='AmendmentChecklist$id' style='margin-left:10px;' class='btn btn-mini'><i class='icon-remove'></i></span>",
+                                ['controller' => 'attachments', 'action' => 'delete', $anc['id']],
+                                [
+                                    'escape' => false,
+                                    'onclick' => "return confirm('Are you sure you want to delete this amendment file?');"
+                                ]
+                            ); 
+                        
+                            echo "<br>";
                         }
                     }
 
@@ -632,7 +640,7 @@ if ($redir == 'applicant') {
                             <th width="15%">Action</th>
                         </tr>
                     </thead>
-                    
+
                 </table>
             </div>
         </div>
