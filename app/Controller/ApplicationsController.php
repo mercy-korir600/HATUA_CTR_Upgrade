@@ -1885,6 +1885,7 @@ class ApplicationsController extends AppController
         // if (!$this->request->is('post') || !$this->request->is('put')) {
         //     throw new MethodNotAllowedException();
         // } else {
+        $this->request->data['Application']['final_date'] = date('Y-m-d H:i:s');
         if ($this->Application->save($this->request->data, true, array(
             'id',
             'final_report',
@@ -2779,7 +2780,186 @@ class ApplicationsController extends AppController
             }
         }
     }
+
     public function applicant_edit($id = null)
+    {
+        $this->Application->id = $id;
+        if (!$this->Application->exists()) {
+            $this->Session->setFlash(__('Application not found.'), 'alerts/flash_error');
+            $this->redirect(array('controller' => 'users', 'action' => 'dashboard'));
+        }
+
+        $response = $this->_isApplicant($id);
+
+
+
+        if ($response['Application']['deactivated']) {
+            $this->redirect(array('action' => 'view', $id));
+        }
+        if ($this->request->is('post') || $this->request->is('put')) {
+
+            //For you to edit, you have to be the owner
+            if ($response['Application']['user_id'] != $this->Auth->user('id')) {
+                $this->Session->setFlash(__('Please contact the Site Owner for submission'), 'alerts/flash_error');
+                $this->redirect($this->referer());
+            }
+
+            if (isset($this->request->data['cancelReport'])) {
+                $this->Session->setFlash(__('Form cancelled.'), 'alerts/flash_info');
+                $this->redirect(array('controller' => 'users', 'action' => 'dashboard'));
+            }
+            $validate = false;
+            if (isset($this->request->data['submitReport'])) {
+                $validate = 'first';
+                $filedata = $this->request->data;
+                unset($filedata['Checklist']);
+                // Check if previously unsubmitted
+                // if (!$response['Application']['unsubmitted']) {
+                $this->request->data['Application']['date_submitted'] = date('Y-m-d H:i:s');
+                // }
+                $this->request->data['Application']['submitted'] = 1;
+                //Start application stage 
+                if ($response['Application']['unsubmitted']) {
+                    $stages = $this->Application->ApplicationStage->find('all', array(
+                        'contain' => array(),
+                        'conditions' => array('ApplicationStage.application_id' => $id)
+                    ));
+                    $var = Hash::extract($stages, '{n}.ApplicationStage[stage=Unsubmitted]');
+                    if (!empty($var)) {
+                        $s1['ApplicationStage'] = min($var);
+                        if (empty($s1['ApplicationStage']['end_date'])) {
+                            $this->Application->ApplicationStage->create();
+                            $s1['ApplicationStage']['status'] = 'Complete';
+                            $s1['ApplicationStage']['comment'] = 'Principal Investigator Re Submission';
+                            $s1['ApplicationStage']['end_date'] = date('Y-m-d');
+                            $this->Application->ApplicationStage->save($s1);
+                        }
+                    }
+                } else {
+                    $this->request->data['ApplicationStage'][0]['stage'] = 'Screening';
+                    $this->request->data['ApplicationStage'][0]['start_date'] = date('Y-m-d');
+                    $this->request->data['ApplicationStage'][0]['status'] = 'Current';
+                }
+                // 
+
+                if (empty($response['Application']['protocol_no'])) {
+                    $count = $this->Application->find('count',  array('conditions' => array(
+                        'Application.date_submitted BETWEEN ? and ?' => array(date("Y-m-01 00:00:00"), date("Y-m-d H:i:s"))
+                    )));
+                    $count++;
+                    $count = ($count < 10) ? "0$count" : $count;
+                    $this->request->data['Application']['protocol_no'] = 'ECCT/' . date('y/m') . '/' . $count;
+                }
+
+                // Check number of Sites
+
+                // if (count($this->request->data['SiteDetail']) > $response['Application']['total_sites']) {
+                //     $this->Session->setFlash(__('You\'ve exceeded the maximum number of sites!, ' . $response['Application']['total_sites'] . ' sites allowed!'), 'alerts/flash_error');
+                //     $this->redirect($this->referer());
+                // }
+            }
+
+            $filedata = $this->request->data;
+            if (isset($this->request->data['saveChanges'])) {
+                unset($filedata['Checklist']);
+            }
+            unset($filedata['Application']);
+
+            if (empty($this->request->data)) {
+                $message = 'The file you provided could not be saved. Kindly ensure that the file is less than
+                        18 MB in size. <small>If it is larger, compress (zip,tar...) it to the required size first</small>';
+                if ($this->RequestHandler->isAjax()) {
+                    $this->set('response', array('message' => 'Failure', 'errors' => $message));
+                } else {
+                    $this->Session->setFlash(__($message), 'alerts/flash_error');
+                    $this->redirect(array('action' => 'edit', $id));
+                }
+            } elseif (!$this->Application->saveAll($filedata, array(
+                'validate' => 'only',
+                'fieldList' => array(
+                    'Attachment' => 'file'
+                )
+            ))) {
+                $message = 'The file is not valid. If the file is more than 18 MB in size please compress it to below 18 MB first.
+                If the file is an image file, ensure the image resolution is within 1600X1600 pixels.';
+                if ($this->RequestHandler->isAjax()) $this->set('response', array('message' => 'Failure', 'errors' => $message));
+                else $this->Session->setFlash(__($message), 'alerts/flash_error');
+            } else {
+                if ($this->Application->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
+                    if ($validate) {
+                        $data = array(
+                            'function' => 'ppbNewApplication',
+                            'Application' => array(
+                                'id' => $this->request->data['Application']['id'],
+                                'name' => $this->Auth->user('name'),
+                                'email' => $this->Auth->user('email'),
+                                'protocol_no' => (!empty($response['Application']['protocol_no'])) ?  $response['Application']['protocol_no'] : $this->request->data['Application']['protocol_no']
+                            )
+                        );
+                        CakeResque::enqueue('default', 'NotificationShell', array('ppbNewApplication', $data));
+                        $protocol_no =  (!empty($response['Application']['protocol_no'])) ?  $response['Application']['protocol_no'] : $this->request->data['Application']['protocol_no'];
+                        // Create a Audit Trail
+                        $audit = array(
+                            'AuditTrail' => array(
+                                'foreign_key' => $response['Application']['id'],
+                                'model' => 'Application',
+                                'message' => 'New Report with protocol number ' . $protocol_no . ' has been submitted by ' . $this->Auth->user('username'),
+                                'ip' => $protocol_no
+                            )
+                        );
+                        $this->loadModel('AuditTrail');
+                        $this->AuditTrail->Create();
+                        if ($this->AuditTrail->save($audit)) {
+                            $this->log($this->request->data, 'audit_success');
+                        } else {
+                            $this->log('Error creating an audit trail', 'notifications_error');
+                            $this->log($this->request->data, 'notifications_error');
+                        }
+
+                        $this->Session->setFlash(__('You have successfully submitted the application to PPB.
+                            Your assigned protocol number is ' . $data['Application']['protocol_no'] . '. PPB will review
+                            this application and notify you on the progress. You can view the progress of the application by clicking on
+                            &lsquo;my applications&rsquo; on the dashboard menu. Thank you.'), 'alerts/flash_success');
+                        $this->redirect(array('action' => 'view', $this->Application->id));
+                    } else {
+                        $message = 'The change to the application has been saved. You may continue editing the report. Remember to submit the report when you are done.';
+                        if ($this->RequestHandler->isAjax()) {
+                            // $this->set('response', array('message' => 'Success', 'content' => $message));
+                            $this->set('response', array(
+                                'message' => 'Success',
+                                'content' => $this->Application->Attachment->find(
+                                    'first',
+                                    array(
+                                        'conditions' => array(
+                                            'Attachment.id' => $this->Application->{array_pop(array_keys($this->request->data))}->id
+                                        ),
+                                        'contain' => array()
+                                    )
+                                )
+                            ));
+                        } else {
+                            $this->Session->setFlash(__($message), 'alerts/flash_success');
+                            $this->redirect(array('action' => 'edit', $this->Application->id));
+                        }
+                    }
+                } else {
+                    $message = 'The application was not successfully submitted. Please correct the errors below...';
+                    if ($this->RequestHandler->isAjax()) {
+                        $this->set('response', array('message' => 'Failure', 'errors' => $message));
+                    } else {
+                        $this->Session->setFlash(__($message), 'alerts/flash_error');
+                    }
+                }
+            }
+            if ($this->RequestHandler->isAjax()) $this->set('_serialize', 'response');
+        } else {
+            $this->request->data = $response;
+        }
+        $counties = $this->Application->SiteDetail->County->find('list', array('order' => 'County.county_name ASC'));
+        $this->set(compact('counties'));
+    }
+
+    public function applicant_edit_latest($id = null)
     {
         $this->Application->id = $id;
         if (!$this->Application->exists()) {

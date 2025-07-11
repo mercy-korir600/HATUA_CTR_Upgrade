@@ -98,14 +98,20 @@
 <?php } else { ?>
   <div class="row-fluid">
     <div class="span12">
+
     <?php      
                echo $application['Application']['final_date'];
     ?>
       <h4>15. Final Study Report <small>For complete and approved trials</small></h4>
-      <hr><?php  echo $application['Application']['final_report']; ?>
-      <h4>Layman's Summary</h4>
-      <hr><?php  echo $application['Application']['laymans_summary']; ?>
+      <h5>Executive summary</h5>
+      <?php  echo $application['Application']['final_report']; ?>
+      <hr>
+      <h5>Implication of the results on current practice</h5>
+       <?php  echo $application['Application']['implication_results']; ?>
       <hr>   
+      <h5>Layman's Summary</h5>
+       <?php  echo $application['Application']['laymans_summary']; ?>
+      <hr>  
       <h4 style="text-align: center; text-decoration: underline;"> Product Accountability</h4>
   <table class="table table-bordered table-condensed">
     <tbody>
