@@ -317,7 +317,7 @@ $this->Html->css('bootstrap-editable', null, array('inline' => false));
           echo $this->Form->button('<i class="icon-thumbs-up"></i> Submit', array(
             'name' => 'submitReport',
             'formnovalidate' => 'formnovalidate',
-            'onclick' => "return confirm('Are you sure you wish to stop/suspend the protocol?');",
+            'onclick' => "return confirm('Are you sure you wish to change the status of the application?');",
             'class' => 'btn btn-info btn-block mapop',
             'id' => 'ApplicationSubmitReport', 'title' => 'Save and Submit Report',
             'data-content' => 'Save the report and submit it to the pharmacy and Poisons Board. You will also get a copy of this report.',

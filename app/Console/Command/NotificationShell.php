@@ -115,7 +115,7 @@ class NotificationShell extends Shell
     $id = $this->args[0]['Application']['id'];
     $added = $this->args[0]['Application']['total_sites'];
     $added = isset($this->args[0]['Application']['total_sites']) ? $this->args[0]['Application']['total_sites'] : 1;
-
+    $this->log('preparing', 'preparing');
     $application = $this->Application->find('first', array(
       'conditions' => array('Application.id' => $id),
       'contain' => array('SiteDetail', 'User', 'InvestigatorContact')
@@ -173,9 +173,7 @@ class NotificationShell extends Shell
           )
         );
         $formData = http_build_query($postData);
-
-        // $next = $HttpSocket->post('https://invoices.pharmacyboardkenya.org/ct_invoice/generate', $formData, $header_options);
-
+ 
 
         $next = $HttpSocket->post('https://invoices.pharmacyboardkenya.org/ecitizen_invoice/generate', $formData, $header_options);
 
@@ -212,6 +210,8 @@ class NotificationShell extends Shell
               $ecitizen = $HttpSocket->post('https://payments.ecitizen.go.ke/PaymentAPI/iframev2.1.php', $payload, $header_options);
               if ($ecitizen->isOk()) {
               }
+            }else{
+              $this->log('saved application failed', 'e-citizen-error_saved');
             }
 
             //<!-- Send email to applicant -->
@@ -235,7 +235,7 @@ class NotificationShell extends Shell
             $email->template('default');
             $email->emailFormat('html');
             $email->to($user['email']);
-            $email->bcc(array('itsjkiprotich@gmail.com'));
+            $email->bcc(array('itsjkiprotich@gmail.com','jkiprotich@intellisoftkenya.com'));
             $email->subject(Sanitize::html(String::insert($messages['applicant_invoice_email_subject'], $variables), array('remove' => true)));
             $email->viewVars(array('message' => $message));
             if (!$email->send()) {

@@ -2105,13 +2105,11 @@ $this->Html->script('save', array('inline' => false));
     </div>
 
   </div>
+  <!-- Start Action Buttons -->
   <div class="span2">
     <div data-spy="affix" class="my-sidebar">
       <div class="well">
         <?php
-        echo $this->Form->hidden('submit_type', array(
-          'value' => '',
-          'id' => 'ApplicationSubmitType'));
         echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
           'name' => 'saveChanges',
           'formnovalidate' => 'formnovalidate',
@@ -2121,113 +2119,30 @@ $this->Html->script('save', array('inline' => false));
                                         The form will still be available for further editing.',
           'div' => false,
         ));
-        //     echo $this->Form->button('<i class="icon-save"></i>Save Changes', array(
-        //       // 'name' => 'saveChanges',
-        // 'onclick' => "this.form.submit_type.value='saveChanges';",
-        //       'formnovalidate' => 'formnovalidate',
-        //       'class' => 'btn btn-success btn-block mapop',
-        //       'id' => 'SadrSaveChanges',
-        //       'type' => 'submit', 
-        //       'title' => 'Save & continue editing',
-        //       'data-content' => 'Save changes to form without submitting it.',
-        //       'escape' => false, // Allows the <i> icon to render
-        //       'type' => 'submit', 
-        //     ));
-
-        // echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
-        //   'type' => 'submit',
-        //   'escape' => false,
-        //   'name' => 'saveChanges',
-        //   'class' => 'btn btn-primary',
-        //   'id' => 'ApplicationSaveChanges'));
-
-
         ?>
         <hr>
         <?php
         echo $this->Form->button('<i class="icon-thumbs-up"></i> Submit', array(
-          'type' => 'submit',
-          'escape' => false,
           'name' => 'submitReport',
-          'class' => 'btn btn-info',
-          'id' => 'ApplicationSubmitReport'));
-
-
-        // echo $this->Form->button('<i class="icon-thumbs-up"></i> Submit', array(
-        //     'type' => 'submit',
-        //     'escape' => false,
-        //     'class' => 'btn btn-info',
-        //     'id' => 'ApplicationSubmitReport',
-        //     'onclick' => "
-        //         if (confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.')) {
-        //             document.getElementById('ApplicationSubmitType').value = 'submitReport';
-        //             return true;
-        //         } else {
-        //             return false;
-        //         }
-        //     "
-        // ));
-
-        // echo $this->Form->button('<i class="icon-thumbs-up"></i> Submit', array(
-        //   'name' => 'submitReport',
-        //   'formnovalidate' => 'formnovalidate',
-        //   'onclick' => "return confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.');",
-        //   'class' => 'btn btn-info btn-block mapop',
-        //   'id' => 'ApplicationSubmitReport', 'title' => 'Save and Submit Report',
-        //   'data-content' => 'Save the report and submit it to the pharmacy and Poisons Board. You will also get a copy of this report.',
-        //   'div' => false,
-        // ));
-        // echo $this->Form->button('<i class="icon-thumbs-up"></i> Submit', array(
-        //   'name' => 'submitReport',
-        // 'formnovalidate' => 'formnovalidate',
-        //   'onclick' => "return confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.');",
-        //   'class' => 'btn btn-info btn-block mapop',
-        //   'id' => 'ApplicationSubmitReport',
-        //   'title' => 'Save and Submit Report',
-        //   'data-content' => 'Save and submit the report to PPB.',
-        //   'escape' => false,
-        //   'div' => false,
-        //   'type' => 'submit', 
-        // ));
-
-        //         echo $this->Form->submit('Submit', array(
-        //     // 'name' => 'submitReport',
-        //     // 'formnovalidate' => 'formnovalidate',
-        //     // 'onclick' => "return confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.');",
-        //         'onclick' => "if (confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.')) { this.form.submit_type.value='submitReport'; return true; } else { return false; }",
-        //     'class' => 'btn btn-info btn-block mapop',
-        //     'id' => 'ApplicationSubmitReport',
-        //     'title' => 'Save and Submit Report',
-        //     'data-content' => 'Save and submit the report to PPB.',
-        //     'escape' => false,
-        //     'div' => false,
-        //       'type' => 'submit', 
-        // ));
-
+          'formnovalidate' => 'formnovalidate',
+          // 'onclick' => "return confirm('Are you sure you wish to submit the form to PPB? You will not be able to edit it later.');",
+          'class' => 'btn btn-info btn-block mapop',
+          'id' => 'ApplicationSubmitReport', 'title' => 'Save and Submit Report',
+          'data-content' => 'Save the report and submit it to the pharmacy and Poisons Board. You will also get a copy of this report.',
+          'div' => false,
+        ));
 
         ?>
         <hr>
         <?php
-        // echo $this->Form->button('<i class="icon-remove-circle"></i> Cancel', array(
-        //   'name' => 'cancelReport',
-        //   'onclick' => "return confirm('Are you sure you wish to cancel the form? You can edit it later from the dashboard.');",
-        //   'class' => 'btn btn-block mapop',
-        //   'id' => 'ApplicationCancelReport', 'title' => 'Cancel form',
-        //   'data-content' => 'Cancel form and go back to dashboard.',
-        //   'div' => false,
-        // ));
         echo $this->Form->button('<i class="icon-remove-circle"></i> Cancel', array(
           'name' => 'cancelReport',
-          'type' => 'submit', // <-- optional, but safe
-          'escape' => false, // <-- required to render the icon
           'onclick' => "return confirm('Are you sure you wish to cancel the form? You can edit it later from the dashboard.');",
           'class' => 'btn btn-block mapop',
-          'id' => 'ApplicationCancelReport',
-          'title' => 'Cancel form',
+          'id' => 'ApplicationCancelReport', 'title' => 'Cancel form',
           'data-content' => 'Cancel form and go back to dashboard.',
           'div' => false,
         ));
-
         echo $this->Form->end();
         ?>
         <hr>
@@ -2249,6 +2164,13 @@ $this->Html->script('save', array('inline' => false));
           array('controller' => 'applications', 'ext' => 'pdf', 'action' => 'view', $this->Form->value('Application.id')),
           array('escape' => false, 'class' => 'btn', 'style' => 'margin-right: 10px;')
         );
+       ?>
+        &nbsp;<?php
+        if (!empty($this->request->data['Application']['ecitizen_invoice'])) {
+          $invoice = base64_encode($this->request->data['Application']['ecitizen_invoice']);
+          echo '<button class="btn pull-right btn-success save-attachment"><a href="https://prims.pharmacyboardkenya.org/crunch?type=ecitizen_invoice&id=' . $invoice . '"><i class="icon-download"></i> Download Invoice</a></button>';
+        
+        }
         ?>
         <!--<button type="submit" class="btn btn-success btn-block">Save changes</button>
       <button type="submit" class="btn btn-info btn-block">Submit</button>
@@ -2256,6 +2178,8 @@ $this->Html->script('save', array('inline' => false));
       </div>
     </div>
   </div>
+
+  <!-- End of action buttons -->
 </div>
 
 <script type="text/javascript">

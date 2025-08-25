@@ -672,8 +672,8 @@ class SaesController extends AppController
                         'subject' => String::insert($message['Message']['subject'], $variables),
                         'message' => String::insert($message['Message']['content'], $variables)
                     );
-                    CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
-                    CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
+                    // CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
+                    // CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
                     $users = $this->Sae->User->find('all', array(
                         'contain' => array(),
                         'conditions' => array('User.group_id' => 2)
@@ -702,8 +702,8 @@ class SaesController extends AppController
                             'subject' => String::insert($message['Message']['subject'], $variables),
                             'message' => String::insert($message['Message']['content'], $variables)
                         );
-                        CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
-                        CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
+                        // CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
+                        // CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
                     }
                     //**********************************    END   *********************************
 
@@ -783,8 +783,8 @@ class SaesController extends AppController
                         'subject' => String::insert($message['Message']['subject'], $variables),
                         'message' => String::insert($message['Message']['content'], $variables)
                     );
-                    CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
-                    CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
+                    // CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
+                    // CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
                     $users = $this->Sae->User->find('all', array(
                         'contain' => array(),
                         'conditions' => array('OR' => array('User.id' => $this->Auth->User('id'), 'User.group_id' => 2))
@@ -813,8 +813,8 @@ class SaesController extends AppController
                             'subject' => String::insert($message['Message']['subject'], $variables),
                             'message' => String::insert($message['Message']['content'], $variables)
                         );
-                        CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
-                        CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
+                        // CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
+                        // CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
                     }
                     //**********************************    END   *********************************
 
