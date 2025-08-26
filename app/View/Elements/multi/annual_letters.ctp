@@ -84,12 +84,21 @@ echo $this->Session->flash();
 
 <!-- View approval letter -->
 <?php
+// if (isset($this->params['named']['anl'])) {
+  // foreach ($application['AnnualLetter'] as $akey => $annual_letter) {
+    // if (($annual_letter['id'] == $this->params['named']['anl'] && $annual_letter['status'] == 'approved') or
+      // ($annual_letter['id'] == $this->params['named']['anl'])
+    // ) {
+
+     
 if (isset($this->params['named']['anl'])) {
   foreach ($application['AnnualLetter'] as $akey => $annual_letter) {
     if (
-      ($annual_letter['id'] == $this->params['named']['anl'] && $annual_letter['status'] == 'approved') or
-      ($annual_letter['id'] == $this->params['named']['anl'])
+      $annual_letter['id'] == $this->params['named']['anl'] &&
+      $annual_letter['status'] == 'approved'
     ) {
+      $anl = $annual_letter;
+
 ?>
       <div class="ctr-fluid">
         <div class="span12">
