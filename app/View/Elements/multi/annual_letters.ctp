@@ -1,7 +1,7 @@
 <?php
 echo $this->Session->flash();
 ?>
-<h3>Annual Approval Letters</h3>
+<h3>Approval Letters</h3>
 <?php if ($redir == 'manager') { ?>
   <br>
   <div class="row-fluid">

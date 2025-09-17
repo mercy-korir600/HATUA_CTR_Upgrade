@@ -327,7 +327,7 @@ $this->assign('Dashboard', 'active');
       <li>
         <?php
         echo $this->Html->link(
-          '<i class="icon-calendar"></i> Annual Approval Letter <small class="muted">(Edit content)</small>',
+          '<i class="icon-calendar"></i>Approval Letters <small class="muted">(Edit content)</small>',
           array('controller' => 'pockets', 'action' => 'edit', 18, 'admin' => true),
           array('escape' => false)
         );

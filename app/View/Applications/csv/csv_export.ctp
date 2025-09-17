@@ -25,12 +25,14 @@ foreach ($applications as $application):
 		if (array_key_exists($key, $application['Application'])) {
 			// $content .= '"' . preg_replace('/"/','""',$row['Application'][$key]) . '",';
 			$row[$key] = '"' . preg_replace('/"/','""',$application['Application'][$key]) . '"';
-		} elseif ($key == 'study_routes') {
+		} 
+		elseif ($key == 'study_routes') {
 			foreach ($application['StudyRoute'] as $study_route) {
 				(isset($row[$key])) ? $row[$key] .= '; '.$study_route['study_route'] : $row[$key] = $study_route['study_route'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'product_type') {
+		}
+		 elseif ($key == 'product_type') {
 			$row[$key] = '';
 			if($application['Application']['product_type_biologicals']) $row[$key] = 'Biologicals';
 			if($application['Application']['product_type_proteins']) $row[$key] .= '; Proteins';
@@ -43,35 +45,42 @@ foreach ($applications as $application):
 			if($application['Application']['product_type_medical_device']) $row[$key] .= '; Medical Device';
 			if($application['Application']['product_type_medical_device_name']) $row[$key] .= ': '.$application['Application']['product_type_medical_device_name'];
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'manufacturers') {
+		} 
+		elseif ($key == 'manufacturers') {
 			foreach ($application['Manufacturer'] as $manufacturer) {
 				(isset($row[$key])) ? $row[$key] .= '; '.$manufacturer['manufacturer_name'] : $row[$key] = $manufacturer['manufacturer_name'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'ethical_committees') {
+		} 
+		elseif ($key == 'ethical_committees') {
 			foreach ($application['EthicalCommittee'] as $ethical_committee) {
 				(isset($row[$key])) ? $row[$key] .= '; '.$ethical_committee['ethical_committee'] : $row[$key] = $ethical_committee['ethical_committee'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'coordinating_investigator') {
+		}
+		 elseif ($key == 'coordinating_investigator') {
 			$row[$key] = $application['Application']['investigator1_given_name'].' '.$application['Application']['investigator1_middle_name'].' '.$application['Application']['investigator1_family_name'];	
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'principal_investigators') {
+		}
+		 elseif ($key == 'principal_investigators') {
 			foreach ($application['InvestigatorContact'] as $principal_investigator) {
 				(isset($row[$key])) ? $row[$key] .= '; '.$principal_investigator['given_name'].' '.$principal_investigator['middle_name'].' '.$principal_investigator['family_name'] : $row[$key] = $principal_investigator['given_name'].' '.$principal_investigator['middle_name'].' '.$principal_investigator['family_name'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'pharmacists') {
+		}
+		 elseif ($key == 'pharmacists') {
 			foreach ($application['Pharmacist'] as $pharmacist) {
 				(isset($row[$key])) ? $row[$key] .= '; REG: '.$pharmacist['reg_no'].' Name: '.$pharmacist['given_name'] : $row[$key] = 'REG: '.$pharmacist['reg_no'].' Name: '.$pharmacist['given_name'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'sponsors') {
+		} 
+		elseif ($key == 'sponsors') {
 			foreach ($application['Sponsor'] as $sponsor) {
 				(isset($row[$key])) ? $row[$key] .= '; '.$sponsor['sponsor'].' Contact: '.$sponsor['contact_person'] : $row[$key] = $sponsor['sponsor'].' Contact: '.$sponsor['contact_person'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'vulnerable_populations') {
+		} 
+		elseif ($key == 'vulnerable_populations') {
 			$row[$key] = '';
 			if($application['Application']['subjects_patients'] == 'Yes') $row[$key] = 'Patients';
 			if($application['Application']['subjects_women_child_bearing'] == 'Yes') $row[$key] .= '; Women of child bearing potential';
@@ -84,12 +93,14 @@ foreach ($applications as $application):
 			if($application['Application']['subjects_others'] == 'Yes') $row[$key] .= '; Others';
 			if($application['Application']['subjects_others_specify']) $row[$key] .= ': '.$application['Application']['subjects_others_specify'];
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'sites') {
+		}
+		 elseif ($key == 'sites') {
 			foreach ($application['SiteDetail'] as $site) {
 				(isset($row[$key])) ? $row[$key] .= '; '.$site['site_name'].' Contact: '.$site['contact_details'] : $row[$key] = $site['site_name'].' Contact: '.$site['contact_details'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'scope_of_trial') {
+		} 
+		elseif ($key == 'scope_of_trial') {
 			$row[$key] = '';
 			if($application['Application']['scope_diagnosis']) $row[$key] = 'Diagnosis';
 			if($application['Application']['scope_prophylaxis']) $row[$key] .= '; Prophylaxis';
@@ -107,7 +118,8 @@ foreach ($applications as $application):
 			if($application['Application']['scope_others']) $row[$key] .= '; Others';
 			if($application['Application']['scope_others_specify']) $row[$key] .= ': '.$application['Application']['scope_others_specify'];
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'trial_phase') {
+		} 
+		elseif ($key == 'trial_phase') {
 			$row[$key] = '';
 			if($application['Application']['trial_human_pharmacology']) $row[$key] = 'Human pharmacology (Phase I)';
 			if($application['Application']['trial_administration_humans']) $row[$key] .= ': First administration to humans';
@@ -118,7 +130,8 @@ foreach ($applications as $application):
 			if($application['Application']['trial_therapeutic_confirmatory']) $row[$key] .= '; Therapeutic confirmatory (Phase III) ';
 			if($application['Application']['trial_therapeutic_use']) $row[$key] .= '; Therapeutic use (Phase IV)';
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'trial_design') {
+		}
+		 elseif ($key == 'trial_design') {
 			$row[$key] = '';
 			if($application['Application']['design_controlled'] == 'Yes') $row[$key] = 'Controlled: ';
 			if($application['Application']['design_controlled_randomised'] == 'Yes') $row[$key] = 'Randomised ';
@@ -135,17 +148,20 @@ foreach ($applications as $application):
 			if($application['Application']['design_controlled_medicinal_other'] == 'Yes') $row[$key] .= '; Other';
 			if($application['Application']['design_controlled_medicinal_specify']) $row[$key] .= $application['Application']['design_controlled_medicinal_specify'];
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'organizations') {
+		} 
+		elseif ($key == 'organizations') {
 			foreach ($application['Organization'] as $org) {
 				(isset($row[$key])) ? $row[$key] .= '; Org: '.$org['organization'].' Contact: '.$org['contact_person'] : $row[$key] = 'Org: '.$org['organization'].' Contact: '.$org['contact_person'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'placebo_details') {
+		} 
+		elseif ($key == 'placebo_details') {
 			foreach ($application['Placebo'] as $plc) {
 				(isset($row[$key])) ? $row[$key] .= '; Form: '.$plc['pharmaceutical_form'].' Route: '.$plc['route_of_administration'] : $row[$key] = 'Form: '.$plc['pharmaceutical_form'].' Route: '.$plc['route_of_administration'];
 			}
 			(isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/','""',$row[$key]) . '"' : $row[$key] = '""';
-		} elseif ($key == 'reviewers') {
+		} 
+		elseif ($key == 'reviewers') {
 			$row[$key] = '';
 			foreach ($application['Review'] as $review) {
 				if ($review['accepted'] == 'accepted') {

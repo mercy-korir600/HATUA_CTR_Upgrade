@@ -69,7 +69,7 @@ echo $this->Session->flash();
       <li><a href="#tab10" data-toggle="tab" style="color: #52A652;">Annual Participants Flow</a></li>
       <li><a href="#tab14" data-toggle="tab" style="color: #52A652;">Manufacturing Site(s)</a></li>
       <!-- <li><a href="#tab11" data-toggle="tab" style="color: #52A652;">Study Budget</a></li> -->
-      <li><a href="#tab12" data-toggle="tab" style="color: #5e3ed3;">Annual Approval Letter</a></li>
+      <li><a href="#tab12" data-toggle="tab" style="color: #5e3ed3;">Approval Letters</a></li>
       <!-- <li><a href="#tab9" data-toggle="tab" style="color: #52A652;">Final Study Report</a></li> -->
       <?php if ($application['Application']['approved'] == 2) { ?>
         <li><a href="#tab9" data-toggle="tab" style="color: #15189d;">Final Study Report</a></li>
