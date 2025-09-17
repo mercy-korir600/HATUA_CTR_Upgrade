@@ -279,6 +279,16 @@ echo $this->Session->flash();
                   echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
+                  echo '<p><i class="icon-time"> </i> Notified on: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  // ask if the user has showned conflict of interest with an link to revoke access with a confirmation dialog
+                  echo $this->Html->link(
+                    __('<small class="muted"> Shown Interest? Revoke Access</small>'),
+                    array('controller' => 'reviews', 'action' => 'revoke', $response['id'], $application['Application']['id']),
+                    array('escape' => false),
+                    __('Are you sure you want to revoke access for %s?', $user)
+                  );
+                  echo '<hr>';
+                
                 } elseif ($response['type'] == 'request' && $response['accepted'] == 'declined') {
                   $responded = true;
                   echo '<p class="text-error"><i class="icon-remove"> </i> ' . $user . ' <small class="muted">(Declines)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';

@@ -395,6 +395,43 @@ class ReviewsController extends AppController
         $this->set(compact('users', 'applications'));
     }
 
+    public function manager_revoke($id=null,$application_id=null) {
+        $this->Review->id = $id;
+        if (!$this->Review->exists()) {
+            throw new NotFoundException(__('Invalid review id'));
+        }
+        $review = $this->Review->find('first', array('conditions' => array('Review.id' => $id), 'contain' => array()));
+        // debug($review);exit;
+        if ($this->Review->delete()) {
+            // Let's create an audit trail
+
+            $this->loadModel('AuditTrail');
+            $audit = array(
+                'AuditTrail' => array(
+                    'foreign_key' => $application_id,
+                    'model' => 'Review',
+                    'message' => 'A review previously assigned to '.$review['User']['name'].' has been revoked for the report with protocol number ' .  $this->Application->field('protocol_no', array('id' => $application_id)) . ' by ' . $this->Auth->User('username'),
+                    'ip' =>  $this->Application->field('protocol_no', array('id' => $application_id))
+                )
+            );
+            $this->AuditTrail->Create();
+            if ($this->AuditTrail->save($audit)) {
+                $this->log($this->args[0], 'audit_success');
+            }
+            else {
+                $this->log('Error creating an audit trail', 'notifications_error');
+                $this->log($this->args[0], 'notifications_error');
+            }
+            $this->Session->setFlash(__('The review request has been revoked'), 'alerts/flash_success');
+            $this->redirect(array('controller' => 'applications', 'action' => 'view', $review['Review']['application_id']));
+        } else {
+            $this->Session->setFlash(__('The review request could not be revoked. Please, try again.'), 'alerts/flash_error');
+            $this->redirect(array('controller' => 'applications', 'action' => 'view', $review['Review']['application_id']));
+        }
+
+
+	}
+
     public function reviewer_test($id = null)
     {
         // if (isset($this->request->data['submitReport'])) 

@@ -843,6 +843,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Reviews/manager_add');
         $this->Acl->allow($group, 'controllers/Reviews/manager_comment');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assign');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_revoke');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assess');
         $this->Acl->allow($group, 'controllers/Reviews/manager_summary');
         $this->Acl->allow($group, 'controllers/Reviews/manager_download_assessment');
