@@ -11,6 +11,7 @@ class User extends AppModel
   public $actsAs = array('Containable', 'Search.Searchable', 'Acl' => array('type' => 'requester'));
   public $filterArgs = array(
     'filter' => array('type' => 'query', 'method' => 'orConditions', 'encode' => true),
+    'group_id' => array('type' => 'value'),
   );
   public function orConditions($data = array())
   {

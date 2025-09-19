@@ -1435,7 +1435,7 @@ class ApplicationsController extends AppController
     {
         $this->Prg->commonProcess();
 
-        $page_options = array('5' => '5', '10' => '10', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000');
+        $page_options = array( '10' => '10', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000');
         if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) {
             if (!empty($this->passedArgs['approved']) && $this->passedArgs['approved'] == '2') {
                 $this->passedArgs['approvedrange'] = true;
@@ -1538,7 +1538,7 @@ class ApplicationsController extends AppController
     public function inspector_index()
     {
         $this->Prg->commonProcess();
-        $page_options = array('5' => '5', '10' => '10');
+        $page_options = array('5' => '5', '10' => '10','50'=>'50','100'=>'100');
         if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) $this->passedArgs['range'] = true;
         if (!empty($this->passedArgs['month_year'])) $this->passedArgs['mode'] = true;
         if (isset($this->passedArgs['pages']) && !empty($this->passedArgs['pages'])) $this->paginate['limit'] = $this->passedArgs['pages'];

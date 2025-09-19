@@ -13,7 +13,7 @@
 				<h4>Welcome to your profile</h4>
 				<hr>
 				<p>Thank you for being a registered user.</p>
-				<p>You may update your registration details within your profile or change your passord.</p>
+				<p>You may update your registration details within your profile or change your password.</p>
 				<?php 
 					if($redir == 'applicanter'){
 				?>
