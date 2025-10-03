@@ -99,7 +99,7 @@
                 <tr>
                     <td><?php echo h($data['AuditTrail']['id']); ?>&nbsp;</td>
                     <td><?php echo h($data['AuditTrail']['ip']); ?>&nbsp;</td>
-                    <td><?php echo h($data['AuditTrail']['message']); ?>&nbsp;</td> 
+                    <td><?php echo (strip_tags($data['AuditTrail']['message'])); ?>&nbsp;</td> 
                     <td><?php echo h($data['AuditTrail']['created']); ?>&nbsp;</td>
                     <td class="actions">
                         <?php
