@@ -464,9 +464,17 @@ class AttachmentsController extends AppController
             }
         }
     }
+    public function manager_delete($id)
+    {
+        $this->general_delete($id);
+    }
     public function applicant_delete($id)
     {
-         
+        $this->general_delete($id);
+    }
+    public function general_delete($id)
+    {
+
         $this->Attachment->id = $id;
         if (!$this->Attachment->exists()) {
             throw new NotFoundException(__('Invalid Attachment'));

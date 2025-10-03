@@ -890,6 +890,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Applications/manager_deactivate');
         $this->Acl->allow($group, 'controllers/Applications/stages');
         $this->Acl->allow($group, 'controllers/Attachments/manager_download');
+        $this->Acl->allow($group, 'controllers/Attachments/manager_delete');
         $this->Acl->allow($group, 'controllers/Attachments/download');
         $this->Acl->allow($group, 'controllers/Notifications');
         $this->Acl->allow($group, 'controllers/Notifications/manager_resend');

@@ -288,7 +288,7 @@ class SiteInspectionsController extends AppController {
     }
 
     public function summary($id = null, $application_id = null) {
-        // debug($this->request);
+        // debug($this->request); 
         $this->SiteInspection->id = $id;
         if (!$this->SiteInspection->exists()) {
             throw new NotFoundException(__('Invalid site inspection'));
