@@ -2144,7 +2144,7 @@
               </tr>
               <tr>
                 <td class="table-label required table-noline">
-                  <p>Address <span class="sterix">*</span></p>
+                  <p>Physical and postal address <span class="sterix">*</span></p>
                 </td>
                 <td class="table-noline"><?php echo $organization['address'] ?></td>
               </tr>
@@ -2153,6 +2153,12 @@
                   <p>Telephone Number <span class="sterix">*</span></p>
                 </td>
                 <td class="table-noline"><?php echo $organization['telephone_number'] ?></td>
+              </tr>
+              <tr>
+                <td class="table-label required table-noline">
+                  <p>Email Address  <span class="sterix">*</span></p>
+                </td>
+                <td class="table-noline"><?php ?></td>
               </tr>
               <tr>
                 <td class="table-label required table-noline">
