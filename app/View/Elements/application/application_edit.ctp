@@ -2007,9 +2007,12 @@ $this->Html->script('save', array('inline' => false));
           'escape' => false,
         ));
         echo $this->Form->input('estimated_duration', array(
+          'type' => 'number',
+          'min' => 0,  
+          'step' => 1   ,
           'label' => array(
             'class' => 'control-nolabel required',
-            'text' => '12.2 Estimated duration of trial <span class="sterix">*</span>'
+            'text' => '12.2 Estimated duration of trial <span class="sterix">*</span><span>(Provide in months)</span>' 
           ),
           'between' => '<div class="nocontrols">',
           'placeholder' => ' ',
