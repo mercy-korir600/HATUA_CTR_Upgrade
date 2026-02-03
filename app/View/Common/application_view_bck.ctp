@@ -487,12 +487,16 @@
                 <td><?php echo $organization['contact_person'] ?></td>
               </tr>
               <tr>
-                <td class="table-label required"><p>Address <span class="sterix">*</span></p></td>
+                <td class="table-label required"><p>Physical and postal address<span class="sterix">*</span></p></td>
                 <td><?php echo $organization['address'] ?></td>
               </tr>
               <tr>
                 <td class="table-label required"><p>Telephone Number <span class="sterix">*</span></p></td>
                 <td><?php echo $organization['telephone_number'] ?></td>
+              </tr>
+              <tr>
+                <td class="table-label required"><p>Email Address <span class="sterix">*</span></p></td>
+                <td><?php echo ""?></td>
               </tr>
               <tr>
                 <td class="table-label required"><p>All tasks of the sponsor <span class="sterix">*</span></p></td>

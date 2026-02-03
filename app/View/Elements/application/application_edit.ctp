@@ -2100,6 +2100,19 @@ $this->Html->script('save', array('inline' => false));
           'between' => '<div class="nocontrols">',
           'class' => 'input-large',
         ));
+       
+
+      echo $this->Form->input('ai_content', array(
+        'before' => '',
+        'label' => false,
+        'div' => false,
+        'class' => false,
+        'hiddenField' => false,
+        'between' => '<input type="hidden" value="0" id="ApplicationAiContent_" name="data[Application][ai_content]">
+                            <label class="checkbox">',
+        'after' => 'I declare that the content I have submitted is my own original work and has not been generated, in whole or in part, using artificial intelligence tools.  </label>',
+      ));
+     
         ?>
       </div>
     </div>

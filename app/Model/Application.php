@@ -1295,7 +1295,15 @@ class Application extends AppModel
                 'message'  => 'Declaration : Please enter the date for the declaration by the National Principal Investigator / National Co-ordinator /
                                 Other (state designation'
             ),
-        ),
+        ), 
+        'ai_content' => array(
+    'notEmpty' => array(
+        'rule'     => 'notEmpty',
+        'required' => true,
+        'message'  => 'Please confirm that the content you have submitted is original and not AI-generated.'
+    ),
+),
+        
     );
 
     public function notEmptyCheckbox($field = null, $key)
