@@ -279,7 +279,7 @@ echo $this->Session->flash();
                   echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
-                  echo '<p><i class="icon-time"> </i> Notified on: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
                   // ask if the user has showned conflict of interest with an link to revoke access with a confirmation dialog
                   echo $this->Html->link(
                     __('<small class="muted"> Shown Interest? Revoke Access</small>'),
