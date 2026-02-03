@@ -111,7 +111,7 @@
 
                     echo $this->Form->input(
                       'protocol_no',
-                      array('div' => false, 'class' => 'span12 unauthorized_index', 'label' => array('class' => 'required', 'text' => 'Protocol No.'))
+                      array('div' => false, 'class' => 'span12 unauthorized_index', 'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'))
                     );
                     ?>
                                     </th>
@@ -384,7 +384,7 @@
                         <thead>
                             <tr>
                                 <th style="width:3%">#</th>
-                                <th style="width: 13%"><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+                                <th style="width: 13%"><?php echo $this->Paginator->sort('ECCT_eference_no'); ?></th>
                                 <th style="width: 26%;"><?php echo $this->Paginator->sort('study_title'); ?></th>
                                 <th style="width: 26%;">Investigator(s) &amp; Site(s)</th>
                                 <th style="width: 27%">Application Status </th>
