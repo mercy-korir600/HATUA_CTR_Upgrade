@@ -132,6 +132,8 @@ class SaesController extends AppController
 
         $criteria = $this->Sae->parseCriteria($this->passedArgs);
         if (!isset($this->passedArgs['approved'])) $criteria['Sae.approved'] = array(0, 1, 2);
+
+        $criteria['Sae.approved'] = array(1, 2);
         $this->paginate['conditions'] = $criteria;
         $this->paginate['order'] = array('Sae.created' => 'desc');
         $this->paginate['contain'] = array('Application', 'Country', 'SuspectedDrug', 'ConcomittantDrug');
@@ -643,6 +645,7 @@ class SaesController extends AppController
             if ($this->Sae->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
                 if (isset($this->request->data['submitReport'])) {
                     $this->Sae->saveField('approved', 1);
+                    $this->Sae->saveField('date_submitted', date('Y-m-d H:i:s'));
                     $sae = $this->Sae->read(null, $id);
 
                     //******************       Send Email and Notifications to Applicant and Managers          *****************************

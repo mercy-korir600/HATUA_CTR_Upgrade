@@ -302,16 +302,12 @@
                                 </tr>
 
                                 <tr class="searchmore" style="display: none;">
-                                <td colspan="2">
-                                        <?php   
-                                        
-                                        
-                                        
+                                    <td colspan="2">
+                                        <?php
                                         echo $this->Form->input('estimated_duration', array(
                       'type'=>'number',
                       'div' => false, 'class' => 'span12 unauthorized_index',
                       'label' => array('class' => 'required', 'text' => 'Estimated Trial Duration'),
-                      
                     ));?>
                                     </td>
                                     <td></td>
