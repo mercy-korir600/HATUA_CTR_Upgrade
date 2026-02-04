@@ -21,20 +21,20 @@ if (($this->Session->read('Auth.User.group_id') == '5' || $this->Session->read('
   echo $this->Form->input('Deviation.' . $akey . '.id', array('value' => $deviation['id'], 'type' => 'hidden'));
 ?>
 
-  <table class="table table-bordered table-condensed">
+<table class="table table-bordered table-condensed">
     <tbody>
-      <tr>
-        <th class="my-well" style="width: 45%">Study Title</th>
-        <td><?php echo $deviation['study_title']; ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Reference No.</th>
-        <td><?php echo $deviation['reference_no']; ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Type of deviation <span class="sterix">*</span></th>
-        <td>
-          <?php
+        <tr>
+            <th class="my-well" style="width: 45%">Study Title</th>
+            <td><?php echo $deviation['study_title']; ?></td>
+        </tr>
+        <tr>
+            <th class="my-well">Reference No.</th>
+            <td><?php echo $deviation['reference_no']; ?></td>
+        </tr>
+        <tr>
+            <th class="my-well">Type of deviation <span class="sterix">*</span></th>
+            <td>
+                <?php
           // echo $this->Form->input('Deviation.'.$akey.'.deviation_type', array('label' => false, 'value' => $deviation['deviation_type'])); 
           // echo $this->Form->input('id', array('label' => false, 'value' => $deviation['id'])); 
           echo $this->Form->input('Deviation.' . $akey . '.deviation_type', array(
@@ -59,8 +59,8 @@ if (($this->Session->read('Auth.User.group_id') == '5' || $this->Session->read('
             'options' => array('Deviation' => 'Deviation'),
           ));
           ?>
-          <hr>
-          <?php
+                <hr>
+                <?php
 
           echo $this->Form->input('Deviation.' . $akey . '.deviation_type_dev', array(
             'type' => 'radio',  'label' => false, 'legend' => false, 'div' => false, 'hiddenField' => false, 'error' => false,
@@ -87,52 +87,83 @@ if (($this->Session->read('Auth.User.group_id') == '5' || $this->Session->read('
             'options' => array('Minor' => 'Minor'),
           ));
           ?>
-        </td>
-      </tr>
-      <tr>
-        <th class="my-well">PI Name</th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.pi_name', array('label' => false, 'value' => $deviation['pi_name'])); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Date of deviation </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_date', array('label' => false, 'type' => 'text', 'class' => 'pickadate')); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Study participant number </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.participant_number', array('label' => false)); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Name of treating physician </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.treating_physician', array('label' => false)); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Description of deviation </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_description', array('label' => false)); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Explanation why deviation occurred</th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_explanation', array('label' => false)); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Measures taken to address the deviation </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_measures', array('label' => false)); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Measures taken to preclude further occurrence of the deviation </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_preclude', array('label' => false)); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Indicate whether the study sponsor has been notified </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.sponsor_notified', array('label' => false)); ?></td>
-      </tr>
-      <tr>
-        <th class="my-well">Impact on the study </th>
-        <td><?php echo $this->Form->input('Deviation.' . $akey . '.study_impact', array('label' => false)); ?></td>
-      </tr>
-    </tbody>
-  </table>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">PI Name</th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.pi_name', array('label' => false, 'value' => $deviation['pi_name'])); ?>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">Date of deviation </th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_date', array('label' => false, 'type' => 'text', 'class' => 'pickadate')); ?>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">Study participant number </th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.participant_number', array('label' => false)); ?>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">Name of treating physician </th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.treating_physician', array('label' => false)); ?>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">Description of deviation </th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_description', array('label' => false)); ?>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">Explanation why deviation occurred</th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_explanation', array('label' => false)); ?>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">Measures taken to address the deviation </th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_measures', array('label' => false)); ?>
+            </td>
+        </tr>
+        <tr>
+            <th class="my-well">Measures taken to preclude further occurrence of the deviation </th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.deviation_preclude', array('label' => false)); ?>
+            </td>
+        </tr>
+        <tr>
+        <tr>
+  <th class="my-well">Indicate whether the study sponsor has been notified</th>
+  <td>
+    <?php
+      echo $this->Form->input('Deviation.' . $akey . '.sponsor_notified', [
+        'label' => false,
+        'type'  => 'checkbox',
+        'id'    => 'sponsor_notified_' . $akey
+      ]);
+    ?>
 
-  <div class="controls">
+    <div id="sponsor_notified_date_wrap_<?= h($akey) ?>" style="margin-top:8px; display:none;">
+      <?php
+        echo $this->Form->input('Deviation.' . $akey . '.sponsor_notification_date', [
+          'label' => 'Date of notification',
+          'type'  => 'text',              // keep text; datepicker will control input
+          'id'    => 'sponsor_notification_date_' . $akey,
+          'class' => 'date-picker',
+          'placeholder' => 'YYYY-MM-DD',
+          'autocomplete' => 'off',
+          // 'readonly' => 'readonly'        // prevents typing; user must pick from popup
+        ]);
+      ?>
+    </div>
+  </td>
+</tr>
+        <tr>
+            <th class="my-well">Impact on the study </th>
+            <td><?php echo $this->Form->input('Deviation.' . $akey . '.study_impact', array('label' => false)); ?></td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="controls">
     <?php
     echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
       'name' => 'saveChanges',
@@ -154,7 +185,7 @@ if (($this->Session->read('Auth.User.group_id') == '5' || $this->Session->read('
     ));
 
     ?>
-  </div>
+</div>
 
 <?php
   echo $this->Form->end();
@@ -162,15 +193,52 @@ if (($this->Session->read('Auth.User.group_id') == '5' || $this->Session->read('
 ?>
 
 <script type="text/javascript">
-  $(function() {
+$(function() { 
+
+
     $('.deviation_type').change(function() {
-      if ($(this).val() == 'Violation') {
-        $('.deviation_type_dev').attr('disabled', this.checked).attr('checked', !this.checked);
-        $('.deviation_type_dev').val('');
-        $('.deviation_type_dev').removeAttr('checked');
-      }else{
-        $('.deviation_type_dev').attr('disabled', !this.checked);
-      }
+        if ($(this).val() == 'Violation') {
+            $('.deviation_type_dev').attr('disabled', this.checked).attr('checked', !this.checked);
+            $('.deviation_type_dev').val('');
+            $('.deviation_type_dev').removeAttr('checked');
+        } else {
+            $('.deviation_type_dev').attr('disabled', !this.checked);
+        }
     });
-  });
+});
 </script>
+
+<script>
+$(function () {
+  var akey = '<?= $akey ?>';
+
+  var $checkbox = $('#sponsor_notified_' + akey);
+  var $wrap     = $('#sponsor_notified_date_wrap_' + akey);
+  var $input    = $('#sponsor_notification_date_' + akey);
+
+  if (!$checkbox.length || !$wrap.length || !$input.length) return;
+
+  if ($.fn.datepicker) {
+    try { $input.datepicker('destroy'); } catch (e) {}
+    $input.datepicker({
+      dateFormat: 'yy-mm-dd',
+      changeMonth: true,
+      changeYear: true
+    });
+  }
+
+  function toggleSponsorDate() {
+    if ($checkbox.is(':checked')) {
+      $wrap.show();
+      $input.prop('required', true);
+    } else {
+      $wrap.hide();
+      $input.prop('required', false).val('');
+    }
+  }
+
+  toggleSponsorDate();
+  $checkbox.on('change', toggleSponsorDate);
+});
+</script>
+ 

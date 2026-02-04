@@ -49,8 +49,25 @@
         <td><?php echo $deviation['deviation_preclude']; ?></td>
       </tr>
       <tr>
-        <th class="my-well">Indicate whether the study sponsor has been notified </th>
-        <td><?php echo $deviation['sponsor_notified']; ?></td>
+      <tr>
+    <th class="my-well">
+        Indicate whether the study sponsor has been notified
+    </th>
+    <td>
+        <?php if (!empty($deviation['sponsor_notified'])): ?>
+           Yes
+            <?php if (!empty($deviation['sponsor_notification_date'])): ?>
+                <br>
+                <small>
+                    Date notified:
+                    <?= h(date('d M Y', strtotime($deviation['sponsor_notification_date']))) ?>
+                </small>
+            <?php endif; ?>
+        <?php else: ?>
+           No
+        <?php endif; ?>
+    </td>
+</tr>
       </tr>
       <tr>
         <th class="my-well">Impact on the study </th>

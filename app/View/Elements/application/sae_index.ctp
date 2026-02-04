@@ -57,7 +57,7 @@
                     array(
                       'div' => false,
                       'placeholder' => 'ECCT/20..',
-                      'class' => 'unauthorized_index span10', 'label' => array('class' => 'required', 'text' => 'Protocol No.'))
+                      'class' => 'unauthorized_index span10', 'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'))
                 );
               ?>
                     </td>
@@ -298,7 +298,7 @@ if (!empty($sae['Sae']['date_submitted']) && !empty($sae['Sae']['reaction_onset'
 $cellStyle = $bgColor ? 'background-color:' . $bgColor . ' !important;' : '';
 ?>
               <tr>
-                    <td style="<?= h($cellStyle) ?>"><?php echo $daysDifference .'--<br>'. h($sae['Sae']['id']); ?>&nbsp;</td>
+                    <td style="<?= h($cellStyle) ?>"><?php echo   h($sae['Sae']['id']); ?>&nbsp;</td>
                     <td style="<?= h($cellStyle) ?>">
 
                         <?php  
@@ -313,8 +313,7 @@ $cellStyle = $bgColor ? 'background-color:' . $bgColor . ' !important;' : '';
                       array('action' => 'view', $sae['Sae']['sae_id']), array('escape' => false));
                   }
               ?>&nbsp;</td>
-                    <td style="<?= h($cellStyle) ?>"><?php 
-          // echo h($sae['Application']['protocol_no']); 
+                    <td style="<?= h($cellStyle) ?>"><?php  
         echo $this->Html->link($sae['Application']['protocol_no'], array('controller' => 'applications' , 'action' => 'view', $sae['Application']['id']), array('escape' => false));
         ?>&nbsp;</td>
                     <td style="<?= h($cellStyle) ?>"><?php echo h($sae['Sae']['patient_initials']); ?>&nbsp;</td>

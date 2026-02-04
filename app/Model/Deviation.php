@@ -95,4 +95,43 @@ class Deviation extends AppModel {
 		}
 		return $results;
 	}
+
+
+    public $validate = [
+
+        'sponsor_notification_date' => [
+            'requiredWhenNotified' => [
+                'rule' => 'validateSponsorNotificationDate',
+                'message' => 'Date of notification is required when sponsor is notified'
+            ],
+            'validFormat' => [
+                 'rule' => 'validateUiDate',
+                'allowEmpty' => true,
+                'message' => 'Use YYYY-MM-DD format'
+            ]
+        ]
+    ];
+    public function validateUiDate($check) {
+        $value = array_values($check)[0];
+        if (empty($value)) return true;
+    
+        // Accept mm/dd/yyyy from UI
+        $d = DateTime::createFromFormat('m/d/Y', $value);
+        return $d && $d->format('m/d/Y') === $value;
+    }
+    /**
+     * Require date only if sponsor_notified is checked
+     */
+    public function validateSponsorNotificationDate($check) {
+
+        $date = array_values($check)[0];
+
+        $notified = Hash::get($this->data, 'Deviation.sponsor_notified');
+
+        if ($notified) {
+            return !empty($date);
+        }
+
+        return true; // not required if not notified
+    }
 }
