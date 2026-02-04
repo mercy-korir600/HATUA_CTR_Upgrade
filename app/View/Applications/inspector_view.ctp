@@ -4,6 +4,7 @@ $this->extend('/Elements/application/applicant_view');
 
 <?php $this->start('amendment-lead'); ?>
 <?php
+<<<<<<< HEAD
 $this->assign('Applications', 'active');
 $this->Html->script('ckeditor/ckeditor', array('inline' => false));
 $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
@@ -27,6 +28,13 @@ $this->Html->script('jquery.blockUI.js', array('inline' => false));
         $my_reviews++;
       }
     }
+=======
+      $this->assign('Applications', 'active');
+      $this->Html->script('ckeditor/ckeditor', array('inline' => false));
+      $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
+      $this->Html->script('jquery.blockUI.js', array('inline' => false));
+      $this->Html->script('multi/amendments-checklist', array('inline' => false));
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
     ?>
     <?php
     echo  '<li><a href="#tab6" data-toggle="tab">Site Inspections (' . count($application['SiteInspection']) . ')</a></li>';

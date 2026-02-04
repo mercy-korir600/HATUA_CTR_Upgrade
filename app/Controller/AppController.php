@@ -32,56 +32,17 @@ App::uses('Controller', 'Controller');
  * @package       app.Controller
  * @link http://book.cakephp.org/2.0/en/controllers.html#the-app-controller
  */
-class AppController extends Controller
-{
-  protected $a_contain = array(
-    'Amendment',
-    'EthicalCommittee',
-    'InvestigatorContact',
-    'Pharmacist',
-    'Sponsor',
-    'SiteDetail'  => array('County'),
-    'Organization',
-    'Placebo',
-    'Attachment',
-    'CoverLetter',
-    'Protocol',
-    'PatientLeaflet',
-    'Brochure',
-    'GmpCertificate',
-    'Cv',
-    'Finance',
-    'Declaration',
-    'IndemnityCover',
-    'OpinionLetter',
-    'ApprovalLetter',
-    'Statement',
-    'ParticipatingStudy',
-    'Addendum',
-    'Registration',
-    'Fee',
-    'Checklist',
-    'AnnualApproval',
-    'AmendmentApproval' => array('Attachment'),
-    'AmendmentApprovalSummary' => array('Attachment'),
-    'AmendmentChecklist',
-    'AmendmentLetter',
-    'ParticipantFlow',
-    'Budget',
-    'Document',
-    'ActiveInspector',
-    'Review'  => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User'),
-    'Sae',
-    'AmendmentLetter',
-    'AnnualLetter' => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment')),
-    'StudyRoute',
-    'Manufacturer',
-    'Ciom',
-    'Deviation' => array('ExternalComment' => array('Attachment')),
-    'SiteInspection' => array('SiteAnswer', 'Attachment', 'InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'User'),
-    'ApplicationStage' => array('Comment' => array('Attachment')),
-    'Outsource' => array('User')
-  );
+class AppController extends Controller {
+  protected $a_contain = array('Amendment', 'EthicalCommittee', 'InvestigatorContact', 'Pharmacist', 'Sponsor', 'SiteDetail'  => array('County'), 'Organization', 'Placebo',
+                'Attachment', 'CoverLetter', 'Protocol', 'PatientLeaflet', 'Brochure', 'GmpCertificate', 'Cv', 'Finance', 'Declaration',
+                'IndemnityCover', 'OpinionLetter', 'ApprovalLetter', 'Statement', 'ParticipatingStudy', 'Addendum', 'Registration', 'Fee', 'Checklist',
+                'AnnualApproval','AmendmentChecklist', 'ParticipantFlow', 'Budget', 'Document', 
+                'Review'  => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User'), 
+                'Sae', 'AnnualLetter', 'StudyRoute', 'Manufacturer', 'Ciom',
+                'Deviation' => array('ExternalComment' => array('Attachment')),
+                'SiteInspection' => array('SiteAnswer', 'Attachment', 'InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'User'),
+                'ApplicationStage' => array('Comment' => array('Attachment'))
+    );
   public $components = array(
     'Acl',
     'Auth' => array(

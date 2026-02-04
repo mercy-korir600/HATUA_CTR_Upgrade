@@ -8,7 +8,11 @@ $this->assign('Applications', 'active');
 $this->Html->script('ckeditor/ckeditor', array('inline' => false));
 $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
 $this->Html->script('jquery.blockUI.js', array('inline' => false));
+<<<<<<< HEAD
 $this->Html->script('invoice', array('inline' => false));
+=======
+$this->Html->script('multi/amendments-checklist', array('inline' => false));
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
 ?>
 
 <?php
@@ -19,7 +23,11 @@ echo $this->Session->flash();
   <ul class="nav nav-tabs">
     <li class="active"><a href="#tab1" data-toggle="tab">Application</a></li>
     <li><a href="#tab17" data-toggle="tab">Screening</a></li>
+<<<<<<< HEAD
     <li><a href="#amendments" data-toggle="tab">Amendments</a></li>
+=======
+    <li><a href="#amendments" data-toggle="tab" style="color: #52A652;">Amendments</a></li>
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
     <?php
     $count_reviews = 0;
     $count_inspectors = 0;
@@ -209,23 +217,34 @@ echo $this->Session->flash();
           <br>
 
           <div class="amend-form">
-            <ul id="rreview_tab" class="nav nav-tabs">
-              <li class="active"><a href="#feedback_list">FEEDBACK/QUERIES</a></li>
-              <li><a href="#comment_query">Add Comment</a></li>
+            <ul class="nav nav-tabs">
+              <li class="active"><a href="#list">FEEDBACK/QUERIES</a></li>
+              <li><a href="#comm">Add Comment</a></li>
             </ul>
             <div class="tab-content">
+<<<<<<< HEAD
               <div class="tab-pane active" id="feedback_list">
                 <div class="row-fluid">
                   <div class="span12">
                     <?php if (!empty($eid)) echo $this->element('comments/list_expandable', ['comments' => $eid['Comment'], 'category' => true]) ?>
+=======
+              <div class="tab-pane " id="list">
+                <div class="row-fluid">
+                  <div class="span12">
+                 
+                    <?php 
+                       debug($eid);
+                    if (!empty($eid)) echo $this->element('comments/list_expandable', ['comments' => $eid['Comment']]) ?>
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
                   </div>
                 </div>
               </div>
 
-              <div class="tab-pane" id="comment_query">
+              <div class="tab-pane active" id="comm">
                 <div class="row-fluid">
                   <div class="span12">
                     <?php
+<<<<<<< HEAD
                     if (!empty($eid))   echo $this->element('comments/add_editor', [
                       'model' => [
                         'model_id' => $application['Application']['id'],
@@ -236,6 +255,21 @@ echo $this->Session->flash();
                         'type' => 50
                       ]
                     ])
+=======
+                    // if (!empty($eid))   
+                    // echo $this->element('comments/add', [
+                    //   'model' => [
+                    //     'model_id' => $application['Application']['id'],
+                    //     'foreign_key' => $eid['id'],
+                    //     'model' => 'ApplicationStage',
+                    //     'category' => 'external',
+                    //     'url' => 'add_screening_query',
+                    //     'type' => 50
+                    //   ]
+                    // ])
+
+                    echo "Test Comments"
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
                     ?>
                   </div>
                 </div>
@@ -279,6 +313,7 @@ echo $this->Session->flash();
                   echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
+<<<<<<< HEAD
                   echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
                   // ask if the user has showned conflict of interest with an link to revoke access with a confirmation dialog
                   echo $this->Html->link(
@@ -289,6 +324,8 @@ echo $this->Session->flash();
                   );
                   echo '<hr>';
                 
+=======
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
                 } elseif ($response['type'] == 'request' && $response['accepted'] == 'declined') {
                   $responded = true;
                   echo '<p class="text-error"><i class="icon-remove"> </i> ' . $user . ' <small class="muted">(Declines)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
@@ -691,6 +728,7 @@ echo $this->Session->flash();
       </div>
     </div>
 
+<<<<<<< HEAD
     <!-- Amendments Section -->
     <div class="tab-pane" id="amendments">
       <div class="row-fluid">
@@ -698,6 +736,16 @@ echo $this->Session->flash();
           <?php echo $this->element('multi/amendments'); ?>
         </div>
       </div>
+=======
+    <div class="tab-pane" id="amendments">   
+      <div class="row-fluid">
+        <div class="span12">
+          <?php 
+          echo $this->element('multi/amendments');
+           ?>
+        </div>
+      </div>                
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
     </div>
 
   </div>

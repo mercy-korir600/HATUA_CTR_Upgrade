@@ -20,6 +20,7 @@ class UsersController extends AppController
     {
         parent::beforeFilter();
         // $this->Auth->allow();
+        // $this->initDB();
         $this->Auth->allow('register', 'login', 'activate_account', 'forgotPassword', 'resetPassword', 'logout', 'initDB');
     }
 
@@ -203,9 +204,7 @@ class UsersController extends AppController
         )));
         $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
         $this->set('users', $this->User->find('list', array('conditions' => array('User.group_id' => 3, 'User.is_active' => 1))));
-        // $this->set('saes', $this->Sae->find('all', array(
-        //     'order' => 'Sae.created DESC'
-        //     )));
+        // $this->set('saes', $this->Sae->find('all', array('order' => 'Sae.created DESC')));
         $this->set('meetingDates', $this->MeetingDate->find('all', array(
             'limit' => 5,
             'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
@@ -888,6 +887,8 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Applications/manager_approve');
         $this->Acl->allow($group, 'controllers/Applications/manager_delete');
         $this->Acl->allow($group, 'controllers/Applications/manager_deactivate');
+        $this->Acl->allow($group, 'controllers/Applications/manager_amendment_summary');
+        $this->Acl->allow($group, 'controllers/Applications/manager_stages_summary');        
         $this->Acl->allow($group, 'controllers/Applications/stages');
         $this->Acl->allow($group, 'controllers/Attachments/manager_download');
         $this->Acl->allow($group, 'controllers/Attachments/manager_delete');
@@ -907,7 +908,8 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Users/edit');
         $this->Acl->allow($group, 'controllers/SiteInspections');
         $this->Acl->allow($group, 'controllers/ParticipantFlows');
-        $this->Acl->allow($group, 'controllers/Comments');
+        $this->Acl->allow($group, 'controllers/Comments');        
+        $this->Acl->allow($group, 'controllers/Comments/manager_add_annual_letter');
         $this->Acl->allow($group, 'controllers/Saes');
         $this->Acl->allow($group, 'controllers/Cioms');
         $this->Acl->allow($group, 'controllers/Reports');

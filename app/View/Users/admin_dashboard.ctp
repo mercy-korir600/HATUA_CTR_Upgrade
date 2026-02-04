@@ -282,6 +282,7 @@ $this->assign('Dashboard', 'active');
       </li>
     </ul>
 
+<<<<<<< HEAD
     <h5>Checklist items <small class="muted">(For protocol and annual approval)</small> </h5>
     <ul class="nav nav-tabs nav-stacked">
       <li>
@@ -312,6 +313,29 @@ $this->assign('Dashboard', 'active');
         ?>
       </li>
     </ul>
+=======
+      <h5>Checklist items <small class="muted">(For protocol and annual approval)</small> </h5>
+      <ul class="nav nav-tabs nav-stacked">
+        <li>
+          <?php
+          echo $this->Html->link('<i class="icon-check-sign"></i> Protocol Approval Checklist <small class="muted">(Files required)</small>',
+            array('controller' => 'pockets', 'action' => 'lindex', 'admin' => true), array('escape' => false));
+          ?>
+        </li>
+        <li>
+          <?php
+          echo $this->Html->link('<i class="icon-check"></i> Annual Approval Checklist <small class="muted">(Files required)</small>',
+            array('controller' => 'pockets', 'action' => 'cindex', 'admin' => true), array('escape' => false));
+          ?>
+        </li>
+        <li>
+          <?php
+          echo $this->Html->link('<i class="icon-file"></i> Amendment Checklist <small class="muted">(Files required)</small>',
+            array('controller' => 'pockets', 'action' => 'aindex', 'admin' => true), array('escape' => false));
+          ?>
+        </li>
+      </ul>
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
 
     <h5>Initial & Annual approval Letters <small class="muted">(Templates)</small> </h5>
     <ul class="nav nav-tabs nav-stacked">

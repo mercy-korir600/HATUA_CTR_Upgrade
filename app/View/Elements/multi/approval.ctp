@@ -176,7 +176,7 @@
   </table>
 
   <hr>
-  <h5>Checklist Form</h5>
+ 
     <?php 
     if ($redir == 'applicant') {     
       if(empty($application['Application']['trial_status_id'])){
@@ -187,6 +187,7 @@
   <?php
       }
   else{?>
+   <h5>Checklist Form</h5>
       <div class="well">        
         <table id="pastyears"  class="table table-bordered  table-condensed table-striped">
           <thead>

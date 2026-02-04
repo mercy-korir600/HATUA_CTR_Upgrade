@@ -111,6 +111,9 @@ class Attachment extends AppModel {
 		if (!empty($this->data['AnnualApproval']['file_date'])) {
 			$this->data['AnnualApproval']['file_date'] = $this->dateFormatBeforeSave($this->data['AnnualApproval']['file_date']);
 		}
+		if (!empty($this->data['AmendmentChecklist']['file_date'])) {
+			$this->data['AmendmentChecklist']['file_date'] = $this->dateFormatBeforeSave($this->data['AmendmentChecklist']['file_date']);
+		}
 		return true;
 	}
 

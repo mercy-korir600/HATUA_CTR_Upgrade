@@ -1,4 +1,5 @@
 <?php
+<<<<<<< HEAD
 
 $header = array(
     'id' => '#',
@@ -14,6 +15,9 @@ $header = array(
     'date_submitted' => 'Date Submitted',
     'approval_date' => 'Date Approved'
 );
+=======
+$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'stages' => 'Stages');
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
 echo implode(',', $header) . "\n";
 foreach ($applications as $application) :
     $content = '';
@@ -21,6 +25,7 @@ foreach ($applications as $application) :
     $stages = $this->requestAction(
         'applications/stages/' . $application['Application']['id']  //get first element of array
     );
+<<<<<<< HEAD
     foreach ($header as $key => $val) {
         if (array_key_exists($key, $application['Application'])) {
             $row[$key] = '"' . preg_replace('/"/', '""', $application['Application'][$key]) . '"';
@@ -88,6 +93,21 @@ foreach ($applications as $application) :
             }
         } else {
             $row[$key] = '';
+=======
+    // debug($stages);
+    // exit;
+    foreach ($header as $key => $val) {
+        if (array_key_exists($key, $application['Application'])) {
+            $row[$key] = '"' . preg_replace('/"/', '""', $application['Application'][$key]) . '"';
+        } elseif ($key == 'stages') {
+            foreach ($stages as $stage) {
+                if (!empty($stage['start_date'])) {
+
+                    (isset($row[$key])) ? $row[$key] .= '; ' . $stage['label'] . ':' . $stage['start_date'] . ':' . $stage['end_date'] : $row[$key] = $stage['label'] . ':' . $stage['start_date'] . ':' . $stage['end_date'];
+                }}
+                (isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/', '""', $row[$key]) . '"' : $row[$key] = '""';
+            
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
         }
     }
     echo implode(',', $row) . "\n";
