@@ -36,7 +36,7 @@
             <td><?php echo $site_inspection['id'] ?></td>
             <td><?php echo $site_inspection['reference_no'] ?></td>
           <?php if($redir !== 'applicant') { ?>
-            <td><?php echo $site_inspection['User']['name'] ?></td>
+            <td><?php if(!empty($site_inspection['User']['name']))echo $site_inspection['User']['name'] ?></td>
             <td><p><?php 
                     if($site_inspection['approved'] == 0) echo 'Unsubmitted';
                     elseif($site_inspection['approved'] == 1) echo 'Awaiting Peer Review';
@@ -108,6 +108,14 @@
                   array('controller' => 'site_inspections', 'ext' => 'pdf', 'action' => 'download_assessment', $site_inspection['id']),
                   array('escape' => false, 'class' => 'btn btn-small btn-info topright'));
           echo $this->element('/application/inspection_edit_form', array('site_inspection' => $site_inspection, 'akey' => $akey));
+          echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
+            'name' => 'saveChanges',
+            'class' => 'btn btn-success btn-block mapop',
+            'id' => 'SiteInspectionSaveChanges', 'title'=>'Save & continue editing',
+            'data-content' => 'Save changes to form without submitting it.
+                                        The form will still be available for further editing.',
+            'div' => false,
+          ));
         ?>
       </div>
     </div>
@@ -119,7 +127,7 @@
                   array('controller' => 'site_inspections', 'ext' => 'pdf', 'action' => 'download_summary', $site_inspection['id']),
                   array('escape' => false, 'class' => 'btn btn-small btn-info topright'));
           
-          if ($site_inspection['approved'] == 2 && $site_inspection['sent_to_pi'] == 0) {
+          if ($site_inspection['approved'] == 2 && $site_inspection['sent_to_pi'] == 0 && ($this->Session->read('Auth.User.group_id') === '2' or $this->Session->read('Auth.User.group_id') === '6')) {
             echo $this->Html->link(__('<i class="icon-envelope-alt"></i> Send Report to PI'),
                   array('controller' => 'site_inspections', 'action' => 'send_to_pi', $site_inspection['id']),
                   array('escape' => false, 'class' => 'btn btn-small btn-warning'));

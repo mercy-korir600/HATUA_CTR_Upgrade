@@ -5,6 +5,7 @@ $this->extend('/Elements/application/applicant_view');
 <!-- START AMENDMENT LEAD -->
 <?php $this->start('amendment-lead'); ?>
 <?php
+<<<<<<< HEAD
 $this->assign('MyApplications', 'active');
 $this->Html->script('ckeditor/ckeditor', array('inline' => false));
 $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
@@ -43,6 +44,79 @@ echo $this->Session->flash();
     <li><a href="#amendments" data-toggle="tab">Amendments</a></li>
     <li><a href="#tab2" data-toggle="tab">Reviewers&rsquo; Comments <small>(<?php echo $reviewers_comments; ?>)</small></a></li>
     <li><a href="#tab6" data-toggle="tab">Site Inspections (<?php echo count($application['SiteInspection']) ?>)</a></li>
+=======
+      $this->assign('MyApplications', 'active');
+      $this->Html->script('ckeditor/ckeditor', array('inline' => false));
+      $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
+      $this->Html->script('jUpload/vendor/jquery.ui.widget.js', array('inline' => false));
+      $this->Html->script('jUpload/jquery.iframe-transport.js', array('inline' => false));
+      $this->Html->script('jUpload/jquery.fileupload.js', array('inline' => false));
+      $this->Html->script('jquery.blockUI.js', array('inline' => false));
+      $this->Html->script('bootstrap-editable', array('inline' => false));
+      $this->Html->css('bootstrap-editable', null, array('inline' => false));
+      //Only meant for applicant
+      $this->Html->script('multi/amendments-checklist', array('inline' => false));
+      $this->Html->script('multi/approvalyear', array('inline' => false));
+      $this->Html->script('multi/documents', array('inline' => false));
+      $this->Html->script('multi/afro_attachments', array('inline' => false));
+
+      $reviewers_comments = 0;
+     foreach ($application['Review'] as $review) {
+          if($review['type'] == 'ppb_comment') {
+            $reviewers_comments++;
+          }
+     }
+     // debug(Hash::check($application['Review'], '{n}[type=ppb_comment].id'));
+     $this->assign('is-applicant', 'true');
+    ?>
+
+    <?php
+        echo $this->Session->flash();
+    ?>
+
+    <div class="tabbable tabs-left"> <!-- Only required for left/right tabs -->
+      <ul class="nav nav-tabs">
+          <li class="active"><a href="#tab1" data-toggle="tab">Application</a></li>
+          <li><a href="#tab17" data-toggle="tab">Screening</a></li>
+          <li><a href="#amendments" data-toggle="tab" style="color: #52A652;">Amendments</a></li>
+          <li><a href="#tab2" data-toggle="tab">Reviewers&rsquo; Comments  <small>(<?php echo $reviewers_comments;?>)</small></a></li>          
+          <li><a href="#tab6" data-toggle="tab">Site Inspections (<?php echo count($application['SiteInspection']) ?>)</a></li>
+          <li><a href="#tab7" data-toggle="tab">SAE/SUSAR (<?php echo count($application['Sae']) ?>)</a></li>
+          <li><a href="#tab15" data-toggle="tab">CIOMS E2B (<?php echo count($application['Ciom']) ?>)</a></li>
+          <li><a href="#tab13" data-toggle="tab">Protocol Deviations (<?php echo count($application['Deviation']) ?>)</a></li>
+          <li><a href="#tab8" data-toggle="tab" style="color: #52A652;">Annual Approval Checklist</a></li>
+          <li><a href="#tab10" data-toggle="tab" style="color: #52A652;">Annual Participants Flow</a></li>
+          <li><a href="#tab14" data-toggle="tab" style="color: #52A652;">Manufacturing Site(s)</a></li>
+          <li><a href="#tab11" data-toggle="tab" style="color: #52A652;">Study Budget</a></li>    
+          <li><a href="#tab12" data-toggle="tab" style="color: #5e3ed3;">Annual Approval Letter</a></li>    
+          <!-- <li><a href="#tab9" data-toggle="tab" style="color: #52A652;">Final Study Report</a></li> -->
+          <?php if ($application['Application']['approved'] == 2) { ?>
+            <li><a href="#tab9"  data-toggle="tab" style="color: #15189d;">Final Study Report</a></li>
+          <?php } ?>    
+      </ul>
+      <div class="tab-content my-tab-content">
+        <div class="tab-pane active" id="tab1">
+          <!-- content for tab1 comes here -->
+
+  <div class="row-fluid">
+    <?php if($application['Application']['submitted'] == 1 ) { ?>
+      <h4 class="text-success">
+       Submitted Application :  (<?php echo $application['Application']['protocol_no'];?>) &mdash;
+       <small> Created on:
+        <?php
+         echo date('d-m-Y h:i:s a', strtotime($application['Application']['created']));
+       ?>
+      </small>
+      </h4>
+    <?php } else { ?>
+      <h4 class="text-success">
+        UnSubmitted Application :  &mdash; <small> Created on:
+        <?php
+         echo date('d-m-Y h:i:s a', strtotime($application['Application']['created']));
+       ?>
+      </small>
+      </h4>
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
     <?php } ?>
     <li><a href="#tab7" data-toggle="tab">SAE/SUSAR (<?php echo count($application['Sae']) ?>)</a></li>
     <li><a href="#tab15" data-toggle="tab">CIOMS E2B (<?php echo count($application['Ciom']) ?>)</a></li>
@@ -484,7 +558,22 @@ echo $this->Session->flash();
       </div>
     </div>
 
+<<<<<<< HEAD
   </div>
+=======
+
+    <div class="tab-pane" id="amendments">   
+      <div class="row-fluid">
+        <div class="span12">
+          <?php 
+          echo $this->element('multi/amendments');
+           ?>
+        </div>
+      </div>                
+    </div>
+
+</div>
+>>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
 </div>
 
 <script text="type/javascript">
