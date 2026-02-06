@@ -296,9 +296,110 @@ class ReviewsController extends AppController
     {
         $this->add($application_id, $review_type);
     }
+    
+    public function internalreviewer_add($application_id = null, $review_type = null)
+    {
+        $this->add($application_id, $review_type);
+    }
     public function reviewer_add($application_id = null, $review_type = null)
     {
         $this->add($application_id, $review_type);
+    }
+    public function manager_assign_internal($id = null)
+    {
+        if ($this->request->is('post')) {
+            $this->Review->create();
+            // debug($this->request);
+            // exit;
+            $message = $this->request->data['Message'];
+            unset($this->request->data['Message']);
+            if (!empty($this->request->data)) {
+                foreach ($this->request->data as $key => $value) {
+                    $this->request->data[$key]['Review']['application_id'] = $id;
+                    $this->request->data[$key]['Review']['type'] = 'request';
+                    $this->request->data[$key]['Review']['category'] = '1';
+                    $this->request->data[$key]['Review']['title'] = 'PPB request';
+                    $this->request->data[$key]['Review']['text'] = $message['text'];
+                }
+
+                if ($this->Review->saveMany($this->request->data)) {
+
+                    //Create new Screening,ScreeningSubmission,Assign stages if not exists
+                    $stages = $this->Application->ApplicationStage->find('all', array(
+                        'contain' => array(),
+                        'conditions' => array('ApplicationStage.application_id' => $id)
+                    ));
+
+                    if (!Hash::check($stages, '{n}.ApplicationStage[stage=Screening].id')) {
+                        $this->Application->ApplicationStage->create();
+                        $this->Application->ApplicationStage->save(
+                            array(
+                                'ApplicationStage' => array(
+                                    'application_id' => $id, 'stage' => 'Screening', 'status' => 'Complete', 'comment' => 'From Manager assign', 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d')
+                                )
+                            )
+                        );
+                    } else {
+                        $var = Hash::extract($stages, '{n}.ApplicationStage[stage=Screening]');
+                        if (!empty($var)) {
+                            $s1['ApplicationStage'] = min($var);
+                            if (empty($s1['ApplicationStage']['end_date'])) {
+                                $this->Application->ApplicationStage->create();
+                                $s1['ApplicationStage']['status'] = 'Complete';
+                                $s1['ApplicationStage']['comment'] = 'Manager assign reviewer';
+                                $s1['ApplicationStage']['end_date'] = date('Y-m-d');
+                                $this->Application->ApplicationStage->save($s1);
+                            }
+                        }
+                    }
+
+                    if (!Hash::check($stages, '{n}.ApplicationStage[stage=ScreeningSubmission].id')) {
+                        $this->Application->ApplicationStage->create();
+                        $this->Application->ApplicationStage->save(
+                            array('ApplicationStage' => array(
+                                'application_id' => $id, 'stage' => 'ScreeningSubmission', 'status' => 'Complete', 'comment' => 'From Manager assign', 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d'),
+                            ))
+                        );
+                    } else {
+                        $var = Hash::extract($stages, '{n}.ApplicationStage[stage=ScreeningSubmission]');
+                        if (!empty($var)) {
+                            $s2['ApplicationStage'] = min($var);
+                            if (empty($s2['ApplicationStage']['end_date'])) {
+                                $this->Application->ApplicationStage->create();
+                                $s2['ApplicationStage']['status'] = 'Complete';
+                                $s2['ApplicationStage']['comment'] = 'Manager assign reviewer';
+                                $s2['ApplicationStage']['end_date'] = date('Y-m-d');
+                                $this->Application->ApplicationStage->save($s2);
+                            }
+                        }
+                    }
+
+                    if (!Hash::check($stages, '{n}.ApplicationStage[stage=Assign].id')) {
+                        $this->Application->ApplicationStage->create();
+                        $this->Application->ApplicationStage->save(
+                            array('ApplicationStage' => array(
+                                'application_id' => $id, 'stage' => 'Assign', 'status' => 'Current', 'comment' => 'From Manager assign', 'start_date' => date('Y-m-d')
+                            ))
+                        );
+                    }
+                    //end stages
+                    $doer = $this->Auth->user('name');
+                    CakeResque::enqueue('default', 'NotificationShell', array('newAppNotifyReviewer', $this->request->data,$doer));
+
+                    $this->Session->setFlash(__('The reviewers have been notified'), 'alerts/flash_success');
+                    $this->redirect(array('controller' => 'applications', 'action' => 'view', $id));
+                } else {
+                    $this->Session->setFlash(__('The reviewers could not be notified. Please, try again.'));
+                    $this->redirect(array('controller' => 'applications', 'action' => 'view', $id));
+                }
+            } else {
+                $this->Session->setFlash(__('Please select at least one reviewer'), 'alerts/flash_error');
+                $this->redirect(array('controller' => 'applications', 'action' => 'view', $id));
+            }
+        }
+        $users = $this->Review->User->find('list');
+        $applications = $this->Review->Application->find('list');
+        $this->set(compact('users', 'applications'));
     }
 
     public function manager_assign($id = null)
@@ -501,7 +602,10 @@ class ReviewsController extends AppController
     {
         $this->assess($id, $application_id);
     }
-
+    public function internalreviewer_assess($id = null, $application_id = null)
+    {
+        $this->assess($id, $application_id);
+    }
     public function summary($id = null, $application_id = null)
     {
         // debug($this->request);
@@ -531,7 +635,11 @@ class ReviewsController extends AppController
     {
         $this->summary($id, $application_id);
     }
-
+    public function internalreviewer_summary($id = null, $application_id = null)
+    {
+        $this->summary($id, $application_id);
+    }
+    
     public function reviewer_edit()
     {
         if ($this->request->is('post')) {
@@ -564,8 +672,13 @@ class ReviewsController extends AppController
         $applications = $this->Review->Application->find('list');
         $this->set(compact('users', 'applications'));
     }
-
-    public function reviewer_respond()
+    public function reviewer_respond(){
+$this->main_respond();
+}
+    public function internalreviewer_respond() {
+$this->main_respond();
+	}
+    public function main_respond()
     {
         if ($this->request->is('post')) {
             if (empty($this->request->data['Review']['accepted'])) {
@@ -673,6 +786,7 @@ class ReviewsController extends AppController
         // $applications = $this->Review->Application->find('list');
         // $this->set(compact('users', 'applications'));
     }
+    
 
     /**
      * edit method
@@ -731,7 +845,7 @@ class ReviewsController extends AppController
         $this->set('rreview', $disp);
         $this->set('application', $review);
         $this->set('akey', $review['Review']['application_id']);
-        $this->pdfConfig = array('filename' => 'Review_Assessment_' . $id,  'orientation' => 'portrait');
+        $this->pdfConfig = array('filename' => 'Review_Assessment_' . $id.'.pdf',  'orientation' => 'portrait');
         $this->render('download_assessment');
     }
     public function manager_download_assessment($id = null)
@@ -746,7 +860,11 @@ class ReviewsController extends AppController
     {
         $this->download_assessment($id);
     }
-
+    public function internalreviewer_download_assessment($id = null)
+    {
+        $this->download_assessment($id);
+    }
+    
     private function download_summary($id = null)
     {
         $this->Review->id = $id;
@@ -765,7 +883,7 @@ class ReviewsController extends AppController
         $this->set('rreview', $disp);
         $this->set('application', $review);
         $this->set('akey', $review['Review']['application_id']);
-        $this->pdfConfig = array('filename' => 'review_Summary_' . $id,  'orientation' => 'portrait');
+        $this->pdfConfig = array('filename' => 'review_Summary_' . $id.'.pdf',  'orientation' => 'portrait');
         $this->render('download_summary');
     }
     public function manager_download_summary($id = null)
@@ -784,7 +902,11 @@ class ReviewsController extends AppController
     {
         $this->download_summary($id);
     }
-
+    public function internalreviewer_download_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+    
     /**
      * delete method
      *

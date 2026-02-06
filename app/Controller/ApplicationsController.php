@@ -1921,12 +1921,7 @@ class ApplicationsController extends AppController
             $this->Session->setFlash(__('No Protocol with given ID.'), 'alerts/flash_error');
             $this->redirect(array('controller' => 'users', 'action' => 'dashboard'));
         }
-
-
-        // $this->loadModel('ApplicationStage');
-        //           $stage = $this->ApplicationStage->read(null, 4);
-        //           debug($stage);
-
+ 
 
         $trial_statuses = $this->Application->TrialStatus->find('list');
         $this->set(compact('trial_statuses'));
@@ -1939,6 +1934,7 @@ class ApplicationsController extends AppController
         $this->set('application', $application);
         $this->set('counties', $this->Application->SiteDetail->County->find('list'));
         $this->set('users', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(3, 2, 6), 'User.is_active' => 1))));
+        $this->set('external', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(9), 'User.is_active' => 1))));
         $this->set('inspectors', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(2, 6), 'User.is_active' => 1))));
 
 
@@ -2067,17 +2063,66 @@ class ApplicationsController extends AppController
         if (!$this->Application->exists()) {
             throw new NotFoundException(__('Invalid application'));
         }
-
-        #TODO: in this condition, add the search for if I have accepted to review the app
+ 
         $my_applications = $this->Application->Review->find('list', array(
             'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request',  'Review.application_id' => $id),
             'fields' => array('Review.id', 'Review.accepted')
         ));
-        // debug($my_applications);
+        
         $accept = array_search('accepted', $my_applications);
         $declined = array_search('declined', $my_applications);
-        // if (isset($my_applications[$id])) {
-        // if ($my_applications[$id] == 'accepted') {
+      
+        if ($accept) {
+            $contains = $this->a_contain;
+            $contains['Review']['conditions'] = array('Review.user_id' => $this->Auth->User('id'),  'Review.type' => 'reviewer_comment');
+            $contains['ManagerReview'] = array('conditions' => array('ManagerReview.type' => 'ppb_comment'), 'InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User');
+            $application = $this->Application->find('first', array(
+                'conditions' => array('Application.id' => $id),
+                'contain' => $contains
+            ));
+            $this->set('counties', $this->Application->SiteDetail->County->find('list'));
+            $this->set('application', $application);
+            if ($application['Application']['deactivated']) {
+                $this->render('reviewer_minimal_view');
+            }
+        } elseif ($declined) {
+            $this->Session->setFlash(__('You have declined to review this protocol.'), 'alerts/flash_info');
+            $this->redirect(array('action' => 'index'));
+        } else {
+            $application = $this->Application->find('first', array(
+                'conditions' => array('Application.id' => $id),
+                'contain' => array('Review' => array('conditions' => array('Review.user_id' => $this->Auth->User('id')))),
+            ));
+            $this->set('application', $application);
+            $this->render('reviewer_minimal_view');
+        }
+
+        if ($application['Application']['deactivated'] || $application['Application']['approved'] == 1) {
+            $this->render('applicant_minimal_view');
+        }
+
+        $this->request->data = $application;
+
+        if (strpos($this->request->url, 'pdf') !== false) {
+            $this->pdfConfig = array('filename' => 'Application_' . $id,  'orientation' => 'portrait');
+        }
+    }
+
+    public function internalreviewer_view($id = null)
+    {
+        $this->Application->id = $id;
+        if (!$this->Application->exists()) {
+            throw new NotFoundException(__('Invalid application'));
+        }
+ 
+        $my_applications = $this->Application->Review->find('list', array(
+            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request',  'Review.application_id' => $id),
+            'fields' => array('Review.id', 'Review.accepted')
+        ));
+        
+        $accept = array_search('accepted', $my_applications);
+        $declined = array_search('declined', $my_applications);
+      
         if ($accept) {
             $contains = $this->a_contain;
             $contains['Review']['conditions'] = array('Review.user_id' => $this->Auth->User('id'),  'Review.type' => 'reviewer_comment');

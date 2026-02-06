@@ -562,7 +562,11 @@ class CommentsController extends AppController
     {
         $this->add_review_internal();
     }
-
+    public function internalreviewer_add_review_internal()
+    {
+        $this->add_review_internal();
+    }
+    
 
     private function add_meeting_date_external()
     {

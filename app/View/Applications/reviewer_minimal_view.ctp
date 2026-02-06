@@ -8,17 +8,37 @@
     <div class="row-fluid">
       <div class="span4">
       <?php
-        echo $this->Html->link('Download PDF', array('action'=>'view', 'ext'=> 'pdf',
-                            $application['Application']['id'], 'reviewer' => true),
-        array('class' => 'btn btn-primary mapop', 'title'=>'Download PDF',
-                      'data-content' => 'Download the pdf version of the report',));
-      ?>
+$prefix = null;
+
+if (!empty($this->request->params['prefix'])) {
+    $prefix = $this->request->params['prefix']; // reviewer | internalreviewer
+}
+
+$url = array(
+    'action' => 'view',
+    'ext' => 'pdf',
+    $application['Application']['id'],
+);
+
+// Preserve prefix
+if ($prefix) {
+    $url[$prefix] = true;
+}
+
+echo $this->Html->link(
+    'Download PDF',
+    $url,
+    array(
+        'class' => 'btn btn-primary mapop',
+        'title' => 'Download PDF',
+        'data-content' => 'Download the pdf version of the report',
+    )
+);?>
+
       </div>
       <div class="span4">
         <?php
-            echo $this->Form->button('Print Report', array('type' => 'button', 'class'=>'btn btn-inverse btnPrint' ,
-                        'onclick' => '$(\'#applicationPrintArea\').jqprint(); '
-                        ));
+            // echo $this->Form->button('Print Report', array('type' => 'button', 'class'=>'btn btn-inverse btnPrint' , 'onclick' => '$(\'#applicationPrintArea\').jqprint(); '   ));
         ?>
       </div>
       <div class="span4">

@@ -71,6 +71,8 @@ class AppController extends Controller
     'Document',
     'ActiveInspector',
     'Review'  => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User'),
+    'InternalReview'  => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User'),
+    
     'Sae',
     'AmendmentLetter',
     'AnnualLetter' => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment')),
@@ -116,6 +118,7 @@ class AppController extends Controller
     if ($this->Auth->User('group_id') == '6')  $redir = 'inspector';
     if ($this->Auth->User('group_id') == '7')  $redir = 'monitor';
     if ($this->Auth->User('group_id') == '8')  $redir = 'outsource';
+    if ($this->Auth->User('group_id') == '9')  $redir = 'internalreviewer';
 
     $this->Auth->loginAction = array('controller' => 'users', 'action' => 'login', 'admin' => false);
     $this->Auth->logoutRedirect = array('controller' => 'users', 'action' => 'login', 'admin' => false);

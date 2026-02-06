@@ -262,8 +262,32 @@ class UsersController extends AppController
             'limit' => 5,
             'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
         )));
-    }
+    } public function internalreviewer_dashboard()
+    {
+        // $this->Application->recursive = -1;
+        $my_applications = $this->User->Review->find('list', array(
+            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request', 'ifnull(Review.accepted,-1)' => array('accepted', '-1')),
+            'fields' => array('Review.application_id'),
+            'contain' => array()
+        ));
+        // pr($my_applications);
+        $this->set('applications', $this->Application->find('all', array(
+            'limit' => 5, 'fields' => array('id', 'study_drug', 'created'),
+            'order' => array('Application.created' => 'desc'),
+            'conditions' => array('submitted' => 1, 'Application.id' => array_values($my_applications)),
+            'contain' => array('Review'),
+        )));
 
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $this->set('meetingDates', $this->MeetingDate->find('all', array(
+            'limit' => 5,
+            'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
+        )));
+    }
+    
     public function partner_dashboard()
     {
         $applications = $this->Application->find('all', array(
@@ -394,6 +418,8 @@ class UsersController extends AppController
                 if ($this->Auth->User('group_id') == '6') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'inspector' => true));
                 if ($this->Auth->User('group_id') == '7') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'monitor' => 'monitor'));
                 if ($this->Auth->User('group_id') == '8') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'outsource' => 'outsource'));
+                if ($this->Auth->User('group_id') == '9') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'internalreviewer' => 'internalreviewer'));
+           
             } else {
                 $this->Session->setFlash('Your username or password was incorrect.', 'alerts/flash_error');
             }
@@ -894,8 +920,9 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Attachments/download');
         $this->Acl->allow($group, 'controllers/Notifications');
         $this->Acl->allow($group, 'controllers/Notifications/manager_resend');
-        $this->Acl->allow($group, 'controllers/Reviews/manager_add');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_add'); 
         $this->Acl->allow($group, 'controllers/Reviews/manager_comment');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_assign_internal');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assign');
         $this->Acl->allow($group, 'controllers/Reviews/manager_revoke');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assess');
@@ -1117,6 +1144,26 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Deviations/outsource_delete'); //
         $this->Acl->allow($group, 'controllers/Comments'); //
         //we add an exit to avoid an ugly "missing views" error message
+
+        $group->id = 9; 
+        $this->Acl->deny($group, 'controllers');
+        $this->Acl->allow($group, 'controllers/Applications/internalreviewer_index');
+        $this->Acl->allow($group, 'controllers/Applications/internalreviewer_view');
+        $this->Acl->allow($group, 'controllers/Applications/stages');
+        $this->Acl->allow($group, 'controllers/Attachments/internalreviewer_download');
+        $this->Acl->allow($group, 'controllers/Attachments/download');
+        $this->Acl->allow($group, 'controllers/Notifications');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_add');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_respond');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_assess');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_summary');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_download_assessment');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_download_summary');
+        $this->Acl->allow($group, 'controllers/Users/internalreviewer_dashboard');
+        $this->Acl->allow($group, 'controllers/Users/profile');
+        $this->Acl->allow($group, 'controllers/Users/edit');
+        $this->Acl->allow($group, 'controllers/Comments');
+        $this->Acl->allow($group, 'controllers/MeetingDates');
         echo "all done";
         exit;
     }
