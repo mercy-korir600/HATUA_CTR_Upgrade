@@ -10,11 +10,44 @@
                                         } elseif (count($application['Review']) > 3) {
                                           echo 'text-warning';
                                         }
-                                        ?>">Assigned Reviewers: <?php echo count($application['Review']); ?></strong><br />
+                                        ?>">Assigned Reviewers: <?php
+                                        $reviewCount = !empty($application['Review']) ? count($application['Review']) : 0;
+                                        $internalCount = !empty($application['InternalReview']) ? count($application['InternalReview']) : 0;
+                                        
+                                        echo $reviewCount + $internalCount;
+                                        
+                                         ?></strong><br />
           <?php
-          foreach ($application['Review'] as $akey => $avalue) {
-            echo $users[$avalue['user_id']] . ", ";
-          }
+           $names = [];
+
+           foreach ($application['Review'] as $akey => $avalue) {
+           
+               $userId = $avalue['user_id'];
+           
+               // 1. Primary source: Users list
+               if (!empty($users[$userId])) {
+                   $names[] = $users[$userId];
+                   continue;
+               }
+           
+               // 2. Fallback: InternalReview model data
+               if (!empty($application['InternalReview'])) {
+                   foreach ($application['InternalReview'] as $internal) {
+                       if ($internal['user_id'] == $userId && !empty($users[$internal['user_id']])) {
+                           $names[] = $users[$internal['user_id']];
+                           break;
+                       }
+                   }
+               }
+           
+               // 3. Final fallback (optional)
+               if (!in_array($userId, array_keys($users))) {
+                   $names[] = 'Unknown Reviewer';
+               }
+           }
+           
+           // Output clean comma-separated list
+           echo implode(', ', array_unique($names));
           ?>
         </td>
       </tr>

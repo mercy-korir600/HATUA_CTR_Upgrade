@@ -1277,7 +1277,7 @@ class ApplicationsController extends AppController
         $criteria['Application.user_id'] = $this->Auth->User('id');
         $this->paginate['conditions'] = $criteria;
         $this->paginate['order'] = array('Application.created' => 'desc');
-        $this->paginate['contain'] = array('InvestigatorContact', 'Sponsor', 'SiteDetail' => array('County'), 'Review' => array('User'));
+        $this->paginate['contain'] = array('InvestigatorContact', 'Sponsor', 'SiteDetail' => array('County'), 'Review' => array('User'), 'InternalReview' => array('User'));
 
         //in case of csv export
         if (isset($this->request->params['ext']) && $this->request->params['ext'] == 'csv') {
@@ -1455,6 +1455,7 @@ class ApplicationsController extends AppController
 
         $this->paginate['contain'] = array(
             'Review' => array('conditions' => array('Review.type' => 'request', 'Review.accepted' => 'accepted'), 'User'),
+            'InternalReview' => array('conditions' => array('InternalReview.type' => 'request', 'InternalReview.accepted' => 'accepted'), 'User'),
             'TrialStatus',
             'InvestigatorContact',
             'Sponsor',
@@ -1568,6 +1569,7 @@ class ApplicationsController extends AppController
 
         $this->paginate['contain'] = array(
             'Review' => array('conditions' => array('Review.type' => 'request', 'Review.accepted' => 'accepted')),
+            'InternalReview' => array('conditions' => array('InternalReview.type' => 'request', 'InternalReview.accepted' => 'accepted'), 'User'),
             'InvestigatorContact',
             'Sponsor',
             'SiteDetail' => array('County')
@@ -1579,8 +1581,34 @@ class ApplicationsController extends AppController
 
         $trial_statuses = $this->Application->TrialStatus->find('list');
         $this->set(compact('trial_statuses'));
-    }
+    } 
+    public function internalreviewer_index()
+    {
+        $this->Prg->commonProcess();
+        $page_options = array('5' => '5', '10' => '10');
+        if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) $this->passedArgs['range'] = true;
+        if (!empty($this->passedArgs['month_year'])) $this->passedArgs['mode'] = true;
+        if (isset($this->passedArgs['pages']) && !empty($this->passedArgs['pages'])) $this->paginate['limit'] = $this->passedArgs['pages'];
+        else $this->paginate['limit'] = reset($page_options);
 
+        $my_applications = $this->Application->Review->find('list', array(
+            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request', 'Review.accepted' => 'accepted'),
+            'fields' => array('Review.application_id')
+        ));
+
+        $criteria = $this->Application->parseCriteria($this->passedArgs);
+        $criteria['Application.submitted'] = 1;
+        $criteria['Application.id'] = $my_applications;
+        $this->paginate['conditions'] = $criteria;
+        $this->paginate['order'] = array('Application.created' => 'desc');
+        $this->paginate['contain'] = array('InvestigatorContact', 'Sponsor', 'SiteDetail' => array('County'));
+
+        $this->set('page_options', $page_options);
+        $this->set('applications', Sanitize::clean($this->paginate(), array('encode' => false)));
+
+        $trial_statuses = $this->Application->TrialStatus->find('list');
+        $this->set(compact('trial_statuses'));
+    }
     public function reviewer_index()
     {
         $this->Prg->commonProcess();
@@ -1648,6 +1676,7 @@ class ApplicationsController extends AppController
         //     'InvestigatorContact', 'Sponsor', 'SiteDetail' => array('County'));
         $this->paginate['contain'] = array(
             'Review' => array('conditions' => array('Review.type' => 'request', 'Review.accepted' => 'accepted'), 'User'),
+            'InternalReview' => array('conditions' => array('InternalReview.type' => 'request', 'InternalReview.accepted' => 'accepted'), 'User'),
             'TrialStatus',
             'InvestigatorContact',
             'Sponsor',
@@ -1661,9 +1690,12 @@ class ApplicationsController extends AppController
             ));
         }
         //end pdf export
+       $applications= Sanitize::clean($this->paginate(), array('encode' => false));
+    //    debug($applications);
+    //    exit;
 
         $this->set('page_options', $page_options);
-        $this->set('applications', Sanitize::clean($this->paginate(), array('encode' => false)));
+        $this->set('applications', $applications);
         $this->set('users', $this->Application->User->find('list', array('conditions' => array('User.group_id' => 3, 'User.is_active' => 1))));
         $this->loadModel('Erc');
         $this->set('ercs', $this->Erc->find('list', array('fields' => array('Erc.name', 'Erc.name'),)));

@@ -14,12 +14,47 @@ $this->Html->css('bootstrap-editable', null, array('inline' => false));
                                         } elseif (count($application['Review']) > 3) {
                                           echo 'text-warning';
                                         }
-                                        ?>">Assigned Reviewers: <?php echo count($application['Review']); ?></strong><br />
+                                        ?>">Assigned Reviewers: <?php 
+                                        $reviewCount = !empty($application['Review']) ? count($application['Review']) : 0;
+                                        $internalCount = !empty($application['InternalReview']) ? count($application['InternalReview']) : 0;
+                                        
+                                        echo $reviewCount + $internalCount;
+                                        
+                                         ?></strong><br />
           <?php
-          foreach ($application['Review'] as $akey => $avalue) {
-            echo $users[$avalue['user_id']] . ", ";
-          }
-          ?>
+$names = [];
+
+/** Collect all user_ids from BOTH arrays safely **/
+$reviewUserIds = [];
+$internalUserIds = [];
+
+if (!empty($application['Review']) && is_array($application['Review'])) {
+    foreach ($application['Review'] as $r) {
+        if (!empty($r['user_id'])) $reviewUserIds[] = $r['user_id'];
+    }
+}
+
+if (!empty($application['InternalReview']) && is_array($application['InternalReview'])) {
+    foreach ($application['InternalReview'] as $ir) {
+        if (!empty($ir['user_id'])) $internalUserIds[] = $ir['user_id'];
+    }
+}
+
+$allUserIds = array_unique(array_merge($reviewUserIds, $internalUserIds));
+
+/** Resolve to names **/
+foreach ($allUserIds as $userId) {
+    if (!empty($users[$userId])) {
+        $names[] = $users[$userId];
+    } else {
+        // optional: only show unknown if you really want it
+        // $names[] = 'Unknown Reviewer';
+    }
+}
+
+echo implode(', ', array_unique($names));
+?>
+
         </td>
       </tr>
       <?php if ($application['Application']['deactivated']) { ?>
