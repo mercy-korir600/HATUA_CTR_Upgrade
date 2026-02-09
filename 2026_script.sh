@@ -1,0 +1,2 @@
+ALTER TABLE `deviations` ADD `sponsor_notification_date` VARCHAR(255) NULL DEFAULT NULL AFTER `sponsor_notified`;
+ALTER TABLE `reviews` ADD `category` TINYINT(1) NULL DEFAULT '0' AFTER `application_id`;
