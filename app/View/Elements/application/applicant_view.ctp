@@ -458,63 +458,110 @@
         </tbody>
       </table>
 
-      <h5>2.1 PRINCIPAL INVESTIGATOR (<small>for multicentre trial</small>) </h5>
-      <?php foreach ($application['InvestigatorContact'] as $key => $investigatorContact) { ?>
-        <span class="badge badge-info"><?php echo $key + 1; ?></span>
-        <table class="table  table-condensed">
-          <tbody>
-            <tr>
-              <td class="table-label required">
-                <p>Given name <span class="sterix">*</span></p>
-              </td>
-              <td><?php echo $investigatorContact['given_name'] ?></td>
-            </tr>
-            <tr>
-              <td class="table-label">
-                <p>Middle name, if applicable</p>
-              </td>
-              <td><?php echo $investigatorContact['middle_name'] ?></td>
-            </tr>
-            <tr>
-              <td class="table-label required">
-                <p>Family name <span class="sterix">*</span></p>
-              </td>
-              <td><?php echo $investigatorContact['family_name'] ?></td>
-            </tr>
-            <tr>
-              <td class="table-label required">
-                <p>Qualification<span class="sterix">*</span></p>
-              </td>
-              <td><?php echo $investigatorContact['qualification'] ?></td>
-            </tr>
-            <tr>
-              <td class="table-label required">
-                <p>Professional address <span class="sterix">*</span></p>
-              </td>
-              <td>
-                <p><?php echo $investigatorContact['professional_address']; ?></p>
-              </td>
-            </tr>
-            <tr>
-              <td class="table-label required">
-                <p>Telephone number <span class="sterix">*</span></p>
-              </td>
-              <td>
-                <p class="xeditable iseditable" id="data[InvestigatorContact][<?php echo $key; ?>][telephone]" data-type="text" data-pk="<?php echo $investigatorContact['id']; ?>" data-original-title="Update telephone number"><?php echo $investigatorContact['telephone']; ?></p>
-              </td>
-            </tr>
-            <tr>
-              <td class="table-label required">
-                <p>Email address <span class="sterix">*</span></p>
-              </td>
-              <td>
-                <p class="xeditable iseditable" id="data[InvestigatorContact][<?php echo $key; ?>][email]" data-type="text" data-pk="<?php echo $investigatorContact['id']; ?>" data-original-title="Update email"><?php echo $investigatorContact['email']; ?></p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <hr>
+      <?php
+        $coPiInvestigators = array();
+        $coIInvestigators = array();
+        $principalInvestigators = array();
+
+        foreach ($application['InvestigatorContact'] as $investigatorContact) {
+          $role = 'principal';
+          if (!empty($investigatorContact['investigator_role'])) {
+            $role = $investigatorContact['investigator_role'];
+          }
+
+          if ($role === 'co_pi') {
+            $coPiInvestigators[] = $investigatorContact;
+          } elseif ($role === 'co_i') {
+            $coIInvestigators[] = $investigatorContact;
+          } else {
+            $principalInvestigators[] = $investigatorContact;
+          }
+        }
+
+        $renderInvestigatorDetailsTable = function($investigatorContact, $counter) {
+          $editableKey = !empty($investigatorContact['id']) ? (int) $investigatorContact['id'] : (int) $counter;
+      ?>
+          <span class="badge badge-info"><?php echo $counter; ?></span>
+          <table class="table  table-condensed">
+            <tbody>
+              <tr>
+                <td class="table-label required">
+                  <p>Given name <span class="sterix">*</span></p>
+                </td>
+                <td><?php echo $investigatorContact['given_name'] ?></td>
+              </tr>
+              <tr>
+                <td class="table-label">
+                  <p>Middle name, if applicable</p>
+                </td>
+                <td><?php echo $investigatorContact['middle_name'] ?></td>
+              </tr>
+              <tr>
+                <td class="table-label required">
+                  <p>Family name <span class="sterix">*</span></p>
+                </td>
+                <td><?php echo $investigatorContact['family_name'] ?></td>
+              </tr>
+              <tr>
+                <td class="table-label required">
+                  <p>Qualification<span class="sterix">*</span></p>
+                </td>
+                <td><?php echo $investigatorContact['qualification'] ?></td>
+              </tr>
+              <tr>
+                <td class="table-label required">
+                  <p>Professional address <span class="sterix">*</span></p>
+                </td>
+                <td>
+                  <p><?php echo $investigatorContact['professional_address']; ?></p>
+                </td>
+              </tr>
+              <tr>
+                <td class="table-label required">
+                  <p>Telephone number <span class="sterix">*</span></p>
+                </td>
+                <td>
+                  <p class="xeditable iseditable" id="data[InvestigatorContact][<?php echo $editableKey; ?>][telephone]" data-type="text" data-pk="<?php echo !empty($investigatorContact['id']) ? $investigatorContact['id'] : ''; ?>" data-original-title="Update telephone number"><?php echo $investigatorContact['telephone']; ?></p>
+                </td>
+              </tr>
+              <tr>
+                <td class="table-label required">
+                  <p>Email address <span class="sterix">*</span></p>
+                </td>
+                <td>
+                  <p class="xeditable iseditable" id="data[InvestigatorContact][<?php echo $editableKey; ?>][email]" data-type="text" data-pk="<?php echo !empty($investigatorContact['id']) ? $investigatorContact['id'] : ''; ?>" data-original-title="Update email"><?php echo $investigatorContact['email']; ?></p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <hr>
+      <?php
+        };
+      ?>
+
+      <h5>2.1 CO-PRINCIPAL INVESTIGATOR (CO-PI)</h5>
+      <?php if (empty($coPiInvestigators)) { ?>
+        <p class="muted">No Co-PI added.</p>
       <?php } ?>
+      <?php foreach ($coPiInvestigators as $coPiCounter => $investigatorContact) {
+        $renderInvestigatorDetailsTable($investigatorContact, $coPiCounter + 1);
+      } ?>
+
+      <h5>2.2 CO-INVESTIGATOR (CO-I)</h5>
+      <?php if (empty($coIInvestigators)) { ?>
+        <p class="muted">No Co-I added.</p>
+      <?php } ?>
+      <?php foreach ($coIInvestigators as $coICounter => $investigatorContact) {
+        $renderInvestigatorDetailsTable($investigatorContact, $coICounter + 1);
+      } ?>
+
+      <h5>2.3 PRINCIPAL INVESTIGATOR (<small>for multicentre trial</small>) </h5>
+      <?php if (empty($principalInvestigators)) { ?>
+        <p class="muted">No Principal Investigator added.</p>
+      <?php } ?>
+      <?php foreach ($principalInvestigators as $principalCounter => $investigatorContact) {
+        $renderInvestigatorDetailsTable($investigatorContact, $principalCounter + 1);
+      } ?>
       <table class="table  table-condensed">
         <tbody>
           <?php
@@ -530,7 +577,7 @@
         </tbody>
       </table>
 
-      <h5>2.2 PHARMACIST </h5>
+      <h5>2.4 PHARMACIST </h5>
       <?php foreach ($application['Pharmacist'] as $key => $pharmacist) { ?>
         <span class="badge badge-info"><?php echo $key + 1; ?></span>
         <table class="table  table-condensed">

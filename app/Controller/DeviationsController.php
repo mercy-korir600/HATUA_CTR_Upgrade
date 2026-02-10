@@ -279,10 +279,12 @@ class DeviationsController extends AppController
         )));
         $count++;
         $count = ($count < 10) ? "0$count" : $count;
+        $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+        $piName = $this->getInvestigatorFullName($principalInvestigator);
         $data = array(
             'application_id' => $application_id,  'study_title' => $application['Application']['study_title'], 'user_id' => $this->Auth->User('id'),
             'reference_no' => 'DEV/' . date('Y') . '/' . $count,
-            'pi_name' => $application['InvestigatorContact'][0]['given_name'] . ' ' . $application['InvestigatorContact'][0]['middle_name'] . ' ' . $application['InvestigatorContact'][0]['family_name']
+            'pi_name' => $piName
         );
         if ($this->Deviation->saveAssociated(array('Deviation' => $data))) {
             $this->Session->setFlash(__('The protocol deviation has been created. Kindly update the details and submit!!'), 'alerts/flash_info');
@@ -303,10 +305,12 @@ class DeviationsController extends AppController
         )));
         $count++;
         $count = ($count < 10) ? "0$count" : $count;
+        $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+        $piName = $this->getInvestigatorFullName($principalInvestigator);
         $data = array(
             'application_id' => $application_id,  'study_title' => $application['Application']['study_title'], 'user_id' => $this->Auth->User('id'),
             'reference_no' => 'DEV/' . date('Y') . '/' . $count,
-            'pi_name' => $application['InvestigatorContact'][0]['given_name'] . ' ' . $application['InvestigatorContact'][0]['middle_name'] . ' ' . $application['InvestigatorContact'][0]['family_name']
+            'pi_name' => $piName
         );
         if ($this->Deviation->saveAssociated(array('Deviation' => $data))) {
             $this->Session->setFlash(__('The protocol deviation has been created. Kindly update the details and submit!!'), 'alerts/flash_info');
@@ -327,12 +331,14 @@ class DeviationsController extends AppController
         )));
         $count++;
         $count = ($count < 10) ? "0$count" : $count;
+        $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+        $piName = $this->getInvestigatorFullName($principalInvestigator);
         $data = array(
             'application_id' => $application_id,
             'study_title' => $application['Application']['study_title'],
             'user_id' => $this->Auth->User('id'),
             'reference_no' => 'DEV/' . date('Y') . '/' . $count,
-            'pi_name' => $application['InvestigatorContact'][0]['given_name'] . ' ' . $application['InvestigatorContact'][0]['middle_name'] . ' ' . $application['InvestigatorContact'][0]['family_name']
+            'pi_name' => $piName
         );
         if ($this->Deviation->saveAssociated(array('Deviation' => $data))) {
             $this->Session->setFlash(__('The protocol deviation has been created. Kindly update the details and submit!!'), 'alerts/flash_info');
@@ -353,10 +359,12 @@ class DeviationsController extends AppController
         )));
         $count++;
         $count = ($count < 10) ? "0$count" : $count;
+        $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+        $piName = $this->getInvestigatorFullName($principalInvestigator);
         $data = array(
             'application_id' => $application_id,  'study_title' => $application['Application']['study_title'], 'user_id' => $this->Auth->User('id'),
             'reference_no' => 'DEV/' . date('Y') . '/' . $count,
-            'pi_name' => $application['InvestigatorContact'][0]['given_name'] . ' ' . $application['InvestigatorContact'][0]['middle_name'] . ' ' . $application['InvestigatorContact'][0]['family_name']
+            'pi_name' => $piName
         );
         if ($this->Deviation->saveAssociated(array('Deviation' => $data))) {
             $this->Session->setFlash(__('The protocol deviation has been created. Kindly update the details and submit!!'), 'alerts/flash_info');

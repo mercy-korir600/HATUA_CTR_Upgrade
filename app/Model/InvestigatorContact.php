@@ -25,6 +25,14 @@ class InvestigatorContact extends AppModel {
 	);
 
 	public $validate = array(
+		'investigator_role' => array(
+            'validRole' => array(
+                'rule' => array('inList', array('principal', 'co_pi', 'co_i')),
+                'allowEmpty' => true,
+                'required' => false,
+                'message' => 'Investigator : Invalid investigator role selected'
+            ),
+        ),
 		'given_name' => array(
             'notEmpty' => array(
                 'rule'     => 'notEmpty',
@@ -68,6 +76,28 @@ class InvestigatorContact extends AppModel {
             ),
         ),
 	);
+
+	public function beforeValidate($options = array()) {
+		$role = null;
+		if (isset($this->data[$this->alias]['investigator_role'])) {
+			$role = $this->data[$this->alias]['investigator_role'];
+		}
+
+		if (empty($role)) {
+			$hasInvestigatorData = false;
+			foreach (array('given_name', 'middle_name', 'family_name', 'qualification', 'professional_address', 'telephone', 'email') as $field) {
+				if (!empty($this->data[$this->alias][$field])) {
+					$hasInvestigatorData = true;
+					break;
+				}
+			}
+			if ($hasInvestigatorData) {
+				$this->data[$this->alias]['investigator_role'] = 'principal';
+			}
+		}
+
+		return true;
+	}
 
 	// UTILITY METHODS
 	public function isOwnedBy($investigator, $user) {

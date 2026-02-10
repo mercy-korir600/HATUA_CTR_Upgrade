@@ -1,7 +1,7 @@
 <?php
  	$this->Html->script('multi/pharmacists', array('inline' => false));
 ?>
-<h5>2.2 PHARMACIST (<small>where necessary, Click button to add more -
+<h5>2.4 PHARMACIST (<small>where necessary, Click button to add more -
 <button type="button" class="btn-mini" id="addPharmacist">Add Pharmacist</button></small>) </h5>
 <div class="ctr-groups">
 	<div id="investigator_primary_contact">

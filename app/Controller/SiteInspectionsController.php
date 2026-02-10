@@ -90,6 +90,18 @@ class SiteInspectionsController extends AppController
     private function csv_export($csiteInspections = '')
     {
         //todo: check if data exists in $csiteInspections
+        if (!empty($csiteInspections)) {
+            foreach ($csiteInspections as $index => $csiteInspection) {
+                $principalInvestigator = $this->getPrimaryInvestigatorContact($csiteInspection['Application']);
+                $csiteInspections[$index]['PrincipalInvestigator'] = array(
+                    'given_name' => isset($principalInvestigator['given_name']) ? $principalInvestigator['given_name'] : null,
+                    'qualification' => isset($principalInvestigator['qualification']) ? $principalInvestigator['qualification'] : null,
+                    'telephone' => isset($principalInvestigator['telephone']) ? $principalInvestigator['telephone'] : null,
+                    'email' => isset($principalInvestigator['email']) ? $principalInvestigator['email'] : null
+                );
+            }
+        }
+
         $_serialize = 'csiteInspections';
         $_header = array(
             '#', 'Reference No.', 'Protocol No', 'PACTR No.',
@@ -101,8 +113,8 @@ class SiteInspectionsController extends AppController
         $_extract = array(
             'SiteInspection.id', 'SiteInspection.reference_no', 'Application.protocol_no', 'SiteInspection.pactr_no',
             'Application.study_title', 'Application.short_title', 'Application.single_site_member_state_f', 'Application.investigator1_given_name',
-            'Application.investigator1_qualification', 'Application.investigator1_telephone', 'Application.investigator1_email', 'InvestigatorContact.0.given_name',
-            'Application.InvestigatorContact.0.qualification', 'Application.InvestigatorContact.0.telephone', 'Application.InvestigatorContact.0.email', 'Application.Sponsor.0.sponsor', 'Application.Sponsor.0.cell_number', 'Application.Sponsor.0.email_address',
+            'Application.investigator1_qualification', 'Application.investigator1_telephone', 'Application.investigator1_email', 'PrincipalInvestigator.given_name',
+            'PrincipalInvestigator.qualification', 'PrincipalInvestigator.telephone', 'PrincipalInvestigator.email', 'Application.Sponsor.0.sponsor', 'Application.Sponsor.0.cell_number', 'Application.Sponsor.0.email_address',
             'trial_phase', 'SiteInspection.User.name', 'SiteInspection.inspection_dates', 'SiteInspection.outcome', 'SiteInspection.conclusion', 'SiteInspection.summary_report',
             'SiteInspection.created'
         );

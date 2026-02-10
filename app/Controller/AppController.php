@@ -141,6 +141,35 @@ class AppController extends Controller
     // );
   }
 
+  protected function getPrimaryInvestigatorContact($application = array())
+  {
+    if (empty($application['InvestigatorContact']) || !is_array($application['InvestigatorContact'])) {
+      return array();
+    }
+
+    foreach ($application['InvestigatorContact'] as $contact) {
+      if (!empty($contact['investigator_role']) && strtolower($contact['investigator_role']) === 'principal') {
+        return $contact;
+      }
+    }
+
+    return reset($application['InvestigatorContact']);
+  }
+
+  protected function getInvestigatorFullName($investigator = array())
+  {
+    if (empty($investigator) || !is_array($investigator)) {
+      return null;
+    }
+
+    $given = isset($investigator['given_name']) ? trim($investigator['given_name']) : '';
+    $middle = isset($investigator['middle_name']) ? trim($investigator['middle_name']) : '';
+    $family = isset($investigator['family_name']) ? trim($investigator['family_name']) : '';
+    $fullName = trim($given . ' ' . $middle . ' ' . $family);
+
+    return ($fullName !== '') ? $fullName : null;
+  }
+
   // public function isAuthorized($user) {
   // if (empty($this->request->prefix)) {
   // return true;

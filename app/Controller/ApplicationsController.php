@@ -2444,12 +2444,13 @@ class ApplicationsController extends AppController
                         $expiry_date = date('jS F Y', strtotime($application['Application']['approval_date'] . " +1 year"));
                         $expiry_date_s = date('Y-m-d', strtotime($application['Application']['approval_date'] . " +1 year"));
 
+                        $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
                         $qualification = $names = $professional_address = $telephone = null;
-                        if (isset($application['InvestigatorContact'][0])) {
-                            $qualification = $application['InvestigatorContact'][0]['qualification'];
-                            $names = $application['InvestigatorContact'][0]['given_name'] . ' ' . $application['InvestigatorContact'][0]['middle_name'] . ' ' . $application['InvestigatorContact'][0]['family_name'];
-                            $professional_address = $application['InvestigatorContact'][0]['professional_address'];
-                            $telephone = $application['InvestigatorContact'][0]['telephone'];
+                        if (!empty($principalInvestigator)) {
+                            $qualification = $principalInvestigator['qualification'];
+                            $names = $this->getInvestigatorFullName($principalInvestigator);
+                            $professional_address = $principalInvestigator['professional_address'];
+                            $telephone = $principalInvestigator['telephone'];
                         }
                         $variables = array(
                             'approval_no' => $approval_no,
@@ -2880,14 +2881,23 @@ class ApplicationsController extends AppController
         $year = date('Y', strtotime($this->Application->field('approval_date')));
         $approval_no = 'APL/' . $cnt . '/' . $year . '-' . $application['Application']['protocol_no'];
         $expiry_date = date('jS F Y', strtotime($application['Application']['approval_date'] . " +1 year"));
+        $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+        $qualification = $names = $professional_address = $telephone = null;
+        if (!empty($principalInvestigator)) {
+            $qualification = $principalInvestigator['qualification'];
+            $names = $this->getInvestigatorFullName($principalInvestigator);
+            $professional_address = $principalInvestigator['professional_address'];
+            $telephone = $principalInvestigator['telephone'];
+        }
+
         $variables = array(
             'approval_no' => $approval_no,
             'protocol_no' => $application['Application']['protocol_no'],
             'letter_date' => date('jS F Y', strtotime($application['Application']['approval_date'])),
-            'qualification' => $application['InvestigatorContact'][0]['qualification'],
-            'names' => $application['InvestigatorContact'][0]['given_name'] . ' ' . $application['InvestigatorContact'][0]['middle_name'] . ' ' . $application['InvestigatorContact'][0]['family_name'],
-            'professional_address' => $application['InvestigatorContact'][0]['professional_address'],
-            'telephone' => $application['InvestigatorContact'][0]['telephone'],
+            'qualification' => $qualification,
+            'names' => $names,
+            'professional_address' => $professional_address,
+            'telephone' => $telephone,
             'study_title' => $application['Application']['short_title'],
             'checklist' => $checkstring,
             'status' => $application['TrialStatus']['name'],
