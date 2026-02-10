@@ -107,17 +107,28 @@ class Deviation extends AppModel {
             'validFormat' => [
                  'rule' => 'validateUiDate',
                 'allowEmpty' => true,
-                'message' => 'Use YYYY-MM-DD format'
+                'message' => 'Use dd-mm-yyyy format'
             ]
         ]
     ];
     public function validateUiDate($check) {
         $value = array_values($check)[0];
         if (empty($value)) return true;
-    
-        // Accept mm/dd/yyyy from UI
-        $d = DateTime::createFromFormat('m/d/Y', $value);
-        return $d && $d->format('m/d/Y') === $value;
+
+        // Current UI format
+        $d = DateTime::createFromFormat('d-m-Y', $value);
+        if ($d && $d->format('d-m-Y') === $value) {
+            return true;
+        }
+
+        // Backward compatibility with stored/legacy UI values
+        $legacyIso = DateTime::createFromFormat('Y-m-d', $value);
+        if ($legacyIso && $legacyIso->format('Y-m-d') === $value) {
+            return true;
+        }
+
+        $legacyUs = DateTime::createFromFormat('m/d/Y', $value);
+        return $legacyUs && $legacyUs->format('m/d/Y') === $value;
     }
     /**
      * Require date only if sponsor_notified is checked

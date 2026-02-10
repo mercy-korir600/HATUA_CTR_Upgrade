@@ -1,5 +1,15 @@
 <?php
 echo $this->Session->flash();
+
+$selectedDeviationId = null;
+$selectedDeviationMode = null;
+if (isset($this->params['named']['deviation_edit'])) {
+  $selectedDeviationId = (int)$this->params['named']['deviation_edit'];
+  $selectedDeviationMode = 'edit';
+} elseif (isset($this->params['named']['deviation_view'])) {
+  $selectedDeviationId = (int)$this->params['named']['deviation_view'];
+  $selectedDeviationMode = 'view';
+}
 ?>
 
 <br>
@@ -32,8 +42,11 @@ echo $this->Session->flash();
   <tbody>
     <?php
     foreach ($application['Deviation'] as $akey => $deviation) {
+      $deviationId = (int)$deviation['id'];
+      $isSelected = ($selectedDeviationId === $deviationId);
+      $rowAnchor = 'deviation-row-' . $deviationId;
     ?>
-      <tr>
+      <tr id="<?php echo h($rowAnchor); ?>" class="<?php echo $isSelected ? 'info' : ''; ?>">
         <td><?php echo $deviation['id'] ?></td>
         <td><?php echo $deviation['reference_no'] ?></td>
         <td><?php echo $deviation['deviation_date'] ?></td>
@@ -45,22 +58,22 @@ echo $this->Session->flash();
           if ($deviation['status'] === 'Unsubmitted') {
             if ($redir === 'applicant' && $deviation['user_id'] == $this->Session->read('Auth.User.id')) echo $this->Html->link(
               '<label class="label label-success">Edit</label>',
-              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id']),
+              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id'], '#' => $rowAnchor),
               array('escape' => false)
             );
             if ($redir === 'monitor' && $deviation['user_id'] == $this->Session->read('Auth.User.id')) echo $this->Html->link(
               '<label class="label label-success">Edit</label>',
-              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id']),
+              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id'], '#' => $rowAnchor),
               array('escape' => false)
             );
             if ($redir === 'inspector' && $deviation['user_id'] == $this->Session->read('Auth.User.id')) echo $this->Html->link(
               '<label class="label label-success">Edit</label>',
-              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id']),
+              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id'], '#' => $rowAnchor),
               array('escape' => false)
             );
             if ($redir === 'outsource' && $deviation['user_id'] == $this->Session->read('Auth.User.id')) echo $this->Html->link(
               '<label class="label label-success">Edit</label>',
-              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id']),
+              array('action' => 'view', $application['Application']['id'], 'deviation_edit' => $deviation['id'], '#' => $rowAnchor),
               array('escape' => false)
             );
 
@@ -72,7 +85,7 @@ echo $this->Session->flash();
           } else {
             echo $this->Html->link(
               '<span class="label label-info"> View </span>',
-              array('action' => 'view', $application['Application']['id'], 'deviation_view' => $deviation['id']),
+              array('action' => 'view', $application['Application']['id'], 'deviation_view' => $deviation['id'], '#' => $rowAnchor),
               array('escape' => false)
             );
             echo "&nbsp;";
@@ -84,105 +97,95 @@ echo $this->Session->flash();
           ?>
         </td>
       </tr>
+      <?php if ($isSelected) {
+        $tabId = 'deviation_tab_' . $deviationId;
+        $formPaneId = 'deviation_form_' . $deviationId;
+        $commentsPaneId = 'deviation_comments_' . $deviationId;
+      ?>
+        <tr class="deviation-inline-row">
+          <td colspan="7" style="padding: 0;">
+            <div style="padding: 10px; border: 1px solid #ddd; border-top: 0; background: #fff;">
+              <ul id="<?php echo h($tabId); ?>" class="nav nav-tabs deviation-tab">
+                <li class="active"><a href="#<?php echo h($formPaneId); ?>">Deviation Form</a></li>
+                <li><a href="#<?php echo h($commentsPaneId); ?>">PI Comments (<?php echo count($deviation['ExternalComment']); ?>)</a></li>
+              </ul>
+
+              <div class="tab-content">
+                <div class="tab-pane active" id="<?php echo h($formPaneId); ?>">
+                  <div style="position: relative; border-top: 1px solid #ddd;">
+                    <?php
+                    if ($selectedDeviationMode === 'edit') {
+                      echo $this->element('/application/deviation_edit', array('deviation' => $deviation, 'akey' => $akey));
+                    } elseif ($selectedDeviationMode === 'view') {
+                      echo $this->Html->link(
+                        __('<i class="icon-download-alt"></i> Download PDF'),
+                        array('controller' => 'deviations', 'ext' => 'pdf', 'action' => 'download_deviation', $deviation['id']),
+                        array('escape' => false, 'class' => 'btn btn-small btn-info topright')
+                      );
+                      echo $this->element('/application/deviation_view', array('deviation' => $deviation, 'akey' => $akey));
+                    }
+                    ?>
+                  </div>
+                </div>
+
+                <div class="tab-pane" id="<?php echo h($commentsPaneId); ?>">
+                  <div class="row-fluid">
+                    <div class="span12">
+                      <br>
+                      <div class="amend-form">
+                        <h5 class="text-center"><u>COMMENTS/QUERIES</u></h5>
+                        <div class="row-fluid">
+                          <div class="span8">
+                            <?php echo $this->element('comments/list', ['comments' => $deviation['ExternalComment'], 'show' => false]) ?>
+                          </div>
+                          <div class="span4 lefty">
+                            <?php
+                            echo $this->element('comments/add', [
+                              'model' => [
+                                'model_id' => $application['Application']['id'], 'foreign_key' => $deviation['id'],
+                                'model' => 'Deviation', 'category' => 'external', 'url' => 'add_dev_external'
+                              ]
+                            ])
+                            ?>
+                          </div>
+                        </div>
+                      </div>
+                    </div><!--/span-->
+                  </div><!--/row-->
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      <?php } ?>
     <?php } ?>
   </tbody>
 </table>
 
-
-<br>
-<hr>
-
-<?php
-if (isset($this->params['named']['deviation_edit']))  $cid = $this->params['named']['deviation_edit'];
-if (isset($this->params['named']['deviation_view']))  $cid = $this->params['named']['deviation_view'];
-
-if (isset($this->params['named']['deviation_edit']) || isset($this->params['named']['deviation_view'])) {
-  foreach ($application['Deviation'] as $akey => $deviation) {
-    if ($deviation['id'] == $cid) {
-?>
-
-      <ul id="deviation_tab" class="nav nav-tabs">
-        <li class="active"><a href="#deviation_form">Deviation Form</a></li>
-        <li><a href="#deviation_comments">PI Comments (<?php echo count($deviation['ExternalComment']); ?>)</a></li>
-      </ul>
-
-      <div class="tab-content">
-        <div class="tab-pane active" id="deviation_form">
-          <div style="position: relative; border-top: 1px solid #ddd;">
-            <?php
-            if (isset($this->params['named']['deviation_edit'])) {
-              echo $this->element('/application/deviation_edit', array('deviation' => $deviation, 'akey' => $akey));
-            } elseif (isset($this->params['named']['deviation_view'])) {
-              echo $this->Html->link(
-                __('<i class="icon-download-alt"></i> Download PDF'),
-                array('controller' => 'deviations', 'ext' => 'pdf', 'action' => 'download_deviation', $deviation['id']),
-                array('escape' => false, 'class' => 'btn btn-small btn-info topright')
-              );
-              echo $this->element('/application/deviation_view', array('deviation' => $deviation, 'akey' => $akey));
-            }
-            ?>
-          </div>
-        </div>
-
-        <div class="tab-pane" id="deviation_comments">
-          <div class="row-fluid">
-            <div class="span12">
-              <br>
-              <div class="amend-form">
-                <h5 class="text-center"><u>COMMENTS/QUERIES</u></h5>
-                <div class="row-fluid">
-                  <div class="span8">
-                    <?php echo $this->element('comments/list', ['comments' => $deviation['ExternalComment'], 'show' => false]) ?>
-                  </div>
-                  <div class="span4 lefty">
-                    <?php
-                    echo $this->element('comments/add', [
-                      // 'model' => ['model_id' => $deviation['id'], 'foreign_key' => $deviation['id'], 
-                      'model' => [
-                        'model_id' => $application['Application']['id'], 'foreign_key' => $deviation['id'],
-                        'model' => 'Deviation', 'category' => 'external', 'url' => 'add_dev_external'
-                      ]
-                    ])
-                    ?>
-                  </div>
-                </div>
-              </div>
-            </div><!--/span-->
-          </div><!--/row-->
-        </div>
-
-      </div>
-
-<?php
-    }
-  }
-}
-?>
-
-<script text="type/javascript">
+<script type="text/javascript">
   $.expander.defaults.slicePoint = 170;
   $(function() {
-    //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
-    //from mcaz
-    $('#deviation_tab a').click(function(e) {
+    var $tabLinks = $('.deviation-tab a');
+    if (!$tabLinks.length) return;
+
+    $tabLinks.click(function(e) {
       e.preventDefault();
       $(this).tab('show');
     });
 
-    $('#deviation_tab a').on("shown", function(e) {
+    $tabLinks.on("shown", function(e) {
       var id = $(e.target).attr("href");
       localStorage.setItem('deviationTab', id)
     });
 
     var deviationTab = localStorage.getItem('deviationTab');
     if (deviationTab != null) {
-      // console.log("select tab");
-      // console.log($('#deviation_tab a[href="' + deviationTab + '"]'));
-      $('#deviation_tab a[href="' + deviationTab + '"]').tab('show');
+      $tabLinks.filter('[href="' + deviationTab + '"]').tab('show');
     }
 
-    var hashTab = $('#deviation_tab a[href="' + location.hash + '"]');
-    hashTab && hashTab.tab('show');
-    //end mcaz
+    var hashTab = $tabLinks.filter('[href="' + location.hash + '"]');
+    if (hashTab.length) {
+      hashTab.tab('show');
+    }
   });
 </script>

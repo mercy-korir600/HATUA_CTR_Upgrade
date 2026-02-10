@@ -130,7 +130,6 @@ if (($this->Session->read('Auth.User.group_id') == '5' || $this->Session->read('
             </td>
         </tr>
         <tr>
-        <tr>
   <th class="my-well">Indicate whether the study sponsor has been notified</th>
   <td>
     <?php
@@ -148,7 +147,7 @@ if (($this->Session->read('Auth.User.group_id') == '5' || $this->Session->read('
           'type'  => 'text',              // keep text; datepicker will control input
           'id'    => 'sponsor_notification_date_' . $akey,
           'class' => 'date-picker',
-          'placeholder' => 'YYYY-MM-DD',
+          'placeholder' => 'dd-mm-yyyy',
           'autocomplete' => 'off',
           // 'readonly' => 'readonly'        // prevents typing; user must pick from popup
         ]);
@@ -221,9 +220,31 @@ $(function () {
   if ($.fn.datepicker) {
     try { $input.datepicker('destroy'); } catch (e) {}
     $input.datepicker({
-      dateFormat: 'yy-mm-dd',
+      dateFormat: 'dd-mm-yy',
+      minDate: '-100Y',
+      maxDate: '-0D',
       changeMonth: true,
-      changeYear: true
+      changeYear: true,
+      yearRange: '-100Y:+0',
+      showButtonPanel: true,
+      currentText: 'Today',
+      gotoCurrent: true,
+      buttonImageOnly: true,
+      showAnim: 'show',
+      showOn: 'both',
+      buttonImage: '/img/calendar.gif',
+      onSelect: function() {
+        $(this).datepicker('hide');
+      },
+      beforeShow: function(input) {
+        setTimeout(function() {
+          $('.ui-datepicker-current')
+            .off('click.deviationToday')
+            .on('click.deviationToday', function() {
+              $(input).datepicker('hide');
+            });
+        }, 0);
+      }
     });
   }
 
@@ -241,4 +262,3 @@ $(function () {
   $checkbox.on('change', toggleSponsorDate);
 });
 </script>
- 

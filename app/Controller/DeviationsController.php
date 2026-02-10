@@ -165,6 +165,51 @@ class DeviationsController extends AppController
         $this->viewClass = 'CsvView.Csv';
         $this->set(compact('pdeviations', '_serialize', '_header', '_extract'));
     }
+
+    private function normalizeSponsorNotificationDates($deviationRows = array())
+    {
+        if (empty($deviationRows) || !is_array($deviationRows)) {
+            return $deviationRows;
+        }
+
+        foreach ($deviationRows as $idx => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $notified = !empty($row['sponsor_notified']);
+
+            if (!$notified) {
+                $deviationRows[$idx]['sponsor_notification_date'] = '';
+                continue;
+            }
+
+            if (!array_key_exists('sponsor_notification_date', $row)) {
+                continue;
+            }
+
+            $value = trim((string)$row['sponsor_notification_date']);
+            if ($value === '') {
+                continue;
+            }
+
+            $normalized = '';
+            $formats = array('d-m-Y', 'Y-m-d', 'm/d/Y', 'd/m/Y');
+            foreach ($formats as $format) {
+                $dt = DateTime::createFromFormat('!' . $format, $value);
+                if ($dt && $dt->format($format) === $value) {
+                    $normalized = $dt->format('m/d/Y');
+                    break;
+                }
+            }
+
+            if ($normalized !== '') {
+                $deviationRows[$idx]['sponsor_notification_date'] = $normalized;
+            }
+        }
+
+        return $deviationRows;
+    }
     /**
      * view method
      *
@@ -390,6 +435,9 @@ class DeviationsController extends AppController
             throw new NotFoundException(__('Invalid deviation'));
         }
         if ($this->request->is('post') || $this->request->is('put')) {
+            if (!empty($this->request->data['Deviation']) && is_array($this->request->data['Deviation'])) {
+                $this->request->data['Deviation'] = $this->normalizeSponsorNotificationDates($this->request->data['Deviation']);
+            }
             if ($this->Deviation->saveMany($this->request->data['Deviation'], array('deep' => true))) {
                 // debug($this->request->data);
                 if (isset($this->request->data['submitReport'])) {
@@ -425,6 +473,9 @@ class DeviationsController extends AppController
             throw new NotFoundException(__('Invalid deviation'));
         }
         if ($this->request->is('post') || $this->request->is('put')) {
+            if (!empty($this->request->data['Deviation']) && is_array($this->request->data['Deviation'])) {
+                $this->request->data['Deviation'] = $this->normalizeSponsorNotificationDates($this->request->data['Deviation']);
+            }
             if ($this->Deviation->saveMany($this->request->data['Deviation'], array('deep' => true))) {
                 // debug($this->request->data);
                 if (isset($this->request->data['submitReport'])) {
@@ -459,6 +510,9 @@ class DeviationsController extends AppController
             throw new NotFoundException(__('Invalid deviation'));
         }
         if ($this->request->is('post') || $this->request->is('put')) {
+            if (!empty($this->request->data['Deviation']) && is_array($this->request->data['Deviation'])) {
+                $this->request->data['Deviation'] = $this->normalizeSponsorNotificationDates($this->request->data['Deviation']);
+            }
             if ($this->Deviation->saveMany($this->request->data['Deviation'], array('deep' => true))) {
                 // debug($this->request->data);
                 if (isset($this->request->data['submitReport'])) {
@@ -493,6 +547,9 @@ class DeviationsController extends AppController
             throw new NotFoundException(__('Invalid deviation'));
         }
         if ($this->request->is('post') || $this->request->is('put')) {
+            if (!empty($this->request->data['Deviation']) && is_array($this->request->data['Deviation'])) {
+                $this->request->data['Deviation'] = $this->normalizeSponsorNotificationDates($this->request->data['Deviation']);
+            }
             if ($this->Deviation->saveMany($this->request->data['Deviation'], array('deep' => true))) {
                 // debug($this->request->data);
                 if (isset($this->request->data['submitReport'])) {
