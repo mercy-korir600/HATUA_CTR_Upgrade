@@ -1,6 +1,6 @@
 <?php
 App::uses('Hash', 'Utility');
-$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'amendment' => 'Amendments');
+$header = array('id' => '#', 'protocol_no' => 'ECCT Reference No.', 'amendment' => 'Amendments');
 echo implode(',', $header) . "\n";
 foreach ($applications as $application) :
     $content = '';

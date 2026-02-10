@@ -14,7 +14,7 @@
   <div class="row-fluid">
     <div class="span12">
       <dl class="dl-horizontal">
-        <dt>Protocol No.</dt>
+        <dt>ECCT Reference No.</dt>
         <dd><?php echo $application['Application']['protocol_no'];?></dd>
         <dt>Short Title</dt>
         <dd><?php echo $application['Application']['short_title'];?></dd>

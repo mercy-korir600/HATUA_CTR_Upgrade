@@ -26,7 +26,7 @@
              <thead>
                  <tr>
                      <th style="width:3%">#</th>
-                     <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+                     <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
                      <th style="width: 35%">Date </th>
                      <th style="width: 35%">Amendments </th>
                  </tr>

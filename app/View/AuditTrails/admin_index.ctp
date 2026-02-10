@@ -14,7 +14,7 @@
             <?php
             echo $this->Form->input('filter', array(
                 'div' => false, 'class' => 'span12 unauthorized_index',
-                'label' => array('class' => 'required', 'text' => 'Protocol No.'),
+                'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'),
                 'type' => 'text',
             ));
             ?>
@@ -87,7 +87,7 @@
         <thead>
             <tr>
                 <th><?php echo $this->Paginator->sort('id'); ?></th>
-                <th><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+                <th><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
                 <th><?php echo $this->Paginator->sort('message'); ?></th>
                 <th><?php echo $this->Paginator->sort('created'); ?></th>
                 <th class="actions"><?php echo __('Actions'); ?></th>

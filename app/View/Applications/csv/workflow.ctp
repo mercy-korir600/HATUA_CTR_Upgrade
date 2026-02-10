@@ -1,7 +1,7 @@
 <?php
 
 // app/Views/Subscribers/export.ctp
-$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'short_title' => 'Short Title', 'version_no' => 'Version No.', 'date_of_protocol' => 'Date of protocol', 
+$header = array('id' => '#', 'protocol_no' => 'ECCT Reference No.', 'short_title' => 'Short Title', 'version_no' => 'Version No.', 'date_of_protocol' => 'Date of protocol', 
 				'study_drug' => 'Study Drug', 
 				'application_stages' => 'Application stages'
             );

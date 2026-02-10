@@ -20,7 +20,7 @@
                 <thead>
                     <tr>
                         <th style="width:3%">#</th>
-                        <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+                        <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
                         <th style="width: 60%">Application Stages </th>
                         <th style="width: 10%">Date Submitted</th>
                         <th style="width: 10%">Date Approved</th>
@@ -122,7 +122,7 @@ echo $this->Html->image('cake.power.png', array('fullBase' => true, 'alt' => 'Ph
             <thead>
                 <tr>
                     <th style="width:3%">#</th>
-                    <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+                    <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
                     <th style="width: 70%">Application Stages </th>
                 </tr>
             </thead>

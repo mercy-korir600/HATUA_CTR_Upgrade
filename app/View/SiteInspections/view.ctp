@@ -11,7 +11,7 @@
 			<?php echo h($siteInspection['SiteInspection']['study_title']); ?>
 			&nbsp;
 		</dd>
-		<dt><?php echo __('Protocol No'); ?></dt>
+		<dt><?php echo __('ECCT Reference No'); ?></dt>
 		<dd>
 			<?php echo h($siteInspection['SiteInspection']['protocol_no']); ?>
 			&nbsp;

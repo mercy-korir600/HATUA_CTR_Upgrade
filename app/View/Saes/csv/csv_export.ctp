@@ -1,7 +1,7 @@
 <?php
 
 // app/Views/Subscribers/export.ctp
-$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'reference_no' => 'Reference No.', 'patient_initials' => 'Patient Initials', 'country_id' => 'Country', 'date_of_birth' => 'Date of Birth', 'age_years' => 'Age years', 'reaction_onset' => 'Reaction onset', 'duration' => 'Duration drug and SAE', 'gender' => 'Gender', 'adverse_reaction' => 'Adverse reaction', 'reaction_description' => 'Reaction description', 'suspected_drugs' => 'Suspected drugs', 'concomitant_drugs' => 'Concomitant drug', 'relevant_history' => 'History', 'manufacturer_name' => 'Manufacturer', 'mfr_no' => 'MFR Control No.', 'manufacturer_date' => 'Date received by manufacturer', 'report_source' => 'Report source', 'reporter_name' => 'Reporter name', 'reporter_phone' => 'Reporter phone', 'reporter_email' => 'Reporter email'
+$header = array('id' => '#', 'protocol_no' => 'ECCT Reference No.', 'reference_no' => 'Reference No.', 'patient_initials' => 'Patient Initials', 'country_id' => 'Country', 'date_of_birth' => 'Date of Birth', 'age_years' => 'Age years', 'reaction_onset' => 'Reaction onset', 'duration' => 'Duration drug and SAE', 'gender' => 'Gender', 'adverse_reaction' => 'Adverse reaction', 'reaction_description' => 'Reaction description', 'suspected_drugs' => 'Suspected drugs', 'concomitant_drugs' => 'Concomitant drug', 'relevant_history' => 'History', 'manufacturer_name' => 'Manufacturer', 'mfr_no' => 'MFR Control No.', 'manufacturer_date' => 'Date received by manufacturer', 'report_source' => 'Report source', 'reporter_name' => 'Reporter name', 'reporter_phone' => 'Reporter phone', 'reporter_email' => 'Reporter email'
             );
 
 

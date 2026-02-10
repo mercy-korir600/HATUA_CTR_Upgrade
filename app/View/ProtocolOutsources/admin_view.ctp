@@ -26,7 +26,7 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Protocol No.</th>
+              <th>ECCT Reference No.</th>
               <th>Task</th>
               <th>Created</th>
               <th><i class="icon-link"></i></th>

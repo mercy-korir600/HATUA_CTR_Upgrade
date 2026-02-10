@@ -3,7 +3,7 @@
 
 $header = array(
     'id' => '#',
-    'protocol_no' => 'Protocol No.',
+    'protocol_no' => 'ECCT Reference No.',
     'created' => 'Application Creation',
     'screening_stage' => 'Screening',
     'response_to_queries_stage' => 'Response to Queries',
@@ -16,7 +16,7 @@ $header = array(
     'approval_date' => 'Date Approved'
 );
 =======
-$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'stages' => 'Stages');
+$header = array('id' => '#', 'protocol_no' => 'ECCT Reference No.', 'stages' => 'Stages');
 >>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
 echo implode(',', $header) . "\n";
 foreach ($applications as $application) :

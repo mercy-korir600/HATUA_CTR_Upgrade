@@ -1,7 +1,7 @@
 <?php
 
 // app/Views/Subscribers/export.ctp
-$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'reference_no' => 'Reference No.', 'reporter_email' => 'Reporter email', 'basename' => 'Filename', 'created' => 'Creation date');
+$header = array('id' => '#', 'protocol_no' => 'ECCT Reference No.', 'reference_no' => 'Reference No.', 'reporter_email' => 'Reporter email', 'basename' => 'Filename', 'created' => 'Creation date');
 
 
 echo implode(',', $header)."\n";

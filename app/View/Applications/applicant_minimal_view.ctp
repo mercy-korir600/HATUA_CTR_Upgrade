@@ -37,7 +37,7 @@
              <hr>
             <table style="width: 100%;">
               <tr>
-                <td style="width: 25%;">Protocol No:</td>
+                <td style="width: 25%;">ECCT Reference No:</td>
                 <td style="width: 25%;"><strong><?php echo __($application['Application']['protocol_no'], true) ?></strong></td>
                 <td style="width: 25%;">Date of Protocol:</td>
                 <td style="width: 25%;"><strong><?php echo __($application['Application']['date_of_protocol'], true) ?></strong></td>

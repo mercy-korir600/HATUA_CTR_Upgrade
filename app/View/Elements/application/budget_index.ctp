@@ -48,7 +48,7 @@
               <th>
               <?php
                 echo $this->Form->input('protocol_no', array('div' => false, 'class' => 'span12 unauthorized_index',
-                  'label' => array('class' => 'required', 'text' => 'Protocol No.'),
+                  'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'),
                   'type' => 'text',
                   ));
               ?>

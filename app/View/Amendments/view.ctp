@@ -26,7 +26,7 @@
 			<?php echo h($amendment['Amendment']['study_title']); ?>
 			&nbsp;
 		</dd>
-		<dt><?php echo __('Protocol No'); ?></dt>
+		<dt><?php echo __('ECCT Reference No'); ?></dt>
 		<dd>
 			<?php echo h($amendment['Amendment']['protocol_no']); ?>
 			&nbsp;

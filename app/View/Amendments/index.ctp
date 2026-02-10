@@ -7,7 +7,7 @@
 			<th><?php echo $this->Paginator->sort('trial_status_id'); ?></th>
 			<th><?php echo $this->Paginator->sort('abstract_of_study'); ?></th>
 			<th><?php echo $this->Paginator->sort('study_title'); ?></th>
-			<th><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+			<th><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
 			<th><?php echo $this->Paginator->sort('version_no'); ?></th>
 			<th><?php echo $this->Paginator->sort('date_of_protocol'); ?></th>
 			<th><?php echo $this->Paginator->sort('study_drug'); ?></th>

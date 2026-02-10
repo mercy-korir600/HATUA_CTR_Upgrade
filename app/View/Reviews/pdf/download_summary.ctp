@@ -13,7 +13,7 @@
         <td><?php echo $application['Application']['short_title'];?></td>
       </tr>
       <tr>
-        <th class="my-well">Protocol No</th>
+        <th class="my-well">ECCT Reference No</th>
         <td><?php echo $application['Application']['protocol_no'];?></td>
       </tr>
       <tr>

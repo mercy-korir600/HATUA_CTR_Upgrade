@@ -75,7 +75,7 @@ $this->Html->script('save', array('inline' => false));
           'class' => 'input-xxlarge',
         ));
         // echo $this->Form->input('protocol_no', array(
-        // 'label' => array('class' => 'control-label required', 'text' => 'Protocol No:<span class="sterix">*</span>'),
+        // 'label' => array('class' => 'control-label required', 'text' => 'ECCT Reference No:<span class="sterix">*</span>'),
         // 'placeholder' => ' ' , 'class' => 'input-xxlarge',
         // ));
         echo $this->Form->input('version_no', array(

@@ -25,7 +25,7 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Protocol No.</th>
+            <th>ECCT Reference No.</th>
             <th>Created</th>
             <th><i class="icon-link"></i></th>
           </tr>
@@ -57,7 +57,7 @@
           <div class="span5">
           <?php
             echo $this->Form->input('protocol_no', array('div' => false, 'class' => 'span12 unauthorized_index',
-              'label' => array('class' => 'required', 'text' => 'Protocol No.'),
+              'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'),
               'type' => 'text',
               ));
           ?>
@@ -108,7 +108,7 @@
 	 <thead>
             <tr>
 		<th><?php echo $this->Paginator->sort('id'); ?></th>
-		<th><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+		<th><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
     <th><?php echo $this->Paginator->sort('study_title'); ?></th>
 		<th>Owner</th>
 		<th class="actions"><?php echo __('Actions'); ?></th>
