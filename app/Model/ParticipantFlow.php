@@ -11,7 +11,7 @@ class ParticipantFlow extends AppModel {
     public $filterArgs = array(
             'reference_no' => array('type' => 'like', 'encode' => true),
             'protocol_no' => array('type' => 'query', 'method' => 'findByProtocolNo', 'encode' => true),
-            'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'SiteInspection.created BETWEEN ? AND ?'),
+            'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'ParticipantFlow.created BETWEEN ? AND ?'),
         );
     public function makeRangeCondition($data = array()) {
             if(!empty($data['start_date'])) $start_date = date('Y-m-d', strtotime($data['start_date']));
@@ -32,6 +32,21 @@ class ParticipantFlow extends AppModel {
                 'fields' => array('id', 'id')
                     )));
             return $cond;
+    }
+
+    public function latestPerApplicationYearCondition($outerAlias = null) {
+            if (empty($outerAlias)) $outerAlias = $this->alias;
+
+            $tableName = $this->getDataSource()->fullTableName($this);
+
+            return $outerAlias . '.id = (
+                SELECT pf_latest.id
+                FROM ' . $tableName . ' pf_latest
+                WHERE pf_latest.application_id = ' . $outerAlias . '.application_id
+                  AND pf_latest.year = ' . $outerAlias . '.year
+                ORDER BY pf_latest.created DESC, pf_latest.id DESC
+                LIMIT 1
+            )';
     }
 /**
  * Validation rules

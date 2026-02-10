@@ -47,6 +47,680 @@ $actions = [
 $drugrecurreadministration = ['1' => 'Yes', '2' => 'No', '3' => 'Unknown'];
 $reporttype = ['1' => 'Spontaneous', '2' => 'Report from study', '3' => 'Other', '4' => 'Not available to sender (unknown)'];
 $qualification = ['1' => 'Physician', '2' => 'Pharmacist', '3' => 'Other Health Professional', '4' => 'Lawyer', '5' => 'Consumer or other non-health professional'];
+
+$isE2bR3 = !empty($isE2bR3);
+$ciomExtractionFields = !empty($ciomExtractionFields) ? $ciomExtractionFields : array();
+
+if ($isE2bR3) {
+    $reportedInformationRows = array();
+    $seenReportedRows = array();
+    $reportedMaxRows = 150;
+    $reportedSummary = array(
+      'Batch Number' => '',
+      'Message Identifier' => '',
+      'Case Identifier' => '',
+      'Message Sender' => '',
+      'Message Receiver' => '',
+      'Source Organization' => '',
+      'Company / MAH' => '',
+      'Source City' => '',
+      'Source Country' => '',
+      'First Received Date' => '',
+      'Most Recent Info Date' => '',
+      'Message Creation Date' => ''
+    );
+    $reportedCaseNarrative = '';
+
+    $patientProfile = array(
+      'Patient Initials/Name' => '',
+      'Sex' => ''
+    );
+    $patientObservationGroups = array();
+
+    $drugGroups = array();
+    $reactionGroups = array();
+
+    $firstNonEmpty = function ($values) {
+      foreach ((array) $values as $value) {
+        $value = trim((string) $value);
+        if ($value !== '') {
+          return $value;
+        }
+      }
+      return '';
+    };
+
+    $toBooleanState = function ($value) {
+      $value = strtolower(trim((string) $value));
+      if (in_array($value, array('true', '1', 'yes', 'y'), true)) {
+        return true;
+      }
+      if (in_array($value, array('false', '0', 'no', 'n'), true)) {
+        return false;
+      }
+      return null;
+    };
+
+    $booleanText = function ($value) {
+      if ($value === true) {
+        return 'Yes';
+      }
+      if ($value === false) {
+        return 'No';
+      }
+      return 'Unknown';
+    };
+
+    $formatE2bDate = function ($rawDate) {
+      $rawDate = trim((string) $rawDate);
+      if ($rawDate === '') {
+        return '';
+      }
+      if (preg_match('/^[0-9]{4}$/', $rawDate)) {
+        return $rawDate;
+      }
+      if (preg_match('/^[0-9]{6}$/', $rawDate)) {
+        return substr($rawDate, 0, 4) . '-' . substr($rawDate, 4, 2);
+      }
+      if (preg_match('/^[0-9]{8}$/', $rawDate)) {
+        return substr($rawDate, 0, 4) . '-' . substr($rawDate, 4, 2) . '-' . substr($rawDate, 6, 2);
+      }
+      return $rawDate;
+    };
+
+    $formatE2bTimestamp = function ($rawValue) use ($formatE2bDate) {
+      $rawValue = trim((string) $rawValue);
+      if ($rawValue === '') {
+        return '';
+      }
+      if (preg_match('/^([0-9]{14})([+-][0-9]{4})$/', $rawValue, $matches)) {
+        return substr($matches[1], 0, 4) . '-' .
+          substr($matches[1], 4, 2) . '-' .
+          substr($matches[1], 6, 2) . ' ' .
+          substr($matches[1], 8, 2) . ':' .
+          substr($matches[1], 10, 2) . ':' .
+          substr($matches[1], 12, 2) . ' ' . $matches[2];
+      }
+      if (preg_match('/^[0-9]{14}$/', $rawValue)) {
+        return substr($rawValue, 0, 4) . '-' .
+          substr($rawValue, 4, 2) . '-' .
+          substr($rawValue, 6, 2) . ' ' .
+          substr($rawValue, 8, 2) . ':' .
+          substr($rawValue, 10, 2) . ':' .
+          substr($rawValue, 12, 2);
+      }
+      return $formatE2bDate($rawValue);
+    };
+
+    $normalizeLabel = function ($field) {
+      $label = trim((string) $field['field_label']);
+      $path = trim((string) $field['field_path']);
+      $key = trim((string) $field['field_key']);
+
+      if (in_array(strtolower($key), array('value', '@value', '@code', '@extension', 'id', '@displayname'))) {
+        $segments = explode('/', trim($path, '/'));
+        for ($i = count($segments) - 1; $i >= 0; $i--) {
+          $segment = preg_replace('/\[[0-9]+\]/', '', $segments[$i]);
+          if ($segment === '' || strpos($segment, '@') === 0) {
+            continue;
+          }
+          $segmentLower = strtolower($segment);
+          if (in_array($segmentLower, array('value', 'code', 'id', 'effectivetime', 'low', 'high', 'statuscode', 'extension', 'root'))) {
+            continue;
+          }
+          $segment = preg_replace('/([a-z0-9])([A-Z])/', '$1 $2', $segment);
+          $segment = str_replace(array('_', '-'), ' ', $segment);
+          $label = ucwords(strtolower(trim($segment)));
+          break;
+        }
+      }
+
+      if ($label === '') {
+        $label = 'Field';
+      }
+      return $label;
+    };
+
+    foreach ($ciomExtractionFields as $row) {
+      if (empty($row['CiomExtractionField'])) {
+        continue;
+      }
+      $field = $row['CiomExtractionField'];
+      $fieldValue = trim((string) $field['field_value']);
+      if ($fieldValue === '') {
+        continue;
+      }
+
+      $fieldPath = strtolower((string) $field['field_path']);
+      $fieldKey = strtolower((string) $field['field_key']);
+      $isAttribute = (strpos($fieldKey, '@') === 0);
+
+      if ($fieldPath === '/mcci_in200100uv01[1]/id[1]/@extension') {
+        $reportedSummary['Batch Number'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/id[1]/@extension') {
+        $reportedSummary['Message Identifier'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/id[1]/@extension') {
+        $reportedSummary['Case Identifier'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/sender[1]/device[1]/id[1]/@extension') {
+        $reportedSummary['Message Sender'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/receiver[1]/device[1]/id[1]/@extension') {
+        $reportedSummary['Message Receiver'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/subjectof1[1]/controlactevent[1]/author[1]/assignedentity[1]/representedorganization[1]/name[1]') {
+        $reportedSummary['Source Organization'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/subjectof1[1]/controlactevent[1]/author[1]/assignedentity[1]/representedorganization[1]/assignedentity[1]/representedorganization[1]/name[1]') {
+        $reportedSummary['Company / MAH'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/subjectof1[1]/controlactevent[1]/author[1]/assignedentity[1]/addr[1]/city[1]') {
+        $reportedSummary['Source City'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/subjectof1[1]/controlactevent[1]/author[1]/assignedentity[1]/assignedperson[1]/aslocatedentity[1]/location[1]/code[1]/@code') {
+        $reportedSummary['Source Country'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/effectivetime[1]/low[1]/@value') {
+        $reportedSummary['First Received Date'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/availabilitytime[1]/@value') {
+        $reportedSummary['Most Recent Info Date'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/creationtime[1]/@value') {
+        $reportedSummary['Message Creation Date'] = $fieldValue;
+      } elseif ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/text[1]') {
+        $reportedCaseNarrative = $fieldValue;
+      }
+
+      if ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/component[1]/adverseeventassessment[1]/subject1[1]/primaryrole[1]/player1[1]/name[1]') {
+        $patientProfile['Patient Initials/Name'] = $fieldValue;
+      }
+      if ($fieldPath === '/mcci_in200100uv01[1]/porr_in049016uv[1]/controlactprocess[1]/subject[1]/investigationevent[1]/component[1]/adverseeventassessment[1]/subject1[1]/primaryrole[1]/player1[1]/administrativegendercode[1]/@code') {
+        $patientProfile['Sex'] = $fieldValue;
+      }
+
+      $patientObservationMatches = array();
+      if (preg_match('#/subjectof2\[1\]/organizer\[1\]/component\[(\d+)\]/observation\[1\]/(.+)$#i', $fieldPath, $patientObservationMatches)) {
+        $observationIndex = (int) $patientObservationMatches[1];
+        $patientSubPath = strtolower($patientObservationMatches[2]);
+        if (!isset($patientObservationGroups[$observationIndex])) {
+          $patientObservationGroups[$observationIndex] = array(
+            'meddra_code' => '',
+            'start_date' => ''
+          );
+        }
+        if ($patientSubPath === 'code[1]/@code') {
+          $patientObservationGroups[$observationIndex]['meddra_code'] = $fieldValue;
+        } elseif ($patientSubPath === 'effectivetime[1]/low[1]/@value') {
+          $patientObservationGroups[$observationIndex]['start_date'] = $fieldValue;
+        }
+      }
+
+      $reactionPathMatches = array();
+      if (preg_match('#^(.*?/subjectof2\[\d+\]/observation\[\d+\])/(.+)$#i', $fieldPath, $reactionPathMatches)) {
+        $reactionPath = $reactionPathMatches[1];
+        $reactionSubPath = strtolower($reactionPathMatches[2]);
+        if (!isset($reactionGroups[$reactionPath])) {
+          $reactionGroups[$reactionPath] = array(
+            'sequence' => !empty($field['sequence']) ? (int) $field['sequence'] : 999999,
+            'event_code' => '',
+            'meddra_code' => '',
+            'meddra_term' => '',
+            'start_date' => '',
+            'country_code' => '',
+            'outbound' => array()
+          );
+        } elseif (!empty($field['sequence']) && (int) $field['sequence'] < $reactionGroups[$reactionPath]['sequence']) {
+          $reactionGroups[$reactionPath]['sequence'] = (int) $field['sequence'];
+        }
+
+        if ($reactionSubPath === 'code[1]/@code') {
+          $reactionGroups[$reactionPath]['event_code'] = $fieldValue;
+        } elseif ($reactionSubPath === 'value[1]/@code') {
+          $reactionGroups[$reactionPath]['meddra_code'] = $fieldValue;
+        } elseif ($reactionSubPath === 'value[1]/@displayname') {
+          $reactionGroups[$reactionPath]['meddra_term'] = $fieldValue;
+        } elseif ($reactionSubPath === 'effectivetime[1]/low[1]/@value') {
+          $reactionGroups[$reactionPath]['start_date'] = $fieldValue;
+        } elseif ($reactionSubPath === 'location[1]/locatedentity[1]/locatedplace[1]/code[1]/@code') {
+          $reactionGroups[$reactionPath]['country_code'] = $fieldValue;
+        } else {
+          $outboundPathMatches = array();
+          if (preg_match('#^outboundrelationship2\[(\d+)\]/observation\[1\]/(.+)$#i', $reactionSubPath, $outboundPathMatches)) {
+            $outboundIndex = (int) $outboundPathMatches[1];
+            $outboundSubPath = strtolower($outboundPathMatches[2]);
+            if (!isset($reactionGroups[$reactionPath]['outbound'][$outboundIndex])) {
+              $reactionGroups[$reactionPath]['outbound'][$outboundIndex] = array(
+                'code' => '',
+                'value_attr' => '',
+                'value_code' => '',
+                'value_text' => ''
+              );
+            }
+            if ($outboundSubPath === 'code[1]/@code') {
+              $reactionGroups[$reactionPath]['outbound'][$outboundIndex]['code'] = $fieldValue;
+            } elseif ($outboundSubPath === 'value[1]/@value') {
+              $reactionGroups[$reactionPath]['outbound'][$outboundIndex]['value_attr'] = $fieldValue;
+            } elseif ($outboundSubPath === 'value[1]/@code') {
+              $reactionGroups[$reactionPath]['outbound'][$outboundIndex]['value_code'] = $fieldValue;
+            } elseif ($outboundSubPath === 'value[1]') {
+              $reactionGroups[$reactionPath]['outbound'][$outboundIndex]['value_text'] = $fieldValue;
+            }
+          }
+        }
+      }
+
+      $drugPathMatches = array();
+      if (preg_match('#^(.*?/subjectof2\[\d+\]/organizer\[\d+\]/component\[\d+\]/substanceadministration\[\d+\])/(.+)$#i', $fieldPath, $drugPathMatches)) {
+        $drugPath = $drugPathMatches[1];
+        $drugSubPath = strtolower($drugPathMatches[2]);
+        if (!isset($drugGroups[$drugPath])) {
+          $drugGroups[$drugPath] = array(
+            'sequence' => !empty($field['sequence']) ? (int) $field['sequence'] : 999999,
+            'medicinal_product_name' => '',
+            'active_substance_name' => '',
+            'strength_value' => '',
+            'strength_unit' => '',
+            'dosage_text' => '',
+            'interval_value' => '',
+            'interval_unit' => '',
+            'drug_start_date' => '',
+            'dosage_form' => '',
+            'indication_code' => '',
+            'indication_text' => '',
+            'auth_application_number' => '',
+            'holder_name' => '',
+            'authorisation_country' => '',
+            'drug_obtained_country' => ''
+          );
+        } elseif (!empty($field['sequence']) && (int) $field['sequence'] < $drugGroups[$drugPath]['sequence']) {
+          $drugGroups[$drugPath]['sequence'] = (int) $field['sequence'];
+        }
+
+        if ($drugSubPath === 'consumable[1]/instanceofkind[1]/kindofproduct[1]/name[1]') {
+          $drugGroups[$drugPath]['medicinal_product_name'] = $fieldValue;
+        } elseif ($drugSubPath === 'consumable[1]/instanceofkind[1]/kindofproduct[1]/ingredient[1]/ingredientsubstance[1]/name[1]') {
+          $drugGroups[$drugPath]['active_substance_name'] = $fieldValue;
+        } elseif ($drugSubPath === 'consumable[1]/instanceofkind[1]/kindofproduct[1]/ingredient[1]/quantity[1]/numerator[1]/@value') {
+          $drugGroups[$drugPath]['strength_value'] = $fieldValue;
+        } elseif ($drugSubPath === 'consumable[1]/instanceofkind[1]/kindofproduct[1]/ingredient[1]/quantity[1]/numerator[1]/@unit') {
+          $drugGroups[$drugPath]['strength_unit'] = $fieldValue;
+        } elseif ($drugSubPath === 'consumable[1]/instanceofkind[1]/kindofproduct[1]/asmanufacturedproduct[1]/subjectof[1]/approval[1]/id[1]/@extension') {
+          $drugGroups[$drugPath]['auth_application_number'] = $fieldValue;
+        } elseif ($drugSubPath === 'consumable[1]/instanceofkind[1]/kindofproduct[1]/asmanufacturedproduct[1]/subjectof[1]/approval[1]/holder[1]/role[1]/playingorganization[1]/name[1]') {
+          $drugGroups[$drugPath]['holder_name'] = $fieldValue;
+        } elseif ($drugSubPath === 'consumable[1]/instanceofkind[1]/kindofproduct[1]/asmanufacturedproduct[1]/subjectof[1]/approval[1]/author[1]/territorialauthority[1]/territory[1]/code[1]/@code') {
+          $drugGroups[$drugPath]['authorisation_country'] = $fieldValue;
+        } elseif ($drugSubPath === 'consumable[1]/instanceofkind[1]/subjectof[1]/productevent[1]/performer[1]/assignedentity[1]/representedorganization[1]/addr[1]/country[1]') {
+          $drugGroups[$drugPath]['drug_obtained_country'] = $fieldValue;
+        } elseif ($drugSubPath === 'outboundrelationship2[1]/substanceadministration[1]/text[1]') {
+          $drugGroups[$drugPath]['dosage_text'] = $fieldValue;
+        } elseif ($drugSubPath === 'outboundrelationship2[1]/substanceadministration[1]/effectivetime[1]/comp[1]/period[1]/@value') {
+          $drugGroups[$drugPath]['interval_value'] = $fieldValue;
+        } elseif ($drugSubPath === 'outboundrelationship2[1]/substanceadministration[1]/effectivetime[1]/comp[1]/period[1]/@unit') {
+          $drugGroups[$drugPath]['interval_unit'] = $fieldValue;
+        } elseif ($drugSubPath === 'outboundrelationship2[1]/substanceadministration[1]/effectivetime[1]/comp[2]/low[1]/@value') {
+          $drugGroups[$drugPath]['drug_start_date'] = $fieldValue;
+        } elseif ($drugSubPath === 'outboundrelationship2[1]/substanceadministration[1]/consumable[1]/instanceofkind[1]/kindofproduct[1]/formcode[1]/originaltext[1]') {
+          $drugGroups[$drugPath]['dosage_form'] = $fieldValue;
+        } elseif ($drugSubPath === 'inboundrelationship[1]/observation[1]/value[1]/@code') {
+          $drugGroups[$drugPath]['indication_code'] = $fieldValue;
+        } elseif ($drugSubPath === 'inboundrelationship[1]/observation[1]/value[1]/originaltext[1]') {
+          $drugGroups[$drugPath]['indication_text'] = $fieldValue;
+        }
+      }
+
+      $isPatientPath = (
+        strpos($fieldPath, '/subject1[1]/primaryrole[1]/player1') !== false ||
+        strpos($fieldPath, 'administrativegendercode') !== false ||
+        strpos($fieldPath, '/subjectof2[1]/organizer[1]/component[') !== false ||
+        strpos($fieldPath, 'patient') !== false
+      );
+      $isDrugPath = (strpos($fieldPath, 'substanceadministration') !== false);
+      $isReactionPath = (bool) preg_match('#/subjectof2\[(2|3|4|5|6)\]/observation\[1\]#', $fieldPath);
+
+      if (!$isPatientPath && !$isDrugPath && !$isReactionPath) {
+        if ($isAttribute && !in_array($fieldKey, array('@value', '@extension', '@displayname', '@code'))) {
+          continue;
+        }
+        $fingerprint = $field['field_path'] . '|' . $fieldValue;
+        if (isset($seenReportedRows[$fingerprint])) {
+          continue;
+        }
+        $seenReportedRows[$fingerprint] = true;
+        if (count($reportedInformationRows) >= $reportedMaxRows) {
+          continue;
+        }
+        $field['display_label'] = $normalizeLabel($field);
+        $reportedInformationRows[] = $field;
+      }
+    }
+
+    $genderLookup = array('1' => 'Male', '2' => 'Female', '0' => 'Unknown', '9' => 'Unknown');
+    if (!empty($patientProfile['Sex']) && isset($genderLookup[$patientProfile['Sex']])) {
+      $patientProfile['Sex'] = $patientProfile['Sex'] . ' (' . $genderLookup[$patientProfile['Sex']] . ')';
+    }
+
+    $patientObservationRows = array();
+    ksort($patientObservationGroups);
+    foreach ($patientObservationGroups as $observationIndex => $observationGroup) {
+      $patientObservationRows[] = array(
+        'observation_no' => $observationIndex,
+        'comment_meaning' => 'Relevant medical history and concurrent conditions (not including reaction/event)',
+        'meddra_code' => $observationGroup['meddra_code'],
+        'start_date' => $observationGroup['start_date']
+      );
+    }
+
+    $drugSummaries = array();
+    uasort($drugGroups, function ($left, $right) {
+      if ($left['sequence'] === $right['sequence']) {
+        return 0;
+      }
+      return ($left['sequence'] < $right['sequence']) ? -1 : 1;
+    });
+    foreach ($drugGroups as $drugGroup) {
+      if ($firstNonEmpty(array(
+        $drugGroup['medicinal_product_name'],
+        $drugGroup['active_substance_name'],
+        $drugGroup['dosage_text'],
+        $drugGroup['indication_code'],
+        $drugGroup['indication_text']
+      )) === '') {
+        continue;
+      }
+      $strength = trim(trim($drugGroup['strength_value']) . ' ' . trim($drugGroup['strength_unit']));
+      $interval = trim(trim($drugGroup['interval_value']) . ' ' . trim($drugGroup['interval_unit']));
+      $drugSummaries[] = array(
+        'medicinal_product_name' => $drugGroup['medicinal_product_name'],
+        'active_substance_name' => $drugGroup['active_substance_name'],
+        'strength' => $strength,
+        'dosage_text' => $drugGroup['dosage_text'],
+        'interval' => $interval,
+        'drug_start_date' => $drugGroup['drug_start_date'],
+        'dosage_form' => $drugGroup['dosage_form'],
+        'indication_code' => $drugGroup['indication_code'],
+        'indication_text' => $drugGroup['indication_text'],
+        'auth_application_number' => $drugGroup['auth_application_number'],
+        'holder_name' => $drugGroup['holder_name'],
+        'authorisation_country' => $drugGroup['authorisation_country'],
+        'drug_obtained_country' => $drugGroup['drug_obtained_country']
+      );
+    }
+
+    $reactionSummaries = array();
+    uasort($reactionGroups, function ($left, $right) {
+      if ($left['sequence'] === $right['sequence']) {
+        return 0;
+      }
+      return ($left['sequence'] < $right['sequence']) ? -1 : 1;
+    });
+    foreach ($reactionGroups as $reactionGroup) {
+      if (trim((string) $reactionGroup['event_code']) !== '29') {
+        continue;
+      }
+      $summary = array(
+        'meddra_code' => $reactionGroup['meddra_code'],
+        'meddra_term' => $reactionGroup['meddra_term'],
+        'start_date' => $reactionGroup['start_date'],
+        'country_code' => $reactionGroup['country_code'],
+        'reported_text' => '',
+        'outcome' => '',
+        'medical_confirmation' => null,
+        'seriousness' => array(
+          'death' => null,
+          'life_threatening' => null,
+          'hospitalisation' => null,
+          'disabling' => null,
+          'congenital' => null,
+          'other_medically_important' => null
+        )
+      );
+
+      if (!empty($reactionGroup['outbound'])) {
+        ksort($reactionGroup['outbound']);
+        foreach ($reactionGroup['outbound'] as $outboundItem) {
+          $detailCode = trim((string) $outboundItem['code']);
+          $valueAttr = trim((string) $outboundItem['value_attr']);
+          $valueCode = trim((string) $outboundItem['value_code']);
+          $valueText = trim((string) $outboundItem['value_text']);
+
+          if ($detailCode === '30') {
+            $summary['reported_text'] = $firstNonEmpty(array($valueText, $valueCode, $valueAttr));
+          } elseif ($detailCode === '27') {
+            $outcomeCode = $firstNonEmpty(array($valueCode, $valueAttr, $valueText));
+            $summary['outcome'] = isset($outcomes[$outcomeCode]) ? $outcomes[$outcomeCode] : $outcomeCode;
+          } elseif ($detailCode === '24') {
+            $summary['medical_confirmation'] = $toBooleanState($valueAttr);
+          } elseif ($detailCode === '34') {
+            $summary['seriousness']['death'] = $toBooleanState($valueAttr);
+          } elseif ($detailCode === '21') {
+            $summary['seriousness']['life_threatening'] = $toBooleanState($valueAttr);
+          } elseif ($detailCode === '33') {
+            $summary['seriousness']['hospitalisation'] = $toBooleanState($valueAttr);
+          } elseif ($detailCode === '35') {
+            $summary['seriousness']['disabling'] = $toBooleanState($valueAttr);
+          } elseif ($detailCode === '12') {
+            $summary['seriousness']['congenital'] = $toBooleanState($valueAttr);
+          } elseif ($detailCode === '26') {
+            $summary['seriousness']['other_medically_important'] = $toBooleanState($valueAttr);
+          }
+        }
+      }
+      $reactionSummaries[] = $summary;
+    }
+
+    $drugRowDefinitions = array(
+      array('label' => 'Medicinal Product Name (Primary Source)', 'key' => 'medicinal_product_name'),
+      array('label' => 'Substance/Specified Substance Name', 'key' => 'active_substance_name'),
+      array('label' => 'Strength (Number + Unit)', 'key' => 'strength'),
+      array('label' => 'Dosage Text', 'key' => 'dosage_text'),
+      array('label' => 'Number of Units in Interval + Time Unit', 'key' => 'interval'),
+      array('label' => 'Start Date of Drug', 'key' => 'drug_start_date'),
+      array('label' => 'Pharmaceutical Form', 'key' => 'dosage_form'),
+      array('label' => 'Indication (MedDRA code)', 'key' => 'indication_code'),
+      array('label' => 'Indication (Primary Source)', 'key' => 'indication_text'),
+      array('label' => 'Authorisation/Application Number', 'key' => 'auth_application_number'),
+      array('label' => 'Holder/Applicant Name', 'key' => 'holder_name'),
+      array('label' => 'Country of Authorisation/Application', 'key' => 'authorisation_country'),
+      array('label' => 'Country Where Drug Was Obtained', 'key' => 'drug_obtained_country')
+    );
+
+    $reactionRowDefinitions = array(
+      array('label' => 'Reaction/Event (MedDRA code)', 'key' => 'meddra_code', 'type' => 'text'),
+      array('label' => 'Reaction/Event Term', 'key' => 'meddra_term', 'type' => 'text'),
+      array('label' => 'Date of Start of Reaction/Event', 'key' => 'start_date', 'type' => 'date'),
+      array('label' => 'Country Where Reaction/Event Occurred', 'key' => 'country_code', 'type' => 'text'),
+      array('label' => 'Reaction/Event as Reported by Primary Source', 'key' => 'reported_text', 'type' => 'text'),
+      array('label' => 'Outcome of Reaction/Event', 'key' => 'outcome', 'type' => 'text'),
+      array('label' => 'Medical Confirmation by Healthcare Professional', 'key' => 'medical_confirmation', 'type' => 'bool'),
+      array('label' => 'Results in Death', 'key' => 'death', 'type' => 'seriousness_bool'),
+      array('label' => 'Life Threatening', 'key' => 'life_threatening', 'type' => 'seriousness_bool'),
+      array('label' => 'Caused/Prolonged Hospitalisation', 'key' => 'hospitalisation', 'type' => 'seriousness_bool'),
+      array('label' => 'Disabling/Incapacitating', 'key' => 'disabling', 'type' => 'seriousness_bool'),
+      array('label' => 'Congenital Anomaly/Birth Defect', 'key' => 'congenital', 'type' => 'seriousness_bool'),
+      array('label' => 'Other Medically Important Condition', 'key' => 'other_medically_important', 'type' => 'seriousness_bool')
+    );
+?>
+<div class="ciom-form">
+    <hr>
+    <h4 style="text-decoration: underline;"> <?php echo h($ciom['Application']['protocol_no']); ?> </h4>
+    <?php
+      echo $this->requestAction('/applications/study_title/'.$ciom['Ciom']['application_id']);
+      echo $this->Html->link(
+                $ciom['Ciom']['basename'],
+                str_replace('/var/www/ctr/app/webroot', '', $ciom['Ciom']['file']),
+                array('class' => 'button', 'target' => '_blank')
+            );
+    ?>
+    <h4 class="text-center" style="text-align: center; text-decoration: underline;">CIOMS E2B(R3)</h4>
+    <div class="alert alert-info">
+      <strong>Detected E2B(R3) message.</strong> Sections are mapped to E2B comment meanings.
+    </div>
+
+    <h4 style="margin-top: 20px;">Patient Information</h4>
+    <table class="table table-condensed table-bordered">
+      <thead><tr style="background: #DAEDF3;"><th style="width: 38%;">Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <?php foreach ($patientProfile as $profileLabel => $profileValue) { ?>
+          <?php if (trim((string) $profileValue) === '') { continue; } ?>
+          <tr>
+            <td><?php echo h($profileLabel); ?></td>
+            <td><?php echo h($profileValue); ?></td>
+          </tr>
+        <?php } ?>
+      </tbody>
+    </table>
+    <?php if (!empty($patientObservationRows)) { ?>
+      <table class="table table-condensed table-bordered">
+        <thead>
+          <tr style="background: #DAEDF3;">
+            <th style="width: 60%;">Comment Meaning</th>
+            <th style="width: 20%;">MedDRA Code</th>
+            <th style="width: 20%;">Start Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($patientObservationRows as $patientObservationRow) { ?>
+            <tr>
+              <td><?php echo h($patientObservationRow['comment_meaning']); ?></td>
+              <td><?php echo h($patientObservationRow['meddra_code']); ?></td>
+              <td><?php echo h($formatE2bDate($patientObservationRow['start_date'])); ?></td>
+            </tr>
+          <?php } ?>
+        </tbody>
+      </table>
+    <?php } else { ?>
+      <p class="muted">No patient observation rows detected.</p>
+    <?php } ?>
+
+    <h4>Drugs Section</h4>
+    <?php if (!empty($drugSummaries)) { ?>
+      <div class="table-responsive">
+        <table class="table table-condensed table-bordered">
+          <thead>
+            <tr style="background: #DAEDF3;">
+              <?php foreach ($drugRowDefinitions as $drugRowDefinition) { ?>
+                <th><?php echo h($drugRowDefinition['label']); ?></th>
+              <?php } ?>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($drugSummaries as $drugIndex => $drugSummary) { ?>
+              <tr>
+                <?php foreach ($drugRowDefinitions as $drugRowDefinition) { ?>
+                  <?php $drugValue = isset($drugSummary[$drugRowDefinition['key']]) ? $drugSummary[$drugRowDefinition['key']] : ''; ?>
+                  <?php if ($drugRowDefinition['key'] === 'drug_start_date') { $drugValue = $formatE2bDate($drugValue); } ?>
+                  <td><?php echo nl2br(h($drugValue)); ?></td>
+                <?php } ?>
+              </tr>
+            <?php } ?>
+          </tbody>
+        </table>
+      </div>
+    <?php } else { ?>
+      <p class="muted">No drug details detected in this E2B(R3) message.</p>
+    <?php } ?>
+
+    <h4>Reactions Section</h4>
+    <?php if (!empty($reactionSummaries)) { ?>
+      <div class="table-responsive">
+        <table class="table table-condensed table-bordered">
+          <thead>
+            <tr style="background: #DAEDF3;">
+              <?php foreach ($reactionRowDefinitions as $reactionRowDefinition) { ?>
+                <th><?php echo h($reactionRowDefinition['label']); ?></th>
+              <?php } ?>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($reactionSummaries as $reactionIndex => $reactionSummary) { ?>
+              <tr>
+                <?php foreach ($reactionRowDefinitions as $reactionRowDefinition) { ?>
+                  <?php
+                    $reactionCellValue = '';
+                    if ($reactionRowDefinition['type'] === 'seriousness_bool') {
+                      $reactionCellValue = isset($reactionSummary['seriousness'][$reactionRowDefinition['key']]) ? $reactionSummary['seriousness'][$reactionRowDefinition['key']] : null;
+                    } else {
+                      $reactionCellValue = isset($reactionSummary[$reactionRowDefinition['key']]) ? $reactionSummary[$reactionRowDefinition['key']] : '';
+                    }
+                  ?>
+                  <td>
+                    <?php if ($reactionRowDefinition['type'] === 'bool' || $reactionRowDefinition['type'] === 'seriousness_bool') { ?>
+                      <input type="checkbox" disabled="disabled" <?php echo ($reactionCellValue === true) ? 'checked="checked"' : ''; ?> />
+                      <?php echo h($booleanText($reactionCellValue)); ?>
+                    <?php } elseif ($reactionRowDefinition['type'] === 'date') { ?>
+                      <?php echo h($formatE2bDate($reactionCellValue)); ?>
+                    <?php } else { ?>
+                      <?php echo nl2br(h($reactionCellValue)); ?>
+                    <?php } ?>
+                  </td>
+                <?php } ?>
+              </tr>
+            <?php } ?>
+          </tbody>
+        </table>
+      </div>
+    <?php } else { ?>
+      <p class="muted">No reaction details detected in this E2B(R3) message.</p>
+    <?php } ?>
+
+    <h4>Reported Information</h4>
+    <?php
+      $hasReportedSummary = false;
+      foreach ($reportedSummary as $summaryValue) {
+        if (trim((string) $summaryValue) !== '') {
+          $hasReportedSummary = true;
+          break;
+        }
+      }
+      $hasNarrative = (trim((string) $reportedCaseNarrative) !== '');
+    ?>
+    <?php if ($hasReportedSummary) { ?>
+      <table class="table table-condensed table-bordered">
+        <thead><tr style="background: #DAEDF3;"><th style="width: 30%;">Field</th><th>Value</th></tr></thead>
+        <tbody>
+          <?php foreach ($reportedSummary as $summaryLabel => $summaryValue) { ?>
+            <?php if (trim((string) $summaryValue) === '') { continue; } ?>
+            <?php
+              $displaySummaryValue = $summaryValue;
+              if (in_array($summaryLabel, array('First Received Date', 'Most Recent Info Date'))) {
+                $displaySummaryValue = $formatE2bDate($summaryValue);
+              } elseif ($summaryLabel === 'Message Creation Date') {
+                $displaySummaryValue = $formatE2bTimestamp($summaryValue);
+              }
+            ?>
+            <tr>
+              <td><?php echo h($summaryLabel); ?></td>
+              <td><?php echo nl2br(h($displaySummaryValue)); ?></td>
+            </tr>
+          <?php } ?>
+        </tbody>
+      </table>
+    <?php } ?>
+
+    <?php if ($hasNarrative) { ?>
+      <h5>Case Narrative</h5>
+      <div class="well well-sm" style="white-space: normal; line-height: 1.6;">
+        <?php echo nl2br(h($reportedCaseNarrative)); ?>
+      </div>
+    <?php } ?>
+
+    <?php if (!empty($reportedInformationRows)) { ?>
+      <details style="margin-top: 10px;">
+        <summary><strong>Additional Extracted Details</strong></summary>
+        <table class="table table-condensed table-bordered" style="margin-top: 8px;">
+          <thead><tr style="background: #DAEDF3;"><th style="width: 30%;">Field</th><th>Value</th></tr></thead>
+          <tbody>
+            <?php foreach ($reportedInformationRows as $reportedInformationRow) { ?>
+              <tr>
+                <td><?php echo h($reportedInformationRow['display_label']); ?></td>
+                <td><?php echo nl2br(h($reportedInformationRow['field_value'])); ?></td>
+              </tr>
+            <?php } ?>
+          </tbody>
+        </table>
+      </details>
+    <?php } ?>
+
+    <?php if (!$hasReportedSummary && !$hasNarrative && empty($reportedInformationRows)) { ?>
+      <p class="muted">No reported information detected in this E2B(R3) message.</p>
+    <?php } ?>
+</div>
+<?php
+    return;
+}
 ?>
 
 <div class="ciom-form">    

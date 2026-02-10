@@ -27,8 +27,16 @@ class ParticipantFlowsController extends AppController {
             else $this->paginate['limit'] = reset($page_options);
 
         $criteria = $this->ParticipantFlow->parseCriteria($this->passedArgs);
-        $this->paginate['conditions'] = $criteria;
-        $this->paginate['order'] = array('ParticipantFlow.created' => 'desc');
+        $conditions = array(
+            $this->ParticipantFlow->latestPerApplicationYearCondition('ParticipantFlow')
+        );
+        if (!empty($criteria)) $conditions[] = $criteria;
+        $this->paginate['conditions'] = $conditions;
+        $this->paginate['order'] = array(
+            'ParticipantFlow.year' => 'desc',
+            'ParticipantFlow.created' => 'desc',
+            'ParticipantFlow.id' => 'desc',
+        );
         $this->paginate['contain'] = array('Application');
         //in case of csv export
         if (isset($this->request->params['ext']) && $this->request->params['ext'] == 'csv') {
@@ -81,9 +89,26 @@ class ParticipantFlowsController extends AppController {
  */
     public function applicant_add() {
         if ($this->request->is('post')) {
+            $year = isset($this->request->data['ParticipantFlow']['year']) ? $this->request->data['ParticipantFlow']['year'] : null;
+            $applicationId = isset($this->request->data['ParticipantFlow']['application_id']) ? $this->request->data['ParticipantFlow']['application_id'] : null;
+            $existingYearEntries = 0;
+            if (!empty($applicationId) && !empty($year)) {
+                $existingYearEntries = $this->ParticipantFlow->find('count', array(
+                    'conditions' => array(
+                        'ParticipantFlow.application_id' => $applicationId,
+                        'ParticipantFlow.year' => $year,
+                    ),
+                    'recursive' => -1,
+                ));
+            }
+
             $this->ParticipantFlow->create();
             if ($this->ParticipantFlow->save($this->request->data)) {
-                $this->Session->setFlash(__('The participant flow has been saved'), 'alerts/flash_success');
+                if ($existingYearEntries > 0) {
+                    $this->Session->setFlash(__('The participant flow has been saved. '), 'alerts/flash_success');
+                } else {
+                    $this->Session->setFlash(__('The participant flow has been saved'), 'alerts/flash_success');
+                }
                 $this->redirect($this->referer());
             } else {
                 $this->Session->setFlash(__('The participant flow could not be saved. Please, try again.'), 'alerts/flash_error');

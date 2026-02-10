@@ -146,7 +146,19 @@ $formatReviewSummary = function ($content) {
                 }
                 ?></td>
             <td><?php echo $rreview['status'] . "<br>" . $rreview['type'] ?></td>
-            <td><?php echo $rreview['User']['name']; ?></td>
+            <td>
+              <?php
+                if (!empty($rreview['User']['name'])) {
+                  echo h($rreview['User']['name']);
+                } elseif (!empty($rreview['User']['username'])) {
+                  echo h($rreview['User']['username']);
+                } elseif (!empty($rreview['user_id'])) {
+                  echo 'Reviewer #' . (int) $rreview['user_id'];
+                } else {
+                  echo 'Reviewer';
+                }
+              ?>
+            </td>
             <td><?php echo $rreview['created'] ?></td>
             <td>
               <?php

@@ -2240,12 +2240,44 @@ class ApplicationsController extends AppController
                 'ReviewAnswer' => array(
                     'fields' => array('ReviewAnswer.id', 'ReviewAnswer.question_number', 'ReviewAnswer.question', 'ReviewAnswer.answer', 'ReviewAnswer.workspace', 'ReviewAnswer.comment'),
                     'order' => array('ReviewAnswer.question_number' => 'ASC', 'ReviewAnswer.id' => 'ASC')
-                )
+                ),
+                'InternalComment' => array('Attachment')
             ),
             'order' => array('Review.created' => 'ASC', 'Review.id' => 'ASC')
         ));
 
+        $missingUserIds = array();
         foreach ($reviewResponses as $reviewResponse) {
+            if (empty($reviewResponse['User']['name']) && !empty($reviewResponse['Review']['user_id'])) {
+                $missingUserIds[] = (int) $reviewResponse['Review']['user_id'];
+            }
+        }
+
+        $reviewerNameLookup = array();
+        if (!empty($missingUserIds)) {
+            $missingUserIds = array_values(array_unique($missingUserIds));
+            $userRows = $this->Review->User->find('all', array(
+                'conditions' => array('User.id' => $missingUserIds),
+                'fields' => array('User.id', 'User.name', 'User.username'),
+                'contain' => array()
+            ));
+            foreach ($userRows as $userRow) {
+                $displayName = trim((string) $userRow['User']['name']);
+                if ($displayName === '') {
+                    $displayName = trim((string) $userRow['User']['username']);
+                }
+                if ($displayName !== '') {
+                    $reviewerNameLookup[(int) $userRow['User']['id']] = $displayName;
+                }
+            }
+        }
+
+        foreach ($reviewResponses as $reviewResponse) {
+            $reviewUserId = !empty($reviewResponse['Review']['user_id']) ? (int) $reviewResponse['Review']['user_id'] : 0;
+            if ($reviewUserId > 0 && empty($reviewResponse['User']['name']) && !empty($reviewerNameLookup[$reviewUserId])) {
+                $reviewResponse['User']['name'] = $reviewerNameLookup[$reviewUserId];
+            }
+
             $feedbackAnswers = array();
             foreach ($reviewResponse['ReviewAnswer'] as $answer) {
                 $hasAnswer = trim((string) $answer['answer']) !== '';

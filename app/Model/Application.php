@@ -371,7 +371,12 @@ class Application extends AppModel
         'ParticipantFlow' => array(
             'className' => 'ParticipantFlow',
             'foreignKey' => 'application_id',
-            'dependent' => false
+            'dependent' => false,
+            'order' => array(
+                'ParticipantFlow.year' => 'DESC',
+                'ParticipantFlow.created' => 'DESC',
+                'ParticipantFlow.id' => 'DESC',
+            ),
         ),
         'Budget' => array(
             'className' => 'Budget',

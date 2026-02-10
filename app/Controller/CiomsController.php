@@ -161,8 +161,53 @@ class CiomsController extends AppController {
         //     );
         //     $this->set($params);
         // }        
+	    }
+
+    private function _runExtractionForCiom($ciomId, $xmlContent) {
+        try {
+            return $this->Ciom->rebuildE2bExtraction($ciomId, $xmlContent);
+        } catch (Exception $e) {
+            $this->log(
+                sprintf('CIOM extraction failed for #%s: %s', (int) $ciomId, $e->getMessage()),
+                'error'
+            );
+            return array('saved' => 0, 'is_r3' => false, 'version' => null, 'error' => 'exception');
+        }
     }
 
+    private function _prepareCiomViewPayload($ciom) {
+        $e2b = array();
+        $parseError = false;
+
+        try {
+            $e2b = Xml::toArray(Xml::build($ciom['Ciom']['e2b_content']));
+        } catch (Exception $e) {
+            $parseError = true;
+            $this->log(
+                sprintf('Unable to parse CIOM XML #%s: %s', (int) $ciom['Ciom']['id'], $e->getMessage()),
+                'error'
+            );
+        }
+
+        $isE2bR3 = $this->Ciom->isE2bR3($ciom['Ciom']['e2b_content']);
+        $ciomExtractionFields = $this->Ciom->getExtractionRows($ciom['Ciom']['id']);
+
+        // Backfill extraction for legacy uploads that were saved before extraction support.
+        if (empty($ciomExtractionFields)) {
+            $this->_runExtractionForCiom($ciom['Ciom']['id'], $ciom['Ciom']['e2b_content']);
+            $ciomExtractionFields = $this->Ciom->getExtractionRows($ciom['Ciom']['id']);
+        }
+
+        if ($parseError && empty($ciomExtractionFields)) {
+            $this->Session->setFlash(
+                __('Unable to parse CIOM XML content for display.'),
+                'alerts/flash_error'
+            );
+        }
+
+        $this->set(compact('ciom', 'e2b', 'isE2bR3', 'ciomExtractionFields'));
+    }
+	
     public function applicant_view($id = null) {
         $this->Ciom->id = $id;
         if (!$this->Ciom->exists()) {
@@ -174,9 +219,8 @@ class CiomsController extends AppController {
                 $this->Session->setFlash(__('You don\'t have permission to access!!'), 'alerts/flash_error');
                 $this->redirect('/');
         }
-        
-        $e2b = Xml::toArray(Xml::build($ciom['Ciom']['e2b_content']));
-        $this->set(compact('ciom', 'e2b'));
+
+        $this->_prepareCiomViewPayload($ciom);
 
         if (strpos($this->request->url, 'pdf') !== false) {
             $this->pdfConfig = array('filename' => 'CIOM_' . $id,  'orientation' => 'portrait');
@@ -193,9 +237,8 @@ class CiomsController extends AppController {
                 $this->Session->setFlash(__('You don\'t have permission to access!!'), 'alerts/flash_error');
                 $this->redirect('/');
         }
-        
-        $e2b = Xml::toArray(Xml::build($ciom['Ciom']['e2b_content']));
-		$this->set(compact('ciom', 'e2b'));
+
+        $this->_prepareCiomViewPayload($ciom);
 
         if (strpos($this->request->url, 'pdf') !== false) {
             $this->pdfConfig = array('filename' => 'CIOM_' . $id,  'orientation' => 'portrait');
@@ -212,9 +255,8 @@ class CiomsController extends AppController {
         //         $this->Session->setFlash(__('You don\'t have permission to access!!'), 'alerts/flash_error');
         //         $this->redirect('/');
         // }
-        
-        $e2b = Xml::toArray(Xml::build($ciom['Ciom']['e2b_content']));
-		$this->set(compact('ciom', 'e2b'));
+
+        $this->_prepareCiomViewPayload($ciom);
 
         if (strpos($this->request->url, 'pdf') !== false) {
             $this->pdfConfig = array('filename' => 'CIOM_' . $id,  'orientation' => 'portrait');
@@ -226,12 +268,15 @@ class CiomsController extends AppController {
 			throw new NotFoundException(__('Invalid ciom'), 'alerts/flash_error');
 		}
 		$ciom = $this->Ciom->read(null, $id);
-        if( strpos($ciom['Ciom']['basename'], 'xml') !== false ) {
-            $this->Session->setFlash(__('Invalid E2B file. Unable to parse content!!'), 'alerts/flash_error');
-            $e2b = Xml::toArray(Xml::build($ciom['Ciom']['e2b_content']));
-            $this->set(compact('ciom', 'e2b'));
-        } else {
+        if (stripos($ciom['Ciom']['basename'], 'xml') === false) {
             $this->redirect($this->referer());
+            return;
+        }
+
+        $this->_prepareCiomViewPayload($ciom);
+
+        if (strpos($this->request->url, 'pdf') !== false) {
+            $this->pdfConfig = array('filename' => 'CIOM_' . $id,  'orientation' => 'portrait');
         }
 		
     }
@@ -256,6 +301,7 @@ class CiomsController extends AppController {
             $this->request->data['Ciom']['e2b_content'] = $file->read();
 
             if ($this->Ciom->save($this->request->data)) {
+                $this->_runExtractionForCiom($this->Ciom->id, $this->request->data['Ciom']['e2b_content']);
                 $this->Session->setFlash(__('The ciom has been saved'), 'alerts/flash_success');
                 $this->redirect(array('action' => 'view', $this->Ciom->id));
             } else {
@@ -277,6 +323,7 @@ class CiomsController extends AppController {
             $this->request->data['Ciom']['e2b_content'] = $file->read();
 
 			if ($this->Ciom->save($this->request->data)) {
+                $this->_runExtractionForCiom($this->Ciom->id, $this->request->data['Ciom']['e2b_content']);
 				$this->Session->setFlash(__('The ciom has been saved'), 'alerts/flash_success');
 				$this->redirect(array('action' => 'view', $this->Ciom->id));
 			} else {
@@ -298,6 +345,7 @@ class CiomsController extends AppController {
             $this->request->data['Ciom']['e2b_content'] = $file->read();
 
 			if ($this->Ciom->save($this->request->data)) {
+                $this->_runExtractionForCiom($this->Ciom->id, $this->request->data['Ciom']['e2b_content']);
 				$this->Session->setFlash(__('The ciom has been saved'), 'alerts/flash_success');
 				$this->redirect(array('action' => 'view', $this->Ciom->id));
 			} else {

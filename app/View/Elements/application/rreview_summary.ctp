@@ -105,8 +105,60 @@ $(function() {
     return;
   }
 
+  function formatAssessmentSummaryForEditor(content) {
+    content = $.trim(content || '');
+    if (!content) {
+      return content;
+    }
+
+    if (/<\s*(p|ul|ol|li|br|div|strong|em|span|h[1-6]|table|blockquote)\b/i.test(content)) {
+      return content;
+    }
+
+    var lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    var blocks = [];
+    var current = [];
+
+    $.each(lines, function(_, line) {
+      line = $.trim(line);
+      if (!line) {
+        if (current.length) {
+          blocks.push(current);
+          current = [];
+        }
+        return;
+      }
+      current.push(line);
+    });
+    if (current.length) {
+      blocks.push(current);
+    }
+    if (!blocks.length) {
+      return content;
+    }
+
+    var html = [];
+    $.each(blocks, function(_, block) {
+      var question = block.shift() || '';
+      var response = $.trim(block.join('\n'));
+
+      if (question) {
+        html.push('<p>' + CKEDITOR.tools.htmlEncode(question) + '</p>');
+      }
+      if (response) {
+        html.push('<p>' + CKEDITOR.tools.htmlEncode(response).replace(/\n/g, '<br>') + '</p>');
+      }
+      html.push('<p>&nbsp;</p>');
+    });
+
+    return html.join('');
+  }
+
   $('.rreview-summary-editor').each(function() {
     if (this.id && !CKEDITOR.instances[this.id]) {
+      if ((this.name || '').indexOf('[summary]') !== -1) {
+        this.value = formatAssessmentSummaryForEditor(this.value);
+      }
       CKEDITOR.replace(this.id);
     }
   });

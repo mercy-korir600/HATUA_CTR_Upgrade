@@ -719,13 +719,40 @@ class ReviewsController extends AppController
                     $this->Review->saveField('status', 'Submitted');
                     // $results = Hash::extract($this->request->data['Review'], '{n}.ReviewAnswer.{n}.comment');
                     $results = '';
-                    $nyabola = $this->Review->ReviewAnswer->find('list', array('conditions' => array('review_id' => $this->Review->id), 'fields' => array('question', 'comment')));
-                    foreach ($nyabola as $lenny => $timko) {
-                        if (!empty($timko)) {
-                            $results .= $lenny . "\n";
-                            $results .= $timko . "\n\n";
+                    $answers = $this->Review->ReviewAnswer->find('all', array(
+                        'conditions' => array('review_id' => $this->Review->id),
+                        'fields' => array('question_type', 'question', 'answer', 'workspace', 'comment'),
+                        'order' => array('ReviewAnswer.id' => 'ASC'),
+                        'contain' => array()
+                    ));
+                    foreach ($answers as $entry) {
+                        $answer = $entry['ReviewAnswer'];
+                        $question = trim((string) $answer['question']);
+                        $response = '';
+
+                        if ($answer['question_type'] === 'comment') {
+                            $response = trim((string) $answer['comment']);
+                        } elseif ($answer['question_type'] === 'workspace') {
+                            $response = trim((string) $answer['workspace']);
+                        } elseif ($answer['question_type'] === 'yesno' || $answer['question_type'] === 'text') {
+                            $response = trim((string) $answer['answer']);
+                        }
+
+                        if ($response === '') {
+                            foreach (array('answer', 'workspace', 'comment') as $field) {
+                                if (trim((string) $answer[$field]) !== '') {
+                                    $response = trim((string) $answer[$field]);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if ($question !== '' && $response !== '') {
+                            $results .= $question . "\n";
+                            $results .= $response . "\n\n";
                         }
                     }
+                    $results = trim($results);
                     // foreach ($this->request->data['Review'] as $ansa) {
                     //     foreach ($ansa as $key => $value) {
                     //         $results .= $value['question']."\n";
