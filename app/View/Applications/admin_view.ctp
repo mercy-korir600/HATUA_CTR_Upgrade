@@ -209,6 +209,7 @@ $this->Html->css('bootstrap-editable', null, array('inline' => false));
 
         <div class="span6">
         <h4 class="text-success">Assigned Internal Reviewers (<?php echo $count_internal_reviews; ?>)</h4>
+        <p><small class="muted">Assign one internal reviewer at a time. The next assignment unlocks only after the previous reviewer submits assessment feedback.</small></p>
         <hr>
           <?php
           echo $this->Form->create(
@@ -255,9 +256,9 @@ $this->Html->css('bootstrap-editable', null, array('inline' => false));
             }
 
             if (!$responded) {
-              echo '<label class="checkbox" style="color: #333333">';
-              echo $this->Form->checkbox($counter . '.Review.user_id', array('hiddenField' => false, 'value' => $user_id));
-              echo $user;
+              echo '<label class="radio" style="color: #333333">';
+              echo '<input type="radio" name="data[Review][user_id]" value="' . (int) $user_id . '"> ';
+              echo h($user);
               echo '</label>';
               // echo $this->Form->input('Reviewer.'.$counter.'.application_id', array('type' => 'hidden', 'value' => $application['Application']['id']));
             }

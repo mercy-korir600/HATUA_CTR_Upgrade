@@ -2146,6 +2146,7 @@ class ApplicationsController extends AppController
         if (!$this->Application->exists()) {
             throw new NotFoundException(__('Invalid application'));
         }
+        $this->set('priorInternalFeedback', array());
  
         $my_applications = $this->Application->Review->find('list', array(
             'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request',  'Review.application_id' => $id),
@@ -2163,8 +2164,10 @@ class ApplicationsController extends AppController
                 'conditions' => array('Application.id' => $id),
                 'contain' => $contains
             ));
+            $priorInternalFeedback = $this->_buildPriorInternalFeedback($id, (int) $this->Auth->User('id'));
             $this->set('counties', $this->Application->SiteDetail->County->find('list'));
             $this->set('application', $application);
+            $this->set('priorInternalFeedback', $priorInternalFeedback);
             if ($application['Application']['deactivated']) {
                 $this->render('reviewer_minimal_view');
             }
@@ -2189,6 +2192,77 @@ class ApplicationsController extends AppController
         if (strpos($this->request->url, 'pdf') !== false) {
             $this->pdfConfig = array('filename' => 'Application_' . $id,  'orientation' => 'portrait');
         }
+    }
+
+    private function _buildPriorInternalFeedback($applicationId, $currentUserId)
+    {
+        $this->loadModel('Review');
+        $priorFeedback = array();
+
+        $currentInternalRequest = $this->Review->find('first', array(
+            'conditions' => array(
+                'Review.application_id' => $applicationId,
+                'Review.type' => 'request',
+                'Review.category' => 1,
+                'Review.user_id' => $currentUserId
+            ),
+            'fields' => array('Review.id'),
+            'order' => array('Review.created' => 'ASC', 'Review.id' => 'ASC'),
+            'contain' => array()
+        ));
+        if (empty($currentInternalRequest['Review']['id'])) {
+            return $priorFeedback;
+        }
+
+        $previousInternalUsers = $this->Review->find('list', array(
+            'conditions' => array(
+                'Review.application_id' => $applicationId,
+                'Review.type' => 'request',
+                'Review.category' => 1,
+                'Review.id <' => $currentInternalRequest['Review']['id']
+            ),
+            'fields' => array('Review.user_id', 'Review.user_id'),
+            'contain' => array()
+        ));
+        if (empty($previousInternalUsers)) {
+            return $priorFeedback;
+        }
+
+        $reviewResponses = $this->Review->find('all', array(
+            'conditions' => array(
+                'Review.application_id' => $applicationId,
+                'Review.user_id' => array_values(array_unique($previousInternalUsers)),
+                'Review.type' => 'reviewer_comment'
+            ),
+            'fields' => array('Review.id', 'Review.user_id', 'Review.assessment_type', 'Review.status', 'Review.summary', 'Review.created'),
+            'contain' => array(
+                'User' => array('fields' => array('User.id', 'User.name', 'User.username')),
+                'ReviewAnswer' => array(
+                    'fields' => array('ReviewAnswer.id', 'ReviewAnswer.question_number', 'ReviewAnswer.question', 'ReviewAnswer.answer', 'ReviewAnswer.workspace', 'ReviewAnswer.comment'),
+                    'order' => array('ReviewAnswer.question_number' => 'ASC', 'ReviewAnswer.id' => 'ASC')
+                )
+            ),
+            'order' => array('Review.created' => 'ASC', 'Review.id' => 'ASC')
+        ));
+
+        foreach ($reviewResponses as $reviewResponse) {
+            $feedbackAnswers = array();
+            foreach ($reviewResponse['ReviewAnswer'] as $answer) {
+                $hasAnswer = trim((string) $answer['answer']) !== '';
+                $hasWorkspace = trim((string) $answer['workspace']) !== '';
+                $hasComment = trim((string) $answer['comment']) !== '';
+                if ($hasAnswer || $hasWorkspace || $hasComment) {
+                    $feedbackAnswers[] = $answer;
+                }
+            }
+
+            if (!empty($feedbackAnswers) || trim((string) $reviewResponse['Review']['summary']) !== '') {
+                $reviewResponse['FeedbackAnswer'] = $feedbackAnswers;
+                $priorFeedback[] = $reviewResponse;
+            }
+        }
+
+        return $priorFeedback;
     }
 
     public function admin_view($id = null)

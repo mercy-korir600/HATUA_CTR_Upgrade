@@ -109,6 +109,54 @@
     <div class="tab-pane" id="tab2">
       <div class="row-fluid">
         <div class="span12">
+          <?php if (!empty($priorInternalFeedback)) { ?>
+            <div class="alert alert-info">
+              Previous internal reviewer feedback is shown below. Please review it before adding your own assessment comments.
+            </div>
+            <?php foreach ($priorInternalFeedback as $feedback) { ?>
+              <div class="well" style="margin-bottom: 12px;">
+                <h5 style="margin-top: 0;">
+                  <?php echo h($feedback['User']['name']); ?> -
+                  <?php echo h(ucfirst($feedback['Review']['assessment_type'])); ?> Assessment
+                  <small class="muted">
+                    (<?php echo h($feedback['Review']['status']); ?>, <?php echo date('d-m-Y H:i', strtotime($feedback['Review']['created'])); ?>)
+                  </small>
+                </h5>
+                <?php if (!empty($feedback['Review']['summary'])) { ?>
+                  <p>
+                    <strong>Summary:</strong><br>
+                    <?php echo nl2br(h($feedback['Review']['summary'])); ?>
+                  </p>
+                <?php } ?>
+                <?php if (!empty($feedback['FeedbackAnswer'])) { ?>
+                  <table class="table table-bordered table-condensed">
+                    <thead>
+                      <tr>
+                        <th style="width: 45%;">Question</th>
+                        <th>Response</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($feedback['FeedbackAnswer'] as $answer) { ?>
+                        <tr>
+                          <td><?php echo h($answer['question']); ?></td>
+                          <td>
+                            <?php
+                              $responseParts = array();
+                              if (trim((string) $answer['answer']) !== '') $responseParts[] = '<strong>Answer:</strong> ' . h($answer['answer']);
+                              if (trim((string) $answer['workspace']) !== '') $responseParts[] = '<strong>Workspace:</strong> ' . nl2br(h($answer['workspace']));
+                              if (trim((string) $answer['comment']) !== '') $responseParts[] = '<strong>Comment:</strong> ' . nl2br(h($answer['comment']));
+                              echo implode('<br>', $responseParts);
+                            ?>
+                          </td>
+                        </tr>
+                      <?php } ?>
+                    </tbody>
+                  </table>
+                <?php } ?>
+              </div>
+            <?php } ?>
+          <?php } ?>
           <?php echo $this->element('application/review'); ?>
         </div>
       </div>
@@ -157,8 +205,8 @@
             if(!empty($var)) $rid = min($var);
        ?>
         <ul id="reviewer_tab" class="nav nav-tabs">
-          <li class="active"><a href="#external_rev_comments">PI Comments (<?php echo count($rid['ExternalComment']); ?>)</a></li>
-          <?php if($redir !== 'applicant') { ?><li><a href="#internal_rev_comments">Internal Comments (<?php echo count($rid['InternalComment']); ?>)</a></li> <?php } ?>
+          <li class="active"><a href="#external_rev_comments" data-toggle="tab">PI Comments (<?php echo count($rid['ExternalComment']); ?>)</a></li>
+          <?php if($redir !== 'applicant') { ?><li><a href="#internal_rev_comments" data-toggle="tab">Internal Comments (<?php echo count($rid['InternalComment']); ?>)</a></li> <?php } ?>
         </ul>
 
         <div class="tab-content">
@@ -241,31 +289,33 @@ $(function() {
       }
   });
 
-  //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
-  //from mcaz
-  $('#reviewer_tab a').click(function (e) {
+  var $reviewerTabs = $('#reviewer_tab a[data-toggle="tab"]');
+  $reviewerTabs.off('.assessmentTabs');
+  $reviewerTabs.on('click.assessmentTabs', function (e) {
       e.preventDefault();
       $(this).tab('show');
   });
 
-  $('#reviewer_tab a').on("shown", function (e) {
+  $reviewerTabs.on("shown.assessmentTabs shown.bs.tab.assessmentTabs", function (e) {
       var id = $(e.target).attr("href");
       localStorage.setItem('assessmentTab', id)
   });
 
   var assessmentTab = localStorage.getItem('assessmentTab');
-  if (assessmentTab != null) {
-      // console.log("select tab");
-      // console.log($('#reviewer_tab a[href="' + assessmentTab + '"]'));
-      $('#reviewer_tab a[href="' + assessmentTab + '"]').tab('show');
+  if (assessmentTab != null && $reviewerTabs.filter('[href="' + assessmentTab + '"]').length) {
+      $reviewerTabs.filter('[href="' + assessmentTab + '"]').tab('show');
   }
 
-  var hashaTab = $('#reviewer_tab a[href="' + location.hash + '"]');
+  var hashaTab = $reviewerTabs.filter('[href="' + location.hash + '"]');
   hashaTab && hashaTab.tab('show');
 
-  $(".morecontent").expander();
-  $('#ReviewText').ckeditor();
-  $('#ReviewRecommendation').ckeditor();
+  if ($.fn.expander) {
+      $(".morecontent").expander();
+  }
+  if ($.fn.ckeditor) {
+      $('#ReviewText').ckeditor();
+      $('#ReviewRecommendation').ckeditor();
+  }
 });
 </script>
 <?php $this->end();?>

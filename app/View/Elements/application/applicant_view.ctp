@@ -2641,27 +2641,36 @@
 <?php echo $this->fetch('endjs');  ?>
 
 <script text="type/javascript">
-  $.expander.defaults.slicePoint = 170;
   $(function() {
-    //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
-    //from mcaz
-    $('a[data-toggle="tab"]').click(function(e) {
+    if ($.expander && $.expander.defaults) {
+      $.expander.defaults.slicePoint = 170;
+    }
+
+    // Keep only the primary left navigation tab state here.
+    // Nested tab groups manage their own state to avoid cross-group conflicts.
+    var $primaryTabLinks = $('.tabbable.tabs-left > .nav-tabs a[data-toggle="tab"]');
+    if (!$primaryTabLinks.length) {
+      return;
+    }
+
+    $primaryTabLinks.off('.primaryTabs');
+    $primaryTabLinks.on('click.primaryTabs', function(e) {
       e.preventDefault();
       $(this).tab('show');
     });
 
-    $('a[data-toggle="tab"]').on("shown", function(e) {
-      var id = $(e.target).attr("href");
-      localStorage.setItem('selectedTab', id)
+    $primaryTabLinks.on('shown.primaryTabs shown.bs.tab.primaryTabs', function(e) {
+      var id = $(e.target).attr('href');
+      localStorage.setItem('selectedPrimaryTab', id);
     });
 
-    var selectedTab = localStorage.getItem('selectedTab');
-    if (selectedTab != null) {
-      $('a[data-toggle="tab"][href="' + selectedTab + '"]').tab('show');
+    var selectedTab = localStorage.getItem('selectedPrimaryTab');
+    if (selectedTab && $primaryTabLinks.filter('[href="' + selectedTab + '"]').length) {
+      $primaryTabLinks.filter('[href="' + selectedTab + '"]').tab('show');
     }
 
-    var hashTab = $('a[data-toggle="tab"][href="' + location.hash + '"]');
-    hashTab && hashTab.tab('show');
-    //end mcaz
+    if (location.hash && $primaryTabLinks.filter('[href="' + location.hash + '"]').length) {
+      $primaryTabLinks.filter('[href="' + location.hash + '"]').tab('show');
+    }
   });
 </script>

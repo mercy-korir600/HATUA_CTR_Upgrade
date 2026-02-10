@@ -2,6 +2,25 @@
 $this->Html->script('ckeditor/ckeditor', array('inline' => false));
 $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
 $this->Html->script('jquery.blockUI.js', array('inline' => false));
+
+$formatReviewSummary = function ($content) {
+  $content = trim((string)$content);
+  if ($content === '') {
+    return '<span class="muted">No summary provided.</span>';
+  }
+
+  if (preg_match('/<\s*(p|ul|ol|li|br|div|strong|em|span|h[1-6]|table|blockquote)\b/i', $content)) {
+    return $content;
+  }
+
+  $lines = preg_split('/\r\n|\r|\n/', $content);
+  $lines = array_values(array_filter(array_map('trim', $lines), 'strlen'));
+  if (count($lines) > 1) {
+    return '<ul><li>' . implode('</li><li>', array_map('h', $lines)) . '</li></ul>';
+  }
+
+  return '<p>' . h($content) . '</p>';
+};
 ?>
 <div class="marketing">
   <div class="row-fluid">
@@ -102,10 +121,7 @@ $this->Html->script('jquery.blockUI.js', array('inline' => false));
 
                       <!-- Modal Body -->
                       <div class="modal-body">
-                        <?php 
-                        
-                        echo $rreview['summary'];
-                        ?>
+                        <?php echo $formatReviewSummary($rreview['summary']); ?>
 
                       </div>
 
@@ -178,10 +194,10 @@ if (isset($this->params['named']['rreview_view'])) {
 ?>
 
       <ul id="rreview_tab" class="nav nav-tabs">
-        <li class="active"><a href="#rreview_form">Assessment Form</a></li>
-        <li><a href="#exit_summary">Exit report</a></li>
-        <li><a href="#rreview_summary">Summary report</a></li>
-        <li><a href="#rreview_comments">Comments (<?php echo count($rreview['InternalComment']); ?>)</a></li>
+        <li class="active"><a href="#rreview_form" data-toggle="tab">Assessment Form</a></li>
+        <li><a href="#exit_summary" data-toggle="tab">Exit report</a></li>
+        <li><a href="#rreview_summary" data-toggle="tab">Summary report</a></li>
+        <li><a href="#rreview_comments" data-toggle="tab">Comments (<?php echo count($rreview['InternalComment']); ?>)</a></li>
       </ul>
 
       <div class="tab-content">
@@ -231,9 +247,9 @@ if (isset($this->params['named']['rreview_view'])) {
             <div class="span12">
               <br>
               <div class="amend-form">
-                <ul id="rreview_tab" class="nav nav-tabs">
-                  <li class="active"><a href="#rreview_comment_list">COMMENTS/QUERIES</a></li>
-                  <li><a href="#rreview_comments_add">Add Comment</a></li>
+                <ul id="rreview_comments_tab" class="nav nav-tabs">
+                  <li class="active"><a href="#rreview_comment_list" data-toggle="tab">COMMENTS/QUERIES</a></li>
+                  <li><a href="#rreview_comments_add" data-toggle="tab">Add Comment</a></li>
                 </ul>
                 <div class="tab-content">
                   <div class="tab-pane active" id="rreview_comment_list">
@@ -273,29 +289,39 @@ if (isset($this->params['named']['rreview_view'])) {
 ?>
 
 <script text="type/javascript">
-  $.expander.defaults.slicePoint = 170;
   $(function() {
-    //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
-    //from mcaz
-    $('#rreview_tab a').click(function(e) {
-      e.preventDefault();
-      $(this).tab('show');
-    });
-
-    $('#rreview_tab a').on("shown", function(e) {
-      var id = $(e.target).attr("href");
-      localStorage.setItem('rreviewTab', id)
-    });
-
-    var rreviewTab = localStorage.getItem('rreviewTab');
-    if (rreviewTab != null) {
-      // console.log("select tab");
-      // console.log($('#rreview_tab a[href="' + rreviewTab + '"]'));
-      $('#rreview_tab a[href="' + rreviewTab + '"]').tab('show');
+    if ($.expander && $.expander.defaults) {
+      $.expander.defaults.slicePoint = 170;
     }
 
-    var hashTab = $('#rreview_tab a[href="' + location.hash + '"]');
-    hashTab && hashTab.tab('show');
-    //end mcaz
+    function bindTabGroup(navSelector, storageKey) {
+      var $links = $(navSelector).find('a[data-toggle="tab"]');
+      if (!$links.length) {
+        return;
+      }
+
+      $links.off('.persistTabs');
+      $links.on('click.persistTabs', function(e) {
+        e.preventDefault();
+        $(this).tab('show');
+      });
+
+      $links.on('shown.persistTabs shown.bs.tab.persistTabs', function(e) {
+        var id = $(e.target).attr('href');
+        localStorage.setItem(storageKey, id);
+      });
+
+      var saved = localStorage.getItem(storageKey);
+      if (saved && $links.filter('[href="' + saved + '"]').length) {
+        $links.filter('[href="' + saved + '"]').tab('show');
+      }
+
+      if (location.hash && $links.filter('[href="' + location.hash + '"]').length) {
+        $links.filter('[href="' + location.hash + '"]').tab('show');
+      }
+    }
+
+    bindTabGroup('#rreview_tab', 'rreviewTab');
+    bindTabGroup('#rreview_comments_tab', 'rreviewCommentTab');
   });
 </script>
