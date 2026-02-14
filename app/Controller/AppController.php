@@ -100,7 +100,6 @@ class AppController extends Controller
       'viewClassMap' => array('csv' => 'CsvView.Csv')
     ),
     'Session',
-    'DebugKit.Toolbar' => array('panels' => array('DebugKit.history'))
   );
   public $helpers = array('Html', 'Form', 'Session', 'Text');
 

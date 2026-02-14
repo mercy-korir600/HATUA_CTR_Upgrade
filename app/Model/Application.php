@@ -1660,6 +1660,12 @@ class Application extends AppModel
     function afterFind($results)
     {
         foreach ($results as $key => $val) {
+            // Legacy `attachments` is a blob column and is not rendered in views.
+            // Dropping it early keeps request/cache memory predictable on large records.
+            if (isset($results[$key]['Application']['attachments'])) {
+                unset($results[$key]['Application']['attachments']);
+            }
+
             if (isset($val['Application']['date_of_protocol'])) {
                 $results[$key]['Application']['date_of_protocol'] = $this->dateFormatAfterFind($val['Application']['date_of_protocol']);
             }

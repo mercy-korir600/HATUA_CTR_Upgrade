@@ -320,20 +320,34 @@ class SiteInspectionsController extends AppController
             // debug($this->request->data);
             // exit;
             if ($this->SiteInspection->saveMany($this->request->data['SiteInspection'], array('deep' => true))) {
-                // if (isset($this->request->data['submitReport'])) {
-                $this->SiteInspection->saveField('approved', 1);
-                $results = Hash::extract($this->request->data['SiteInspection'], '{n}.SiteAnswer.{n}.finding');
-                if (isset(array_count_values($results)['Major']) && array_count_values($results)['Major'] > 4 || array_count_values($results)['Critical'] > 0) {
-                    $this->SiteInspection->saveField('conclusion', 'Site did not meet criteria!');
-                    $this->SiteInspection->saveField('outcome', 'Failed Inspection');
+                $isSubmitReport = !empty($this->request->data['submitReport']);
+                $protocolNo = $this->Application->field('protocol_no', array('id' => $application_id));
+
+                if ($isSubmitReport) {
+                    $this->SiteInspection->saveField('approved', 1);
+                    $results = Hash::extract($this->request->data['SiteInspection'], '{n}.SiteAnswer.{n}.finding');
+                    $findingCounts = array_count_values(array_filter($results));
+                    $majorCount = !empty($findingCounts['Major']) ? (int)$findingCounts['Major'] : 0;
+                    $criticalCount = !empty($findingCounts['Critical']) ? (int)$findingCounts['Critical'] : 0;
+                    if ($majorCount > 4 || $criticalCount > 0) {
+                        $this->SiteInspection->saveField('conclusion', 'Site did not meet criteria!');
+                        $this->SiteInspection->saveField('outcome', 'Failed Inspection');
+                    }
+                    $auditMessage = 'Site Inspection  has been submitted for report with protocol number ' . $protocolNo . ' by ' . $this->Auth->User('username');
+                    $flashMessage = __('The site inspection has been submitted');
+                } else {
+                    $this->SiteInspection->saveField('approved', 0);
+                    $auditMessage = 'Site Inspection draft has been updated for report with protocol number ' . $protocolNo . ' by ' . $this->Auth->User('username');
+                    $flashMessage = __('The site inspection draft has been saved');
                 }
+
                 $this->loadModel('AuditTrail');
                 $audit = array(
                     'AuditTrail' => array(
                         'foreign_key' => $application_id,
                         'model' => 'Application',
-                        'message' => 'Site Inspection  has been submitted for report with protocol number ' . $this->Application->field('protocol_no', array('id' => $application_id)) . ' by ' . $this->Auth->User('username'),
-                        'ip' =>  $this->Application->field('protocol_no', array('id' => $application_id))
+                        'message' => $auditMessage,
+                        'ip' =>  $protocolNo
                     )
                 );
                 $this->AuditTrail->Create();
@@ -345,8 +359,7 @@ class SiteInspectionsController extends AppController
                 }
 
 
-                // }
-                $this->Session->setFlash(__('The site inspection has been saved'), 'alerts/flash_success');
+                $this->Session->setFlash($flashMessage, 'alerts/flash_success');
                 $this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id, 'inspection_id' => $id));
             } else {
                 $this->Session->setFlash(__('The site inspection could not be saved. Please, try again.'), 'alerts/flash_error');

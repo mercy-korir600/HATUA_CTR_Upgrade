@@ -520,23 +520,31 @@ class CommentsController extends AppController
                 $sender = $this->Comment->User->find('first', array('contain' => array(), 'conditions' => array('User.id' => $this->request->data['Comment']['user_id'])));
                 foreach ($users as $user) {
                     $actioner = ($user['User']['group_id'] == 2) ? 'manager' : 'reviewer';
+                    $protocolNo = !empty($app['Application']['protocol_no']) ? trim((string) $app['Application']['protocol_no']) : '';
+                    $protocolLink = $html->link(
+                        $protocolNo,
+                        array(
+                            'controller' => 'applications', 'action' => 'view', $app['Application']['id'],
+                            $actioner => true, 'full_base' => true
+                        ),
+                        array('escape' => false)
+                    );
                     $variables = array(
-                        'name' => $user['User']['name'], 'sender' => $sender['User']['name'], 'reference_link' => $app['Application']['protocol_no'],
+                        'name' => $user['User']['name'],
+                        'sender' => $sender['User']['name'],
+                        'reference_link' => $protocolLink,
                         'comment_subject' => $this->request->data['Comment']['subject'],
                         'comment_content' => $this->request->data['Comment']['content'],
-                        'protocol_no' => $html->link(
-                            $app['Application']['protocol_no'],
-                            array(
-                                'controller' => 'applications', 'action' => 'view', $app['Application']['id'],
-                                $actioner => true, 'full_base' => true
-                            ),
-                            array('escape' => false)
-                        ),
+                        'protocol_no' => $protocolNo,
+                        'protocol_link' => $protocolLink,
                     );
+                    $internalReviewSubject = ($protocolNo !== '')
+                        ? 'Internal Review Comment (' . $protocolNo . ')'
+                        : 'Internal Review Comment';
                     $datum = array(
                         'email' => $user['User']['email'],
                         'id' => $this->request->data['Comment']['foreign_key'], 'user_id' => $user['User']['id'], 'type' => 'internal_review_comment', 'model' => 'Application',
-                        'subject' => String::insert($message['Message']['subject'], $variables),
+                        'subject' => $internalReviewSubject,
                         'message' => String::insert($message['Message']['content'], $variables)
                     );
                     CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));

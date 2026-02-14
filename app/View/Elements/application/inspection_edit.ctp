@@ -1,4 +1,25 @@
-  <br>
+<?php
+$formatExitReportContent = function ($content) {
+  $content = trim((string)$content);
+  if ($content === '') {
+    return '<span class="muted">No details provided.</span>';
+  }
+
+  if (preg_match('/<\s*(p|ul|ol|li|br|div|strong|em|span|h[1-6]|table|blockquote)\b/i', $content)) {
+    return $content;
+  }
+
+  $lines = preg_split('/\r\n|\r|\n/', $content);
+  $lines = array_values(array_filter(array_map('trim', $lines), 'strlen'));
+  if (count($lines) > 1) {
+    return '<ul><li>' . implode('</li><li>', array_map('h', $lines)) . '</li></ul>';
+  }
+
+  return '<p>' . h($content) . '</p>';
+};
+?>
+
+<br>
   <div class="row-fluid">
     <div class="span12">      
         <?php     
@@ -66,7 +87,7 @@
                   }
                   
                 } else {
-                  echo $this->Html->link('<span class="label label-success"> View </span>',
+                  echo $this->Html->link('<span class="label label-success"> Edit </span>',
                      array('action' => 'view', $application['Application']['id'], 'inspection_id' => $site_inspection['id']), array('escape'=>false));
                   echo "&nbsp;";
                   if (($this->Session->read('Auth.User.group_id') === '2' or $site_inspection['user_id'] == $this->Session->read('Auth.User.id'))) {                    
@@ -93,10 +114,11 @@
   ?>
 
   <ul id="assessment_tab" class="nav nav-tabs">
-    <?php if($redir !== 'applicant') { ?><li class="active"><a href="#assessment_form">Assessment Form</a></li> <?php } ?>
-    <li><a href="#summary_report">Summary Report</a></li>
-    <?php if($redir !== 'applicant') { ?><li><a href="#internal_comments">Internal Comments (<?php echo count($site_inspection['InternalComment']); ?>)</a></li> <?php } ?>
-    <li><a href="#external_comments">PI Comments (<?php echo count($site_inspection['ExternalComment']); ?>)</a></li>
+    <?php if($redir !== 'applicant') { ?><li class="active"><a href="#assessment_form" data-toggle="tab">Assessment Form</a></li> <?php } ?>
+    <li><a href="#summary_report" data-toggle="tab">Summary Report</a></li>
+    <?php if($redir !== 'applicant') { ?><li><a href="#inspector_exit_report" data-toggle="tab">Inspector Exit Report</a></li> <?php } ?>
+    <?php if($redir !== 'applicant') { ?><li><a href="#internal_comments" data-toggle="tab">Internal Comments (<?php echo count($site_inspection['InternalComment']); ?>)</a></li> <?php } ?>
+    <li><a href="#external_comments" data-toggle="tab">PI Comments (<?php echo count($site_inspection['ExternalComment']); ?>)</a></li>
   </ul>
 
   <div class="tab-content">
@@ -108,14 +130,6 @@
                   array('controller' => 'site_inspections', 'ext' => 'pdf', 'action' => 'download_assessment', $site_inspection['id']),
                   array('escape' => false, 'class' => 'btn btn-small btn-info topright'));
           echo $this->element('/application/inspection_edit_form', array('site_inspection' => $site_inspection, 'akey' => $akey));
-          echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
-            'name' => 'saveChanges',
-            'class' => 'btn btn-success btn-block mapop',
-            'id' => 'SiteInspectionSaveChanges', 'title'=>'Save & continue editing',
-            'data-content' => 'Save changes to form without submitting it.
-                                        The form will still be available for further editing.',
-            'div' => false,
-          ));
         ?>
       </div>
     </div>
@@ -139,6 +153,69 @@
         ?>
       </div>
     </div>
+
+    <?php if($redir !== 'applicant') { ?>
+    <div class="tab-pane" id="inspector_exit_report">
+      <div style="position: relative; border-top: 1px solid #ddd; padding-top: 10px;">
+        <table class="table table-bordered table-condensed">
+          <tbody>
+            <tr>
+              <td class="table-label required" style="width: 25%;"><p>Inspector</p></td>
+              <td>
+                <?php
+                if (!empty($site_inspection['User']['name'])) {
+                  echo h($site_inspection['User']['name']);
+                } elseif (!empty($site_inspection['User']['username'])) {
+                  echo h($site_inspection['User']['username']);
+                } elseif (!empty($site_inspection['user_id'])) {
+                  echo 'Inspector #' . (int)$site_inspection['user_id'];
+                } else {
+                  echo '<span class="muted">-</span>';
+                }
+                ?>
+              </td>
+            </tr>
+            <tr>
+              <td class="table-label required"><p>Recommendation(s)</p></td>
+              <td><?php echo $formatExitReportContent($site_inspection['conclusion']); ?></td>
+            </tr>
+            <tr>
+              <td class="table-label required"><p>Exit Report</p></td>
+              <td><?php echo $formatExitReportContent($site_inspection['summary_report']); ?></td>
+            </tr>
+            <tr>
+              <td class="table-label required"><p>Attachment(s)</p></td>
+              <td>
+                <?php if (!empty($site_inspection['Attachment'])) { ?>
+                  <?php foreach ($site_inspection['Attachment'] as $attachment) { ?>
+                    <p>
+                      <?php
+                      echo $this->Html->link(
+                        __($attachment['basename']),
+                        array(
+                          'controller' => 'attachments',
+                          'action' => 'download',
+                          $attachment['id'],
+                          'full_base' => true
+                        ),
+                        array('class' => 'btn btn-info btn-small')
+                      );
+                      ?>
+                      <?php if (!empty($attachment['created'])) { ?>
+                        <small class="muted"> - <?php echo h($attachment['created']); ?></small>
+                      <?php } ?>
+                    </p>
+                  <?php } ?>
+                <?php } else { ?>
+                  <span class="muted">No attachment uploaded.</span>
+                <?php } ?>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <?php } ?>
 
     <?php if($redir !== 'applicant') { ?>
     <div class="tab-pane" id="internal_comments">
@@ -199,29 +276,33 @@
   ?>
 
 <script text="type/javascript">
-$.expander.defaults.slicePoint = 170;
 $(function() {
+    if ($.expander && $.expander.defaults) {
+        $.expander.defaults.slicePoint = 170;
+    }
+
     //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
     //from mcaz
-    $('#assessment_tab a').click(function (e) {
+    var $assessmentTabLinks = $('#assessment_tab a');
+    $assessmentTabLinks.off('.inspectionTabs');
+    $assessmentTabLinks.on('click.inspectionTabs', function (e) {
         e.preventDefault();
         $(this).tab('show');
     });
 
-    $('#assessment_tab a').on("shown", function (e) {
+    $assessmentTabLinks.on("shown.inspectionTabs shown.bs.tab.inspectionTabs", function (e) {
         var id = $(e.target).attr("href");
-        localStorage.setItem('assessmentTab', id)
+        localStorage.setItem('inspectionAssessmentTab', id);
     });
 
-    var assessmentTab = localStorage.getItem('assessmentTab');
-    if (assessmentTab != null) {
-        // console.log("select tab");
-        // console.log($('#assessment_tab a[href="' + assessmentTab + '"]'));
-        $('#assessment_tab a[href="' + assessmentTab + '"]').tab('show');
+    var assessmentTab = localStorage.getItem('inspectionAssessmentTab');
+    if (assessmentTab != null && $assessmentTabLinks.filter('[href="' + assessmentTab + '"]').length) {
+        $assessmentTabLinks.filter('[href="' + assessmentTab + '"]').tab('show');
     }
 
-    var hashTab = $('#assessment_tab a[href="' + location.hash + '"]');
-    hashTab && hashTab.tab('show');
+    if (location.hash && $assessmentTabLinks.filter('[href="' + location.hash + '"]').length) {
+        $assessmentTabLinks.filter('[href="' + location.hash + '"]').tab('show');
+    }
     //end mcaz
 });
 </script>

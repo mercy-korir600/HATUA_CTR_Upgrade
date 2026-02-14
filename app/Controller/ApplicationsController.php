@@ -2439,7 +2439,7 @@ class ApplicationsController extends AppController
                 'Review.user_id' => array_values(array_unique($previousInternalUsers)),
                 'Review.type' => 'reviewer_comment'
             ),
-            'fields' => array('Review.id', 'Review.user_id', 'Review.assessment_type', 'Review.status', 'Review.summary', 'Review.created'),
+            'fields' => array('Review.id', 'Review.user_id', 'Review.assessment_type', 'Review.recommendation', 'Review.status', 'Review.summary', 'Review.created'),
             'contain' => array(
                 'User' => array('fields' => array('User.id', 'User.name', 'User.username')),
                 'ReviewAnswer' => array(
@@ -2450,6 +2450,58 @@ class ApplicationsController extends AppController
             ),
             'order' => array('Review.created' => 'ASC', 'Review.id' => 'ASC')
         ));
+
+        // Ensure comment attachments are always hydrated for modal rendering.
+        // Some environments return InternalComment without nested Attachment.
+        $internalCommentIds = array();
+        foreach ($reviewResponses as $reviewResponse) {
+            if (!empty($reviewResponse['InternalComment'])) {
+                foreach ((array) $reviewResponse['InternalComment'] as $internalComment) {
+                    if (!empty($internalComment['id'])) {
+                        $internalCommentIds[] = (int) $internalComment['id'];
+                    }
+                }
+            }
+        }
+
+        $attachmentsByCommentId = array();
+        if (!empty($internalCommentIds)) {
+            $internalCommentIds = array_values(array_unique($internalCommentIds));
+            $attachmentRows = $this->Review->InternalComment->Attachment->find('all', array(
+                'conditions' => array(
+                    'Attachment.model' => 'Comments',
+                    'Attachment.foreign_key' => $internalCommentIds
+                ),
+                'fields' => array('Attachment.id', 'Attachment.foreign_key', 'Attachment.basename', 'Attachment.dirname', 'Attachment.model', 'Attachment.group', 'Attachment.created'),
+                'order' => array('Attachment.id' => 'ASC'),
+                'contain' => array()
+            ));
+
+            foreach ($attachmentRows as $attachmentRow) {
+                $commentId = !empty($attachmentRow['Attachment']['foreign_key']) ? (int) $attachmentRow['Attachment']['foreign_key'] : 0;
+                if ($commentId > 0) {
+                    if (empty($attachmentsByCommentId[$commentId])) {
+                        $attachmentsByCommentId[$commentId] = array();
+                    }
+                    $attachmentsByCommentId[$commentId][] = $attachmentRow['Attachment'];
+                }
+            }
+        }
+
+        if (!empty($attachmentsByCommentId)) {
+            foreach ($reviewResponses as $reviewIndex => $reviewResponse) {
+                if (empty($reviewResponse['InternalComment']) || !is_array($reviewResponse['InternalComment'])) {
+                    continue;
+                }
+
+                foreach ($reviewResponse['InternalComment'] as $commentIndex => $internalComment) {
+                    $commentId = !empty($internalComment['id']) ? (int) $internalComment['id'] : 0;
+                    if ($commentId > 0 && !empty($attachmentsByCommentId[$commentId])) {
+                        $reviewResponses[$reviewIndex]['InternalComment'][$commentIndex]['Attachment'] = $attachmentsByCommentId[$commentId];
+                    }
+                }
+            }
+        }
 
         $missingUserIds = array();
         foreach ($reviewResponses as $reviewResponse) {

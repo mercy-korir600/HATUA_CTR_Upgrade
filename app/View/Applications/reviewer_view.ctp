@@ -6,8 +6,31 @@
 <?php
       $this->assign('Applications', 'active');
       $this->Html->script('ckeditor/ckeditor', array('inline' => false));
-      $this->Html->script('multi/amendments-checklist', array('inline' => false));
       $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
+
+      $formatManagerReviewContent = function ($content) {
+        $content = trim((string)$content);
+        if ($content === '') {
+          return '<span class="muted">No details provided.</span>';
+        }
+
+        if ($content !== strip_tags($content)) {
+          return $content;
+        }
+
+        return '<p>' . nl2br(h($content)) . '</p>';
+      };
+
+      $managerReviewComments = Hash::extract($application, 'ManagerReview.{n}[type=ppb_comment]');
+      if (!empty($managerReviewComments)) {
+        usort($managerReviewComments, function ($a, $b) {
+          return strtotime($b['created']) - strtotime($a['created']);
+        });
+      }
+
+      $latestManagerReview = !empty($managerReviewComments) ? $managerReviewComments[0] : array();
+      $latestManagerReviewExternal = !empty($latestManagerReview['ExternalComment']) ? $latestManagerReview['ExternalComment'] : array();
+      $latestManagerReviewInternal = !empty($latestManagerReview['InternalComment']) ? $latestManagerReview['InternalComment'] : array();
     ?>
     <div class="tabbable tabs-left"> <!-- Only required for left/right tabs -->
       <ul class="nav nav-tabs">
@@ -94,14 +117,18 @@
 <?php $this->start('view-rightbar'); ?>
   </div>
   <div class="span2">
-    <div class="form-actions"  style="margin-top: 0px; margin-bottom: 0px; padding-left: 10px;">
-    <?php
-       echo $this->Html->link(__('<i class="icon-download-alt"></i> <br> <span><strong>Download PDF</strong></span>'),
-              array('controller' => 'applications', 'ext' => 'pdf', 'action' => 'view', $application['Application']['id']),
-              array('escape' => false, 'class' => 'btn pull-right', 'style'=>'margin-right: 10px;'));
-    ?>
+    <?php if ($application['Application']['submitted'] == 1) { ?>
+      <div class="well">
+        <?php
+          echo $this->Html->link(
+            __('<i class="icon-download-alt"></i> Download PDF'),
+            array('controller' => 'applications', 'ext' => 'pdf', 'action' => 'view', $application['Application']['id']),
+            array('escape' => false, 'class' => 'btn')
+          );
+        ?>
+      </div>
+    <?php } ?>
   </div>
-</div>
 <?php $this->end();  ?>
 <!-- END RIGHTBAR -->
 
@@ -121,7 +148,7 @@
              <div class="row-fluid">
                 <div class="span12">
                    <h3 class="text-info">The Expert Committee on Clinical Trials</h3>
-                   <h3 class="text-info" style="text-decoration: underline;">Reviewer's Comments</h3>
+                   <h3 class="text-info" style="text-decoration: underline;">Manager Reviews</h3>
                 </div>
              </div>
               <hr class="soften" style="margin: 10px 0px;">
@@ -130,36 +157,46 @@
         <p><strong>2. Protocol title: </strong><?php echo $application['Application']['study_title'];?></p>
         <div class="row-fluid">
           <div class="span12">
-            <h4 class="text-success">Reviewer's Comments
+            <h4 class="text-success">Manager Review History
               <?php
                 echo $this->Html->link(__('<i class="icon-download-alt"></i> Download Comments <small>(PDF)</small>'),
                   array('controller' => 'applications', 'ext' => 'pdf', 'action' => 'view', $application['Application']['id']),
                   array('escape' => false, 'class' => 'btn pull-right', 'style'=>'margin-right: 10px;'));
                 ?>
-              </h4>
-            <?php
-                $counter = 0;
-                foreach ($application['ManagerReview'] as $review) {
-                   $counter++;
-                   echo "<hr><span class=\"badge badge-success\">".$counter."</span> <small class='muted'>created on: ".date('d-m-Y H:i:s', strtotime($review['created']))."</small>";
-                   echo "<div style='padding-left: 29px;' class='morecontent'>".$review['text']."</div>";
-                   // echo "<br>";
-                   echo "<div style='padding-left: 29px;' class='morecontent'>".$review['recommendation']."</div>";
-                }
-            ?>
+            </h4>
+            <?php if (empty($managerReviewComments)) { ?>
+              <div class="alert alert-info" style="margin-top: 10px;">
+                No manager reviews available yet.
+              </div>
+            <?php } else { ?>
+              <table class="table table-bordered table-striped table-condensed" style="margin-top: 10px;">
+                <thead>
+                  <tr>
+                    <th style="width: 6%;">#</th>
+                    <th style="width: 22%;">Recommendation</th>
+                    <th style="width: 56%;">Comments</th>
+                    <th style="width: 16%;">Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($managerReviewComments as $index => $review) { ?>
+                    <tr>
+                      <td><?php echo $index + 1; ?></td>
+                      <td><?php echo $formatManagerReviewContent($review['recommendation']); ?></td>
+                      <td><?php echo $formatManagerReviewContent($review['text']); ?></td>
+                      <td><?php echo !empty($review['created']) ? date('d-m-Y H:i:s', strtotime($review['created'])) : '<span class="muted">-</span>'; ?></td>
+                    </tr>
+                  <?php } ?>
+                </tbody>
+              </table>
+            <?php } ?>
           </div>
        </div>
 
 
-       <?php
-          //Reviews limited to ppb_comment already
-            $var = Hash::extract($application, 'ManagerReview.{n}[type=ppb_comment]');
-            $rid = null;
-            if(!empty($var)) $rid = min($var);
-       ?>
         <ul id="reviewer_tab" class="nav nav-tabs">
-          <li class="active"><a href="#external_rev_comments">PI Comments (<?php echo count($rid['ExternalComment']); ?>)</a></li>
-          <?php if($redir !== 'applicant') { ?><li><a href="#internal_rev_comments">Internal Comments (<?php echo count($rid['InternalComment']); ?>)</a></li> <?php } ?>
+          <li class="active"><a href="#external_rev_comments" data-toggle="tab">PI Comments (<?php echo count($latestManagerReviewExternal); ?>)</a></li>
+          <?php if($redir !== 'applicant') { ?><li><a href="#internal_rev_comments" data-toggle="tab">Internal Comments (<?php echo count($latestManagerReviewInternal); ?>)</a></li> <?php } ?>
         </ul>
 
         <div class="tab-content">
@@ -172,8 +209,8 @@
                       <div class="row-fluid">
                         <div class="span8">    
                           <?php                       
-                            // debug($rid);
-                            if(!empty($rid)) echo $this->element('comments/list', ['comments' => $rid['ExternalComment'],'show'=>false]);
+                            if(!empty($latestManagerReviewExternal)) echo $this->element('comments/list', ['comments' => $latestManagerReviewExternal,'show'=>false]);
+                            else echo '<p class="muted">No PI comments available for manager reviews yet.</p>';
                           ?> 
                         </div>
                         <div class="span4 lefty">
@@ -199,8 +236,8 @@
                       <div class="row-fluid">
                         <div class="span8">    
                           <?php                       
-                            // debug($rid);
-                            if(!empty($rid)) echo $this->element('comments/list', ['comments' => $rid['InternalComment'],'show'=>false]);
+                            if(!empty($latestManagerReviewInternal)) echo $this->element('comments/list', ['comments' => $latestManagerReviewInternal,'show'=>false]);
+                            else echo '<p class="muted">No internal comments available for manager reviews yet.</p>';
 
                             //NEW*** Bring in all the assessment comments
                             $rcas = Hash::extract($application, 'Review.{n}[type=reviewer_comment]');
@@ -216,9 +253,10 @@
                         </div>
                         <div class="span4 lefty">
                         <?php  
-                            if(!empty($rid))  echo $this->element('comments/add', [
-                                         'model' => ['model_id' => $application['Application']['id'], 'foreign_key' => $rid['id'],   
+                            if(!empty($latestManagerReview['id']))  echo $this->element('comments/add', [
+                                         'model' => ['model_id' => $application['Application']['id'], 'foreign_key' => $latestManagerReview['id'],   
                                                      'model' => 'Review', 'category' => 'internal', 'url' => 'add_internal_review_response']]) 
+                            ; else echo '<p class="muted">A manager review must exist before adding an internal response.</p>';
                         ?>
                         </div>
                       </div>
@@ -234,39 +272,41 @@
 </div>
 
 <script text="type/javascript">
-$.expander.defaults.slicePoint = 170;
 $(function() {
-  $( "#tabs" ).tabs({
-      cookie: {
-        expires: 1
-      }
-  });
+  if ($.expander && $.expander.defaults) {
+    $.expander.defaults.slicePoint = 170;
+  }
 
   //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
   //from mcaz
-  $('#reviewer_tab a').click(function (e) {
+  var $reviewerTabLinks = $('#reviewer_tab a');
+  $reviewerTabLinks.off('.reviewerTabs');
+  $reviewerTabLinks.on('click.reviewerTabs', function (e) {
       e.preventDefault();
       $(this).tab('show');
   });
 
-  $('#reviewer_tab a').on("shown", function (e) {
+  $reviewerTabLinks.on("shown.reviewerTabs shown.bs.tab.reviewerTabs", function (e) {
       var id = $(e.target).attr("href");
-      localStorage.setItem('assessmentTab', id)
+      localStorage.setItem('reviewerAssessmentTab', id);
   });
 
-  var assessmentTab = localStorage.getItem('assessmentTab');
-  if (assessmentTab != null) {
-      // console.log("select tab");
-      // console.log($('#reviewer_tab a[href="' + assessmentTab + '"]'));
-      $('#reviewer_tab a[href="' + assessmentTab + '"]').tab('show');
+  var assessmentTab = localStorage.getItem('reviewerAssessmentTab');
+  if (assessmentTab != null && $reviewerTabLinks.filter('[href="' + assessmentTab + '"]').length) {
+      $reviewerTabLinks.filter('[href="' + assessmentTab + '"]').tab('show');
   }
 
-  var hashaTab = $('#reviewer_tab a[href="' + location.hash + '"]');
-  hashaTab && hashaTab.tab('show');
+  if (location.hash && $reviewerTabLinks.filter('[href="' + location.hash + '"]').length) {
+      $reviewerTabLinks.filter('[href="' + location.hash + '"]').tab('show');
+  }
 
-  $(".morecontent").expander();
-  $('#ReviewText').ckeditor();
-  $('#ReviewRecommendation').ckeditor();
+  if ($.fn.expander) {
+    $(".morecontent").expander();
+  }
+  if ($.fn.ckeditor) {
+    $('#ReviewText').ckeditor();
+    $('#ReviewRecommendation').ckeditor();
+  }
 });
 </script>
 <?php $this->end();?>

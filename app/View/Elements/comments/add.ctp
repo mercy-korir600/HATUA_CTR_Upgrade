@@ -44,7 +44,7 @@
                   ?>
                   <div class="row-fluid">
                       <div class="span11">
-                        <div class="uploadsTable">
+                        <div class="uploadsTable" data-attachment-category="<?php echo h($model['model']); ?>">
                           <h6 class="muted"><b>Attach File(s) </b>
                               <button type="button" class="btn btn-primary btn-small addUpload">&nbsp;<i class="icon-plus"></i>&nbsp;</button>
                           </h6>

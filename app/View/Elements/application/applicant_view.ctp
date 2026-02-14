@@ -2581,6 +2581,17 @@
           <?php   }
           } ?>
           <?php echo $this->fetch('declaration_date2'); ?>
+          <tr>
+            <td class="table-label required">
+              <p>Original Content Declaration <span class="sterix">*</span></p>
+            </td>
+            <td>
+              <p>
+                <?php echo (!empty($application['Application']['ai_content']) ? $ichecked : $nchecked); ?>
+                I declare that the content I have submitted is my own original work and has not been generated, in whole or in part, using artificial intelligence tools.
+              </p>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -2691,6 +2702,52 @@
   $(function() {
     if ($.expander && $.expander.defaults) {
       $.expander.defaults.slicePoint = 170;
+    }
+
+    // Keep the shared application sections (#tabs-1 ... #tabs-15) consistent across roles.
+    var $applicationSections = $('#tabs');
+    if ($applicationSections.length && !$applicationSections.hasClass('ui-tabs')) {
+      if ($.fn.tabs) {
+        try {
+          $applicationSections.tabs({
+            cookie: {
+              expires: 1
+            }
+          });
+        } catch (e) {
+          try {
+            $applicationSections.tabs();
+          } catch (ignored) {}
+        }
+      }
+
+      if (!$applicationSections.hasClass('ui-tabs')) {
+        var $sectionNav = $applicationSections.children('ul').first();
+        var $sectionLinks = $sectionNav.find('a[href^="#tabs-"]');
+        var $sectionPanes = $applicationSections.children('div[id^="tabs-"]');
+        if ($sectionLinks.length && $sectionPanes.length) {
+          $sectionNav.addClass('nav nav-tabs');
+          var activateSection = function(hash) {
+            var $target = $sectionPanes.filter(hash);
+            if (!$target.length) return;
+            $sectionLinks.parent().removeClass('active');
+            $sectionLinks.filter('[href="' + hash + '"]').parent().addClass('active');
+            $sectionPanes.hide();
+            $target.show();
+          };
+
+          $sectionLinks.off('click.applicationSections').on('click.applicationSections', function(e) {
+            e.preventDefault();
+            activateSection($(this).attr('href'));
+          });
+
+          var defaultSection = $sectionLinks.first().attr('href');
+          var initialSection = (location.hash && $sectionLinks.filter('[href="' + location.hash + '"]').length)
+            ? location.hash
+            : defaultSection;
+          activateSection(initialSection);
+        }
+      }
     }
 
     // Keep only the primary left navigation tab state here.

@@ -21,6 +21,40 @@ $formatReviewSummary = function ($content) {
 
   return '<p>' . h($content) . '</p>';
 };
+
+$formatReviewComments = function ($comments) {
+  if (empty($comments)) {
+    return '<span class="muted">No comments available.</span>';
+  }
+
+  $items = array();
+  foreach ((array)$comments as $comment) {
+    $subject = !empty($comment['subject']) ? trim((string)$comment['subject']) : '';
+    $content = !empty($comment['content']) ? trim((string)$comment['content']) : '';
+    $sender = !empty($comment['sender']) ? trim((string)$comment['sender']) : '';
+
+    $segments = array();
+    if ($subject !== '') {
+      $segments[] = '<strong>' . h($subject) . '</strong>';
+    }
+    if ($content !== '') {
+      $segments[] = nl2br(h($content));
+    }
+    if ($sender !== '') {
+      $segments[] = '<small class="muted">By: ' . h($sender) . '</small>';
+    }
+
+    if (!empty($segments)) {
+      $items[] = '<div style="margin-bottom: 8px;">' . implode('<br>', $segments) . '</div>';
+    }
+  }
+
+  if (empty($items)) {
+    return '<span class="muted">No comments available.</span>';
+  }
+
+  return implode('', $items);
+};
 ?>
 <div class="marketing">
   <div class="row-fluid">
@@ -75,17 +109,17 @@ $formatReviewSummary = function ($content) {
 <br>
 <div class="row-fluid">
   <div class="span12">
-    <table class="table  table-bordered" style="margin-bottom: 1px;">
+    <table class="table table-bordered table-striped table-condensed" style="margin-bottom: 1px;">
 
       <thead>
         <tr>
-          <th style="width:3%">ID</th>
-          <th style="width:3%">Recommendation</th>
-          <th style="width: 40%;">Comments</th>
-          <th style="width:3%">Status &amp; Type</th>
-          <th style="width:3%">User</th>
-          <th style="width:3%">Created</th>
-          <th style="width:3%"><?php echo __('Actions'); ?></th>
+          <th style="width: 6%;">#</th>
+          <th style="width: 20%;">Recommendation</th>
+          <th style="width: 30%;">Comments</th>
+          <th style="width: 14%;">Status &amp; Type</th>
+          <th style="width: 12%;">User</th>
+          <th style="width: 12%;">Created</th>
+          <th style="width: 6%;"><?php echo __('Actions'); ?></th>
         </tr>
       </thead>
       <tbody>
@@ -93,14 +127,13 @@ $formatReviewSummary = function ($content) {
         foreach ($application['Review'] as $akey => $rreview) {
         ?>
           <tr>
-            <td><?php echo $rreview['id'] ?></td>
+            <td><?php echo $akey + 1; ?></td>
             <td>
               <?php
               if ($rreview['type'] == 'request') {
                 echo 'Assigned: ' . $rreview['accepted'] . '<br/>';
               }
-              // echo $rreview['summary'] . '<br/>';
-              echo $rreview['recommendation'];
+              echo $formatReviewSummary($rreview['recommendation']);
               if (!empty($rreview['summary'])) {
               ?>
 
@@ -109,42 +142,23 @@ $formatReviewSummary = function ($content) {
                 </button>
 
                 <!-- Start -->
-                <div class="modal fade" id="myModal_<?php echo $rreview['id']; ?>">
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-
-                      <!-- Modal Header -->
-                      <div class="modal-header">
-                        <h4 class="modal-title">Clinical Summary</h4>
-                        <button type="button" class="close" data-dismiss="modal">&times;</button>
-                      </div>
-
-                      <!-- Modal Body -->
-                      <div class="modal-body">
-                        <?php echo $formatReviewSummary($rreview['summary']); ?>
-
-                      </div>
-
-                      <!-- Modal Footer -->
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                      </div>
-
-                    </div>
+                <div class="modal hide fade" id="myModal_<?php echo $rreview['id']; ?>" tabindex="-1" role="dialog" aria-hidden="true">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4>Clinical Summary</h4>
+                  </div>
+                  <div class="modal-body">
+                    <?php echo $formatReviewSummary($rreview['summary']); ?>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn" data-dismiss="modal">Close</button>
                   </div>
                 </div>
 
                 <!-- End -->
               <?php } ?>
             </td>
-            <td><?php
-                foreach ($rreview['InternalComment'] as $iComment) {
-                  echo   $iComment['subject'] . "<br>";
-                  echo   $iComment['content'] . "<br>";
-                  echo   $iComment['sender'] . "<br>";
-                  echo "<br>";
-                }
-                ?></td>
+            <td><?php echo $formatReviewComments($rreview['InternalComment']); ?></td>
             <td><?php echo $rreview['status'] . "<br>" . $rreview['type'] ?></td>
             <td>
               <?php

@@ -7,6 +7,23 @@
       $this->assign('Applications', 'active');
       $this->Html->script('ckeditor/ckeditor', array('inline' => false));
       $this->Html->script('ckeditor/adapters/jquery', array('inline' => false));
+
+      $formatFeedbackContent = function ($content) {
+        $content = trim((string) $content);
+        if ($content === '') {
+          return '<span class="muted">No content provided.</span>';
+        }
+
+        // If rich text is present, keep only common formatting tags.
+        if ($content !== strip_tags($content)) {
+          return strip_tags(
+            $content,
+            '<p><br><strong><b><em><i><u><ul><ol><li><blockquote><h1><h2><h3><h4><h5><h6><table><thead><tbody><tr><th><td><a><span><div>'
+          );
+        }
+
+        return '<p>' . nl2br(h($content)) . '</p>';
+      };
     ?>
     <div class="tabbable tabs-left"> <!-- Only required for left/right tabs -->
       <ul class="nav nav-tabs">
@@ -111,96 +128,218 @@
         <div class="span12">
           <?php if (!empty($priorInternalFeedback)) { ?>
             <div class="alert alert-info">
-              Previous internal reviewer feedback is shown below. Open one reviewer at a time before adding your own assessment comments.
+              Previous internal reviewer feedback is shown below.
             </div>
-            <div class="accordion" id="priorInternalFeedbackAccordion">
-              <?php foreach ($priorInternalFeedback as $feedbackIndex => $feedback) { ?>
-                <?php
-                  $panelId = 'priorInternalFeedback' . (int) $feedbackIndex;
-                  $reviewerName = 'Reviewer';
-                  if (!empty($feedback['User']['name'])) {
-                    $reviewerName = $feedback['User']['name'];
-                  } elseif (!empty($feedback['User']['username'])) {
-                    $reviewerName = $feedback['User']['username'];
-                  } elseif (!empty($feedback['Review']['user_id'])) {
-                    $reviewerName = 'Reviewer #' . (int) $feedback['Review']['user_id'];
-                  }
-                  $assessmentType = !empty($feedback['Review']['assessment_type']) ? ucfirst($feedback['Review']['assessment_type']) : 'Assessment';
-                  $status = !empty($feedback['Review']['status']) ? $feedback['Review']['status'] : 'Unknown status';
-                  $createdAt = !empty($feedback['Review']['created']) ? strtotime($feedback['Review']['created']) : false;
-                  $createdLabel = $createdAt ? date('d-m-Y H:i', $createdAt) : 'Unknown time';
-                  $responseCount = !empty($feedback['FeedbackAnswer']) ? count($feedback['FeedbackAnswer']) : 0;
-                ?>
-                <div class="accordion-group">
-                  <div class="accordion-heading">
-                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-parent="#priorInternalFeedbackAccordion" href="#<?php echo h($panelId); ?>">
-                      <strong><?php echo h($reviewerName); ?></strong> -
-                      <?php echo h($assessmentType); ?>
-                      <small class="muted">
-                        (<?php echo h($status); ?>, <?php echo h($createdLabel); ?>)
-                      </small>
-                      <?php if ($responseCount > 0) { ?>
-                        <span class="badge pull-right"><?php echo (int) $responseCount; ?> responses</span>
-                      <?php } ?>
-                    </a>
-                  </div>
-                  <div id="<?php echo h($panelId); ?>" class="accordion-body collapse">
-                    <div class="accordion-inner">
-                      <?php if (!empty($feedback['Review']['summary'])) { ?>
-                        <p>
-                          <strong>Summary:</strong><br>
-                          <?php echo nl2br(h($feedback['Review']['summary'])); ?>
-                        </p>
-                      <?php } ?>
-                      <?php if (!empty($feedback['FeedbackAnswer'])) { ?>
-                        <table class="table table-bordered table-condensed">
-                          <thead>
-                            <tr>
-                              <th style="width: 45%;">Question</th>
-                              <th>Response</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <?php foreach ($feedback['FeedbackAnswer'] as $answer) { ?>
+            <table class="table table-bordered table-striped table-condensed">
+              <thead>
+                <tr>
+                  <th style="width: 6%;">ID</th>
+                  <th style="width: 18%;">Recommendation</th>
+                  <th style="width: 28%;">Comments</th>
+                  <th style="width: 14%;">Status &amp; Type</th>
+                  <th style="width: 12%;">User</th>
+                  <th style="width: 12%;">Created</th>
+                  <th style="width: 10%;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($priorInternalFeedback as $feedbackIndex => $feedback) { ?>
+                  <?php
+                    $reviewerName = 'Reviewer';
+                    if (!empty($feedback['User']['name'])) {
+                      $reviewerName = $feedback['User']['name'];
+                    } elseif (!empty($feedback['User']['username'])) {
+                      $reviewerName = $feedback['User']['username'];
+                    } elseif (!empty($feedback['Review']['user_id'])) {
+                      $reviewerName = 'Reviewer #' . (int) $feedback['Review']['user_id'];
+                    }
+
+                    $feedbackReviewId = !empty($feedback['Review']['id']) ? (int) $feedback['Review']['id'] : 0;
+                    $assessmentType = !empty($feedback['Review']['assessment_type']) ? ucfirst($feedback['Review']['assessment_type']) : 'Assessment';
+                    $status = !empty($feedback['Review']['status']) ? $feedback['Review']['status'] : 'Unknown status';
+                    $createdAt = !empty($feedback['Review']['created']) ? strtotime($feedback['Review']['created']) : false;
+                    $createdLabel = $createdAt ? date('d-m-Y H:i', $createdAt) : 'Unknown time';
+                    $recommendationRaw = !empty($feedback['Review']['recommendation']) ? (string) $feedback['Review']['recommendation'] : '';
+                    $recommendationPlain = trim(preg_replace('/\s+/', ' ', strip_tags($recommendationRaw)));
+                    $recommendationDisplay = ($recommendationPlain !== '')
+                      ? h($this->Text->truncate($recommendationPlain, 90, array('ellipsis' => '...', 'exact' => false)))
+                      : '<span class="muted">N/A</span>';
+
+                    $internalComments = !empty($feedback['InternalComment']) ? (array) $feedback['InternalComment'] : array();
+                    $commentPreviewItems = array();
+                    foreach ($internalComments as $internalComment) {
+                      $commentBodyRaw = !empty($internalComment['content']) ? (string) $internalComment['content'] : '';
+                      $commentBodyPlain = trim(preg_replace('/\s+/', ' ', strip_tags($commentBodyRaw)));
+                      if ($commentBodyPlain !== '') {
+                        $commentPreviewItems[] = h($this->Text->truncate($commentBodyPlain, 90, array('ellipsis' => '...', 'exact' => false)));
+                      }
+                      if (count($commentPreviewItems) >= 2) {
+                        break;
+                      }
+                    }
+                    if (!empty($commentPreviewItems)) {
+                      $commentsPreview = implode('<br>', $commentPreviewItems);
+                      $remainingComments = count($internalComments) - count($commentPreviewItems);
+                      if ($remainingComments > 0) {
+                        $commentsPreview .= '<br><span class="muted">+' . (int) $remainingComments . ' more comment(s)</span>';
+                      }
+                    } else {
+                      $commentsPreview = '<span class="muted">No comments yet.</span>';
+                    }
+
+                    $summaryModalId = 'priorInternalSummaryModal' . $feedbackReviewId . '_' . (int) $feedbackIndex;
+                    $viewModalId = 'priorInternalViewModal' . $feedbackReviewId . '_' . (int) $feedbackIndex;
+                  ?>
+                  <tr>
+                    <td><?php echo ((int) $feedbackIndex + 1); ?></td>
+                    <td>
+                      <?php echo $recommendationDisplay; ?>
+                      <br>
+                      <button type="button" class="btn btn-mini btn-info" data-toggle="modal" data-target="#<?php echo h($summaryModalId); ?>" style="margin-top: 5px;">
+                        Summary
+                      </button>
+                    </td>
+                    <td><?php echo $commentsPreview; ?></td>
+                    <td><?php echo h($status . ' / ' . $assessmentType); ?></td>
+                    <td><?php echo h($reviewerName); ?></td>
+                    <td><?php echo h($createdLabel); ?></td>
+                    <td>
+                      <button type="button" class="btn btn-mini btn-primary" data-toggle="modal" data-target="#<?php echo h($viewModalId); ?>">
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                <?php } ?>
+              </tbody>
+            </table>
+
+            <?php foreach ($priorInternalFeedback as $feedbackIndex => $feedback) { ?>
+              <?php
+                $feedbackReviewId = !empty($feedback['Review']['id']) ? (int) $feedback['Review']['id'] : 0;
+                $summaryModalId = 'priorInternalSummaryModal' . $feedbackReviewId . '_' . (int) $feedbackIndex;
+              ?>
+              <div id="<?php echo h($summaryModalId); ?>" class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-header">
+                  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                  <h4>Summary #<?php echo $feedbackReviewId; ?></h4>
+                </div>
+                <div class="modal-body">
+                  <?php if (!empty($feedback['Review']['summary'])) { ?>
+                    <?php echo $formatFeedbackContent($feedback['Review']['summary']); ?>
+                  <?php } else { ?>
+                    <p class="muted">No summary available.</p>
+                  <?php } ?>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn" data-dismiss="modal">Close</button>
+                </div>
+              </div>
+            <?php } ?>
+            <?php foreach ($priorInternalFeedback as $feedbackIndex => $feedback) { ?>
+              <?php
+                $selectedReviewId = !empty($feedback['Review']['id']) ? (int) $feedback['Review']['id'] : 0;
+                $selectedAssessmentType = !empty($feedback['Review']['assessment_type']) ? ucfirst($feedback['Review']['assessment_type']) : 'Assessment';
+                $viewModalId = 'priorInternalViewModal' . $selectedReviewId . '_' . (int) $feedbackIndex;
+                $assessmentTabId = 'priorInternalViewAssessmentTab' . $selectedReviewId . '_' . (int) $feedbackIndex;
+                $commentsTabId = 'priorInternalViewCommentsTab' . $selectedReviewId . '_' . (int) $feedbackIndex;
+                $modalReview = $feedback['Review'];
+                $modalReview['ReviewAnswer'] = !empty($feedback['ReviewAnswer']) ? $feedback['ReviewAnswer'] : array();
+                $modalComments = !empty($feedback['InternalComment']) ? $feedback['InternalComment'] : array();
+              ?>
+              <div id="<?php echo h($viewModalId); ?>" class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true" style="width: 900px; margin-left: -450px;">
+                <div class="modal-header">
+                  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                  <h4><?php echo h($selectedAssessmentType); ?> Assessment Form #<?php echo $selectedReviewId; ?></h4>
+                </div>
+                <div class="modal-body" style="max-height: 70vh;">
+                  <ul class="nav nav-tabs" style="margin-bottom: 10px;">
+                    <li class="active"><a href="#<?php echo h($assessmentTabId); ?>" data-toggle="tab">Assessment Form</a></li>
+                    <li><a href="#<?php echo h($commentsTabId); ?>" data-toggle="tab">Comments (<?php echo count($modalComments); ?>)</a></li>
+                  </ul>
+                  <div class="tab-content">
+                    <div class="tab-pane active" id="<?php echo h($assessmentTabId); ?>">
+                      <h3 style="text-align: center;"><?php echo h($selectedAssessmentType); ?> Assessment Form</h3>
+                      <hr class="soften" style="margin: 10px 0px;">
+
+                      <table class="table table-bordered table-condensed">
+                        <tbody>
+                          <tr>
+                            <th class="my-well" style="width: 45%">Study Title</th>
+                            <td>
+                              <div style="font-weight: 600; line-height: 1.5;">
+                                <?php echo $formatFeedbackContent($application['Application']['study_title']); ?>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr>
+                            <th class="my-well">Short Title</th>
+                            <td><?php echo h($application['Application']['short_title']); ?></td>
+                          </tr>
+                          <tr>
+                            <th class="my-well">ECCT Reference No</th>
+                            <td><?php echo h($application['Application']['protocol_no']); ?></td>
+                          </tr>
+                          <tr>
+                            <th class="my-well">Investigation medicinal product</th>
+                            <td><?php echo h($application['Application']['study_drug']); ?></td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      <table class="table table-bordered table-condensed">
+                        <thead>
+                          <tr>
+                            <th></th>
+                            <th width="35%"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <?php foreach ((array) $modalReview['ReviewAnswer'] as $answer) { ?>
+                            <?php if ($answer['question_type'] == 'label') { ?>
+                              <tr class="success">
+                                <td colspan="2"><strong><?php echo h($answer['question']); ?></strong></td>
+                              </tr>
+                            <?php } elseif ($answer['question_type'] == 'yesno') { ?>
                               <tr>
                                 <td><?php echo h($answer['question']); ?></td>
-                                <td>
-                                  <?php
-                                    $responseParts = array();
-                                    if (trim((string) $answer['answer']) !== '') $responseParts[] = '<strong>Answer:</strong> ' . h($answer['answer']);
-                                    if (trim((string) $answer['workspace']) !== '') $responseParts[] = '<strong>Workspace:</strong> ' . nl2br(h($answer['workspace']));
-                                    if (trim((string) $answer['comment']) !== '') $responseParts[] = '<strong>Comment:</strong> ' . nl2br(h($answer['comment']));
-                                    echo implode('<br>', $responseParts);
-                                  ?>
-                                </td>
+                                <td><?php echo h($answer['answer']); ?></td>
+                              </tr>
+                            <?php } elseif ($answer['question_type'] == 'text') { ?>
+                              <tr>
+                                <td><?php echo h($answer['question']); ?></td>
+                                <td><?php echo $formatFeedbackContent($answer['answer']); ?></td>
+                              </tr>
+                            <?php } elseif ($answer['question_type'] == 'workspace') { ?>
+                              <tr>
+                                <td><?php echo h($answer['question']); ?></td>
+                                <td><?php echo $formatFeedbackContent($answer['workspace']); ?></td>
+                              </tr>
+                            <?php } elseif ($answer['question_type'] == 'comment') { ?>
+                              <tr>
+                                <td><?php echo h($answer['question']); ?></td>
+                                <td><?php echo $formatFeedbackContent($answer['comment']); ?></td>
                               </tr>
                             <?php } ?>
-                          </tbody>
-                        </table>
-                      <?php } ?>
-                      <?php
-                        $feedbackComments = !empty($feedback['InternalComment']) ? $feedback['InternalComment'] : array();
-                        $feedbackReviewId = !empty($feedback['Review']['id']) ? (int) $feedback['Review']['id'] : 0;
-                        $addCommentCollapseId = 'priorFeedbackAddComment' . $feedbackReviewId;
-                      ?>
-                      <hr>
-                      <h6 class="text-info">Comments/Queries (<?php echo count($feedbackComments); ?>)</h6>
-                      <?php if (!empty($feedbackComments)) { ?>
-                        <?php echo $this->element('comments/list_expandable', ['comments' => $feedbackComments, 'category' => false]); ?>
-                      <?php } else { ?>
-                        <p class="muted">No comments yet for this review.</p>
-                      <?php } ?>
-
-                      <?php if ($feedbackReviewId > 0) { ?>
-                        <a class="btn btn-small btn-info" data-toggle="collapse" href="#<?php echo h($addCommentCollapseId); ?>">
-                          Add Comment To This Review
-                        </a>
-                        <div id="<?php echo h($addCommentCollapseId); ?>" class="collapse" style="margin-top: 10px;">
+                          <?php } ?>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="tab-pane" id="<?php echo h($commentsTabId); ?>">
+                      <div class="row-fluid">
+                        <div class="span7">
+                          <?php if (!empty($modalComments)) { ?>
+                            <?php echo $this->element('comments/list_expandable', ['comments' => $modalComments, 'category' => false]); ?>
+                          <?php } else { ?>
+                            <p class="muted">No comments available yet.</p>
+                          <?php } ?>
+                        </div>
+                        <div class="span5">
+                          <h5 class="text-info" style="margin-top: 0;"><u>Add Comment</u></h5>
                           <?php
                             echo $this->element('comments/add', [
                               'model' => [
                                 'model_id' => $application['Application']['id'],
-                                'foreign_key' => $feedbackReviewId,
+                                'foreign_key' => $selectedReviewId,
                                 'model' => 'Review',
                                 'type' => 51,
                                 'category' => 'internal',
@@ -209,12 +348,15 @@
                             ]);
                           ?>
                         </div>
-                      <?php } ?>
+                      </div>
                     </div>
                   </div>
                 </div>
-              <?php } ?>
-            </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn" data-dismiss="modal">Close</button>
+                </div>
+              </div>
+            <?php } ?>
           <?php } ?>
           <?php echo $this->element('application/review'); ?>
         </div>
