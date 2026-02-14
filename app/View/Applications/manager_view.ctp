@@ -294,6 +294,8 @@ echo $this->Session->flash();
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
                   echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
+                  echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
                   // ask if the user has showned conflict of interest with an link to revoke access with a confirmation dialog
                   echo $this->Html->link(
                     __('<small class="muted"> Shown Interest? Revoke Access</small>'),
@@ -365,6 +367,8 @@ echo $this->Session->flash();
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
                   echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
+                  echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
                   // ask if the user has showned conflict of interest with an link to revoke access with a confirmation dialog
                   echo $this->Html->link(
                     __('<small class="muted"> Shown Interest? Revoke Access</small>'),

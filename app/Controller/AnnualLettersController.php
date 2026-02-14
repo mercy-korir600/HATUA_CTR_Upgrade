@@ -1067,95 +1067,112 @@ class AnnualLettersController extends AppController
             throw new NotFoundException(__('Invalid annual approval letter'));
         }
         if ($this->request->is('post') || $this->request->is('put')) {
+            $anl = $this->AnnualLetter->find('first', array('contain' => array('Application'), 'conditions' => array('AnnualLetter.id' => $id)));
+            $wasApproved = ($anl['AnnualLetter']['status'] === 'approved');
+            $isDraftSave = isset($this->request->data['saveDraft']);
+            $targetStatus = ($isDraftSave && !$wasApproved) ? 'draft' : 'approved';
+
+            $this->request->data['AnnualLetter']['id'] = $id;
+            $this->request->data['AnnualLetter']['status'] = $targetStatus;
+
             if ($this->AnnualLetter->save($this->request->data)) {
-
-                //******************       Send Email and Notifications to Applicant and Managers    *****************************
-                $this->loadModel('Message');
-                $html = new HtmlHelper(new ThemeView());
-                $message = $this->Message->find('first', array('conditions' => array('name' => 'annual_approval_letter')));
-                $anl = $this->AnnualLetter->find('first', array('contain' => array('Application'), 'conditions' => array('AnnualLetter.id' => $this->AnnualLetter->id)));
-
-                $users = $this->AnnualLetter->Application->User->find('all', array(
-                    'contain' => array('Group'),
-                    'conditions' => array('OR' => array('User.id' => $this->AnnualLetter->Application->field('user_id'), 'User.group_id' => 2)) //Applicant and managers
-                ));
-                foreach ($users as $user) {
-                    $variables = array(
-                        'name' => $user['User']['name'], 'approval_no' => $anl['AnnualLetter']['approval_no'], 'protocol_no' => $anl['Application']['protocol_no'],
-                        'protocol_link' => $html->link($anl['Application']['protocol_no'], array(
-                            'controller' => 'applications', 'action' => 'view', $anl['Application']['id'], $user['Group']['redir'] => true,
-                            'full_base' => true
-                        ), array('escape' => false)),
-                        'expiry_date' => $anl['AnnualLetter']['expiry_date'],
-                        'approval_date' => $anl['AnnualLetter']['approval_date']
-                    );
-                    $datum = array(
-                        'email' => $user['User']['email'],
-                        'id' => $id, 'user_id' => $user['User']['id'], 'type' => 'annual_approval_letter', 'model' => 'AnnaulLetter',
-                        'subject' => String::insert($message['Message']['subject'], $variables),
-                        'message' => String::insert($message['Message']['content'], $variables)
-                    );
-                    CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
-                    CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
+                if ($targetStatus !== 'approved') {
+                    $this->Session->setFlash(__('The annual approval letter draft has been saved'), 'alerts/flash_success');
+                    return $this->redirect(array('controller' => 'applications', 'action' => 'view', $anl['Application']['id'], 'ane' => $id, 'manager' => true));
                 }
-                //**********************************    END   *********************************
 
-                //**********************  Create new Screening,ScreeningSubmission,Assign,Review,ReviewSubmission,Final,AnnualApproval stages if not exists
-                $stages = $this->Application->ApplicationStage->find('all', array(
-                    'contain' => array(),
-                    'conditions' => array('ApplicationStage.application_id' => $anl['Application']['id'])
-                ));
+                // Skip notifications and workflow updates when editing an already submitted letter.
+                if (!$wasApproved) {
+                    //******************       Send Email and Notifications to Applicant and Managers    *****************************
+                    $this->loadModel('Message');
+                    $html = new HtmlHelper(new ThemeView());
+                    $message = $this->Message->find('first', array('conditions' => array('name' => 'annual_approval_letter')));
+                    $anl = $this->AnnualLetter->find('first', array('contain' => array('Application'), 'conditions' => array('AnnualLetter.id' => $this->AnnualLetter->id)));
 
-                if (!Hash::check($stages, '{n}.ApplicationStage[stage=AnnualApproval].id')) {
-                    //create only if approved
-                    if ($anl['Application']['approved'] == 2) {
-                        $this->Application->ApplicationStage->create();
-                        $this->Application->ApplicationStage->save(
-                            array('ApplicationStage' => array(
-                                'application_id' => $anl['Application']['id'], 'stage' => 'AnnualApproval', 'status' => 'Current', 'comment' => 'Manager approve', 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d', strtotime('+1 year')),
-                            ))
+                    $users = $this->AnnualLetter->Application->User->find('all', array(
+                        'contain' => array('Group'),
+                        'conditions' => array('OR' => array('User.id' => $this->AnnualLetter->Application->field('user_id'), 'User.group_id' => 2)) //Applicant and managers
+                    ));
+                    foreach ($users as $user) {
+                        $variables = array(
+                            'name' => $user['User']['name'], 'approval_no' => $anl['AnnualLetter']['approval_no'], 'protocol_no' => $anl['Application']['protocol_no'],
+                            'protocol_link' => $html->link($anl['Application']['protocol_no'], array(
+                                'controller' => 'applications', 'action' => 'view', $anl['Application']['id'], $user['Group']['redir'] => true,
+                                'full_base' => true
+                            ), array('escape' => false)),
+                            'expiry_date' => $anl['AnnualLetter']['expiry_date'],
+                            'approval_date' => $anl['AnnualLetter']['approval_date']
                         );
+                        $datum = array(
+                            'email' => $user['User']['email'],
+                            'id' => $id, 'user_id' => $user['User']['id'], 'type' => 'annual_approval_letter', 'model' => 'AnnaulLetter',
+                            'subject' => String::insert($message['Message']['subject'], $variables),
+                            'message' => String::insert($message['Message']['content'], $variables)
+                        );
+                        CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
+                        CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
                     }
-                } else {
-                    $var = Hash::extract($stages, '{n}.ApplicationStage[stage=AnnualApproval]');
-                    if (!empty($var)) {
-                        $s7['ApplicationStage'] = min($var);
-                        $this->Application->ApplicationStage->create();
-                        $s7['ApplicationStage']['status'] = 'Current';
-                        $s7['ApplicationStage']['comment'] = 'Manager letter approve';
-                        $s7['ApplicationStage']['end_date'] = date('Y-m-d', strtotime($anl['AnnualLetter']['expiry_date']));
-                        $this->Application->ApplicationStage->save($s7);
+                    //**********************************    END   *********************************
+
+                    //**********************  Create new Screening,ScreeningSubmission,Assign,Review,ReviewSubmission,Final,AnnualApproval stages if not exists
+                    $stages = $this->Application->ApplicationStage->find('all', array(
+                        'contain' => array(),
+                        'conditions' => array('ApplicationStage.application_id' => $anl['Application']['id'])
+                    ));
+
+                    if (!Hash::check($stages, '{n}.ApplicationStage[stage=AnnualApproval].id')) {
+                        //create only if approved
+                        if ($anl['Application']['approved'] == 2) {
+                            $this->Application->ApplicationStage->create();
+                            $this->Application->ApplicationStage->save(
+                                array('ApplicationStage' => array(
+                                    'application_id' => $anl['Application']['id'], 'stage' => 'AnnualApproval', 'status' => 'Current', 'comment' => 'Manager approve', 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d', strtotime('+1 year')),
+                                ))
+                            );
+                        }
+                    } else {
+                        $var = Hash::extract($stages, '{n}.ApplicationStage[stage=AnnualApproval]');
+                        if (!empty($var)) {
+                            $s7['ApplicationStage'] = min($var);
+                            $this->Application->ApplicationStage->create();
+                            $s7['ApplicationStage']['status'] = 'Current';
+                            $s7['ApplicationStage']['comment'] = 'Manager letter approve';
+                            $s7['ApplicationStage']['end_date'] = date('Y-m-d', strtotime($anl['AnnualLetter']['expiry_date']));
+                            $this->Application->ApplicationStage->save($s7);
+                        }
                     }
-                }
-                //end stages
-                //**********************        end
+                    //end stages
+                    //**********************        end
 
-                // Create a Audit Trail
-                $this->loadModel('Application');
-                $this->loadModel('AuditTrail');
-                $audit = array(
-                    'AuditTrail' => array(
-                        'foreign_key' => $anl['Application']['id'],
-                        'model' => 'Application',
-                        'message' => 'An annual approval letter for the report with protocol number ' .  $this->Application->field('protocol_no',array('id'=>$anl['Application']['id'])) . ' has been  approved by ' . $this->Session->read('Auth.User.username'),
-                        'ip' =>  $this->Application->field('protocol_no',array('id'=>$anl['Application']['id']))
-                    )
-                );
-                $this->AuditTrail->Create();
-                if ($this->AuditTrail->save($audit)) {
-                    $this->log($this->args[0], 'audit_success');
+                    // Create a Audit Trail
+                    $this->loadModel('Application');
+                    $this->loadModel('AuditTrail');
+                    $audit = array(
+                        'AuditTrail' => array(
+                            'foreign_key' => $anl['Application']['id'],
+                            'model' => 'Application',
+                            'message' => 'An annual approval letter for the report with protocol number ' .  $this->Application->field('protocol_no', array('id' => $anl['Application']['id'])) . ' has been  approved by ' . $this->Session->read('Auth.User.username'),
+                            'ip' =>  $this->Application->field('protocol_no', array('id' => $anl['Application']['id']))
+                        )
+                    );
+                    $this->AuditTrail->Create();
+                    if ($this->AuditTrail->save($audit)) {
+                        $this->log($this->args[0], 'audit_success');
+                    } else {
+                        $this->log('Error creating an audit trail', 'notifications_error');
+                        $this->log($this->args[0], 'notifications_error');
+                    }
+
+                    $this->Session->setFlash(__('The annual approval letter has been saved'), 'alerts/flash_success');
                 } else {
-                    $this->log('Error creating an audit trail', 'notifications_error');
-                    $this->log($this->args[0], 'notifications_error');
+                    $this->Session->setFlash(__('The submitted annual approval letter has been updated'), 'alerts/flash_success');
                 }
-
-                $this->Session->setFlash(__('The annual approval letter has been saved'), 'alerts/flash_success');
-                $this->redirect(array('controller' => 'applications', 'action' => 'view', $anl['Application']['id'], 'anl' => $id, 'manager' => true));
+                return $this->redirect(array('controller' => 'applications', 'action' => 'view', $anl['Application']['id'], 'anl' => $id, 'manager' => true));
             } else {
                 $this->Session->setFlash(__('The annual approval letter could not be saved. Please, try again.'), 'alerts/flash_error');
             }
         }
-        $this->redirect($this->referer());
+        return $this->redirect($this->referer());
     }
     /**
      * delete method

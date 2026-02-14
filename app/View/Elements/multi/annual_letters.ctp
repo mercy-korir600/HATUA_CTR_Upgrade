@@ -38,6 +38,7 @@ echo $this->Session->flash();
       <th>Approval No.</th>
       <th>Approval date</th>
       <th>Expiry date</th>
+      <th>Status</th>
       <th>Created</th>
       <th class="actions"><?php echo __('Actions'); ?></th>
     </tr>
@@ -56,19 +57,26 @@ echo $this->Session->flash();
           <td><?php echo h($anl['approval_no']); ?>&nbsp;</td>
           <td><?php echo h($anl['approval_date']); ?>&nbsp;</td>
           <td><?php echo h($anl['expiry_date']); ?>&nbsp;</td>
+          <td><?php echo h($anl['status']); ?>&nbsp;</td>
           <td><?php echo h($anl['created']); ?>&nbsp;</td>
           <td class="actions">
             <?php
-            if ($anl['status'] == 'submitted') {
+            if ($redir == 'manager') {
               echo $this->Html->link('<span class="label label-success"> Edit </span>', array('action' => 'view', $application['Application']['id'], 'ane' => $anl['id']), array('escape' => false));
+              echo "&nbsp;";
             } else {
               echo $this->Html->link('<span class="label label-info"> View </span>', array('action' => 'view', $application['Application']['id'], 'anl' => $anl['id']), array('escape' => false));
             }
 
-            echo "&nbsp;";
-            if ($anl['status'] == 'submitted')
-              echo $this->Html->link('<span class="label label-warning"> Approve </span>', array('action' => 'view', $application['Application']['id'], 'ane' => $anl['id']), array('escape' => false));
-            echo "&nbsp;";
+            if ($redir == 'manager' && $anl['status'] == 'approved') {
+              echo $this->Html->link('<span class="label label-info"> View </span>', array('action' => 'view', $application['Application']['id'], 'anl' => $anl['id']), array('escape' => false));
+              echo "&nbsp;";
+            }
+
+            if ($anl['status'] != 'approved' && $redir == 'manager') {
+              echo $this->Html->link('<span class="label label-warning"> Submit </span>', array('action' => 'view', $application['Application']['id'], 'ane' => $anl['id']), array('escape' => false));
+              echo "&nbsp;";
+            }
             // if($anl['status'] == 'submitted') 
             echo $this->Html->link('<span class="label label-inverse"> Download PDF </span>', array('controller' => 'annual_letters', 'action' => 'view', $anl['id'], 'ext' => 'pdf',), array('escape' => false));
             ?>
@@ -217,7 +225,7 @@ if (isset($this->params['named']['anl'])) {
   <?php
   if (isset($this->params['named']['ane'])) {
     foreach ($application['AnnualLetter'] as $akey => $annual_letter) {
-      if ($annual_letter['id'] == $this->params['named']['ane'] && $annual_letter['status'] != 'approved') {
+      if ($annual_letter['id'] == $this->params['named']['ane'] && $redir == 'manager') {
         // debug($annual_letter['status'] == 'submitted');         
   ?>
         <div class="ctr-groups">
@@ -237,10 +245,9 @@ if (isset($this->params['named']['anl'])) {
           ));
           echo $this->Form->input('id'); ?>
           <fieldset>
-            <legend>Approve</strong></legend>
+            <legend>Edit Approval Letter</legend>
             <?php
             echo $this->Form->input('id', array('type' => 'hidden', 'value' => $annual_letter['id']));
-            echo $this->Form->input('status', array('type' => 'hidden', 'value' => 'approved'));
             echo $this->Form->input('approval_date', array(
               'div' => array('class' => 'control-group'), 'type' => 'text', 'value' => $annual_letter['approval_date'], 'class' => 'datepickers',
               'label' => array('class' => 'control-label required', 'text' => 'Approval date <span class="sterix">*</span>'),
@@ -257,15 +264,36 @@ if (isset($this->params['named']['anl'])) {
             ));
             ?>
           </fieldset>
-          <?php echo  $this->Form->end(array(
-            'label' => 'Paste Signature and Approve',
-            'value' => 'Approve',
-            'class' => 'btn btn-success',
-            'div' => array(
-              'class' => 'form-actions',
-            )
-          ));
-          ?>
+          <div class="form-actions">
+            <?php
+            if ($annual_letter['status'] != 'approved') {
+              echo $this->Form->submit('Save as Draft', array(
+                'name' => 'saveDraft',
+                'class' => 'btn btn-warning',
+                'div' => false
+              ));
+              echo "&nbsp;";
+              echo $this->Form->submit('Paste Signature and Submit', array(
+                'name' => 'submitLetter',
+                'class' => 'btn btn-success',
+                'div' => false
+              ));
+            } else {
+              echo $this->Form->submit('Save Changes', array(
+                'name' => 'saveChanges',
+                'class' => 'btn btn-info',
+                'div' => false
+              ));
+              echo "&nbsp;";
+              echo $this->Form->submit('Paste Signature and Submit', array(
+                'name' => 'submitLetter',
+                'class' => 'btn btn-success',
+                'div' => false
+              ));
+            }
+            ?>
+          </div>
+          <?php echo $this->Form->end(); ?>
           <script type="text/javascript">
             (function($) {
 

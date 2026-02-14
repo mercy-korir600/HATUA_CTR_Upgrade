@@ -8,6 +8,51 @@ $this->Html->script('jUpload/jquery.fileupload.js', array('inline' => false));
 $this->Html->script('save', array('inline' => false));
 // pr($this->request->data);
 ?>
+<style>
+  .generate-invoice-modal {
+    width: 560px;
+    margin-left: -280px;
+    border: 1px solid #d7d7d7;
+    border-radius: 8px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+    z-index: 1060;
+  }
+
+  .generate-invoice-modal .modal-header {
+    background: #f7f9f7;
+    border-bottom: 1px solid #e2e2e2;
+    padding: 14px 16px;
+  }
+
+  .generate-invoice-modal .modal-header h4 {
+    color: #3c763d;
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .generate-invoice-modal .modal-body {
+    padding: 16px;
+  }
+
+  .generate-invoice-modal .invoice-hint {
+    margin: 0 0 10px 0;
+    color: #666;
+  }
+
+  .generate-invoice-modal .control-group {
+    margin-bottom: 0;
+  }
+
+  .generate-invoice-modal .controls input[type="number"] {
+    min-height: 36px;
+    font-size: 16px;
+  }
+
+  .generate-invoice-modal .modal-footer {
+    background: #fcfcfc;
+    border-top: 1px solid #e8e8e8;
+  }
+</style>
 <div class="row-fluid">
   <?php echo $this->fetch('header'); ?>
   <?php echo $this->Session->flash(); ?>
@@ -2149,7 +2194,23 @@ $this->Html->script('save', array('inline' => false));
         ));
 
         ?>
-        <hr>
+        <?php if (!empty($this->request->params['prefix']) && $this->request->params['prefix'] === 'applicant') { ?>
+          <hr>
+          <?php
+          echo $this->Html->tag(
+            'button',
+            '<i class="icon-barcode"></i> Generate Invoice',
+            array(
+              'type' => 'button',
+              'class' => 'btn btn-warning btn-block',
+              'data-toggle' => 'modal',
+              'data-target' => '#GenerateInvoiceModal',
+              'escape' => false,
+            )
+          );
+          ?>
+          <hr>
+        <?php } ?>
         <?php
         echo $this->Form->button('<i class="icon-remove-circle"></i> Cancel', array(
           'name' => 'cancelReport',
@@ -2192,6 +2253,52 @@ $this->Html->script('save', array('inline' => false));
       <button type="submit" class="btn btn-info btn-block">Submit</button>
       <button type="button" class="btn btn-block">Cancel</button>-->
       </div>
+
+      <?php if (!empty($this->request->params['prefix']) && $this->request->params['prefix'] === 'applicant') { ?>
+      <div id="GenerateInvoiceModal" class="modal hide fade generate-invoice-modal" tabindex="-1" role="dialog" aria-labelledby="GenerateInvoiceModalLabel" aria-hidden="true">
+        <?php
+        echo $this->Form->create('Application', array(
+          'url' => array('controller' => 'applications', 'action' => 'edit', $this->request->data['Application']['id']),
+          'class' => 'form-horizontal',
+          'id' => 'GenerateInvoiceForm',
+        ));
+        ?>
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 id="GenerateInvoiceModalLabel"><i class="icon-barcode"></i> Generate Invoice</h4>
+        </div>
+        <div class="modal-body">
+          <p class="invoice-hint">Enter the number of sites to use for invoice generation.</p>
+          <?php
+          echo $this->Form->input('total_sites', array(
+            'type' => 'number',
+            'id' => 'InvoiceTotalSites',
+            'min' => 1,
+            'required' => true,
+            'value' => !empty($this->request->data['Application']['total_sites']) ? $this->request->data['Application']['total_sites'] : 1,
+            'label' => array('class' => 'control-label required', 'text' => 'Total Sites <span class="sterix">*</span>'),
+            'class' => 'input-medium',
+          ));
+          ?>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+          <?php
+          echo $this->Form->button(
+            '<i class="icon-ok"></i> Generate Invoice',
+            array(
+              'type' => 'submit',
+              'name' => 'generateInvoice',
+              'class' => 'btn btn-success',
+              'escape' => false,
+              'onclick' => "return confirm('Proceed to generate invoice using this number of sites?');",
+            )
+          );
+          ?>
+        </div>
+        <?php echo $this->Form->end(); ?>
+      </div>
+      <?php } ?>
     </div>
   </div>
 
@@ -2205,6 +2312,14 @@ $this->Html->script('save', array('inline' => false));
         expires: 1
       }
     });
+
+    if ($('#GenerateInvoiceModal').length) {
+      // Keep modal outside affixed sidebar to avoid clipping and z-index issues.
+      $('#GenerateInvoiceModal').appendTo('body');
+      $('#GenerateInvoiceModal').on('shown', function() {
+        $('#InvoiceTotalSites').focus().select();
+      });
+    }
 
     $('#ApplicationApplicantEditForm').submit(function() {
       //check if there is an empty file input
