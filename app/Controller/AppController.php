@@ -140,6 +140,24 @@ class AppController extends Controller
     // );
   }
 
+  public function beforeRender()
+  {
+    parent::beforeRender();
+
+    $requestExt = !empty($this->request->params['ext']) ? strtolower($this->request->params['ext']) : '';
+    $requestUrl = !empty($this->request->url) ? strtolower($this->request->url) : '';
+    $isPdfRequest = ($requestExt === 'pdf') || (strpos($requestUrl, '.pdf') !== false);
+    if (
+      $isPdfRequest &&
+      isset($this->pdfConfig) &&
+      is_array($this->pdfConfig) &&
+      !empty($this->pdfConfig['filename']) &&
+      !preg_match('/\.pdf$/i', $this->pdfConfig['filename'])
+    ) {
+      $this->pdfConfig['filename'] .= '.pdf';
+    }
+  }
+
   protected function getPrimaryInvestigatorContact($application = array())
   {
     if (empty($application['InvestigatorContact']) || !is_array($application['InvestigatorContact'])) {
