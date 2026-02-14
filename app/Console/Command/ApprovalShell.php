@@ -11,6 +11,33 @@ App::uses('HtmlHelper', 'View/Helper');
 
 class ApprovalShell extends Shell {
     public $uses = array('User', 'Application', 'Amendment','Review', 'Notification', 'Message', 'Pocket', 'AnnualLetter');
+
+    private function getPrimaryInvestigatorContact($application = array()) {
+        if (empty($application['InvestigatorContact']) || !is_array($application['InvestigatorContact'])) {
+            return array();
+        }
+
+        foreach ($application['InvestigatorContact'] as $contact) {
+            if (!empty($contact['investigator_role']) && strtolower($contact['investigator_role']) === 'principal') {
+                return $contact;
+            }
+        }
+
+        return reset($application['InvestigatorContact']);
+    }
+
+    private function getInvestigatorFullName($investigator = array()) {
+        if (empty($investigator) || !is_array($investigator)) {
+            return null;
+        }
+
+        $given = isset($investigator['given_name']) ? trim($investigator['given_name']) : '';
+        $middle = isset($investigator['middle_name']) ? trim($investigator['middle_name']) : '';
+        $family = isset($investigator['family_name']) ? trim($investigator['family_name']) : '';
+        $fullName = trim($given . ' ' . $middle . ' ' . $family);
+
+        return ($fullName !== '') ? $fullName : null;
+    }
     
     //send email method
     private function  sendEmail($datum = null) {        
@@ -172,13 +199,22 @@ class ApprovalShell extends Shell {
               $year = date('Y', strtotime($this->Application->field('approval_date')));
               $approval_no = 'APL/'.$cnt.'/'.$year.'-'.$application['Application']['protocol_no'];
               $expiry_date = date('jS F Y', strtotime($application['Application']['approval_date'] . " +1 year"));
+              $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+              $qualification = $names = $professional_address = $telephone = null;
+              if (!empty($principalInvestigator)) {
+                  $qualification = $principalInvestigator['qualification'];
+                  $names = $this->getInvestigatorFullName($principalInvestigator);
+                  $professional_address = $principalInvestigator['professional_address'];
+                  $telephone = $principalInvestigator['telephone'];
+              }
+
               $variables = array(
                   'approval_no' => $approval_no, 'protocol_no' => $application['Application']['protocol_no'], 
                   'letter_date' => date('jS F Y', strtotime($application['Application']['approval_date'])),
-                  'qualification' => $application['InvestigatorContact'][0]['qualification'],
-                  'names' => $application['InvestigatorContact'][0]['given_name'].' '.$application['InvestigatorContact'][0]['middle_name'].' '.$application['InvestigatorContact'][0]['family_name'],
-                  'professional_address' => $application['InvestigatorContact'][0]['professional_address'],
-                  'telephone' => $application['InvestigatorContact'][0]['telephone'],
+                  'qualification' => $qualification,
+                  'names' => $names,
+                  'professional_address' => $professional_address,
+                  'telephone' => $telephone,
                   'study_title' => $application['Application']['short_title'],
                   'checklist' => $checkstring,
                   'status' => $application['TrialStatus']['name'], 
@@ -284,13 +320,22 @@ class ApprovalShell extends Shell {
 	          $year = date('Y', strtotime($this->Application->field('approval_date')));
 	          $approval_no = 'APL/'.$cnt.'/'.$year.'-'.$application['Application']['protocol_no'];
 	          $expiry_date = date('jS F Y', strtotime($application['Application']['approval_date'] . " +1 year"));
+	          $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+	          $qualification = $names = $professional_address = $telephone = null;
+	          if (!empty($principalInvestigator)) {
+	              $qualification = $principalInvestigator['qualification'];
+	              $names = $this->getInvestigatorFullName($principalInvestigator);
+	              $professional_address = $principalInvestigator['professional_address'];
+	              $telephone = $principalInvestigator['telephone'];
+	          }
+
 	          $variables = array(
 	              'approval_no' => $approval_no, 'protocol_no' => $application['Application']['protocol_no'], 
 	              'letter_date' => date('jS F Y', strtotime($application['Application']['approval_date'])),
-	              'qualification' => $application['InvestigatorContact'][0]['qualification'],
-	              'names' => $application['InvestigatorContact'][0]['given_name'].' '.$application['InvestigatorContact'][0]['middle_name'].' '.$application['InvestigatorContact'][0]['family_name'],
-	              'professional_address' => $application['InvestigatorContact'][0]['professional_address'],
-	              'telephone' => $application['InvestigatorContact'][0]['telephone'],
+	              'qualification' => $qualification,
+	              'names' => $names,
+	              'professional_address' => $professional_address,
+	              'telephone' => $telephone,
 	              'study_title' => $application['Application']['short_title'],
 	              'checklist' => $checkstring,
 	              'status' => $application['TrialStatus']['name'], 
@@ -343,4 +388,3 @@ class ApprovalShell extends Shell {
 
 
 }
-

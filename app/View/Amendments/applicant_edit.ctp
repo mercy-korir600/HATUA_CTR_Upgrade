@@ -1,5 +1,25 @@
 <?php
 $this->extend('/Elements/application/applicant_view');
+
+$currentAmendment = array();
+$currentAmendmentId = !empty($this->request->data['Amendment']['id']) ? (int) $this->request->data['Amendment']['id'] : 0;
+$amendmentCount = !empty($application['Amendment']) ? count($application['Amendment']) : 0;
+
+if (!empty($application['Amendment'])) {
+  foreach ($application['Amendment'] as $amendmentRow) {
+    if (!empty($amendmentRow['id']) && (int) $amendmentRow['id'] === $currentAmendmentId) {
+      $currentAmendment = $amendmentRow;
+      break;
+    }
+  }
+
+  if (empty($currentAmendment)) {
+    $amendmentRows = array_values($application['Amendment']);
+    $currentAmendment = $amendmentRows[count($amendmentRows) - 1];
+  }
+}
+
+$sectionOne = !empty($currentAmendment['Amend']) ? $currentAmendment['Amend'] : array();
 ?>
 
 <?php $this->start('amendment-lead'); ?>
@@ -12,18 +32,103 @@ $this->extend('/Elements/application/applicant_view');
     ?>
      <div class="tabbable tabs-left"> <!-- Only required for left/right tabs -->
       <ul class="nav nav-tabs">
-          <li class="active"><a href="#tab1" data-toggle="tab">Amendment No. <?php  echo count($application['Amendment']); ?></a></li>
+          <li class="active"><a href="#tab0" data-toggle="tab">Section 1</a></li>
+          <li><a href="#tab1" data-toggle="tab">Amendment No. <?php echo $amendmentCount; ?></a></li>
           <li><a href="#tab2" data-toggle="tab">Reviewer's Comments</a></li>
       </ul>
       <div class="tab-content my-tab-content">
-        <div class="tab-pane active" id="tab1">
+        <div class="tab-pane active" id="tab0">
+          <div class="row-fluid">
+            <h4 class="text-success">Section 1</h4>
+          </div>
+          <table class="table table-condensed table-striped table-bordered">
+            <tbody>
+              <tr>
+                <td class="table-label"><strong>1. Cover letter</strong></td>
+                <td><?php echo !empty($sectionOne['cover_letter']) ? $sectionOne['cover_letter'] : '<span class="muted">Not provided</span>'; ?></td>
+              </tr>
+              <tr>
+                <td class="table-label"><strong>2. Summary of the proposed amendments</strong></td>
+                <td><?php echo !empty($sectionOne['summary']) ? $sectionOne['summary'] : '<span class="muted">Not provided</span>'; ?></td>
+              </tr>
+              <tr>
+                <td class="table-label"><strong>3. Reason for the amendment</strong></td>
+                <td><?php echo !empty($sectionOne['reason']) ? $sectionOne['reason'] : '<span class="muted">Not provided</span>'; ?></td>
+              </tr>
+              <tr>
+                <td class="table-label"><strong>4. Impact on the original study objectives</strong></td>
+                <td><?php echo !empty($sectionOne['objectives_impacts']) ? $sectionOne['objectives_impacts'] : '<span class="muted">Not provided</span>'; ?></td>
+              </tr>
+              <tr>
+                <td class="table-label"><strong>5. Impact on study endpoints and data generated</strong></td>
+                <td><?php echo !empty($sectionOne['endpoints_impacts']) ? $sectionOne['endpoints_impacts'] : '<span class="muted">Not provided</span>'; ?></td>
+              </tr>
+              <tr>
+                <td class="table-label"><strong>6. Impact on the safety and wellbeing of participants</strong></td>
+                <td><?php echo !empty($sectionOne['safety_impacts']) ? $sectionOne['safety_impacts'] : '<span class="muted">Not provided</span>'; ?></td>
+              </tr>
+              <tr>
+                <td class="table-label"><strong>Cover Letter File</strong></td>
+                <td>
+                  <?php if (!empty($currentAmendment['CoverLetter'])) { ?>
+                    <?php foreach ($currentAmendment['CoverLetter'] as $coverFile) { ?>
+                      <?php if (!empty($coverFile['id']) && !empty($coverFile['basename'])) { ?>
+                        <p style="margin-bottom: 6px;">
+                          <?php
+                            echo $this->Html->link(
+                              __($coverFile['basename']),
+                              array('controller' => 'attachments', 'action' => 'download', $coverFile['id']),
+                              array('class' => 'btn btn-info btn-mini')
+                            );
+                          ?>
+                          <small class="muted"> uploaded on <?php echo $coverFile['created']; ?></small>
+                        </p>
+                      <?php } ?>
+                    <?php } ?>
+                  <?php } else { ?>
+                    <span class="muted">No cover letter file uploaded.</span>
+                  <?php } ?>
+                </td>
+              </tr>
+              <tr>
+                <td class="table-label"><strong>Additional Attachments</strong></td>
+                <td>
+                  <?php if (!empty($currentAmendment['Attachment'])) { ?>
+                    <?php foreach ($currentAmendment['Attachment'] as $attachmentFile) { ?>
+                      <?php if (!empty($attachmentFile['id']) && !empty($attachmentFile['basename'])) { ?>
+                        <p style="margin-bottom: 6px;">
+                          <?php
+                            echo $this->Html->link(
+                              __($attachmentFile['basename']),
+                              array('controller' => 'attachments', 'action' => 'download', $attachmentFile['id']),
+                              array('class' => 'btn btn-info btn-mini')
+                            );
+                          ?>
+                          <small class="muted">
+                            uploaded on <?php echo !empty($attachmentFile['created']) ? $attachmentFile['created'] : 'N/A'; ?>
+                            <?php if (!empty($attachmentFile['description'])) { ?>
+                              - <?php echo h($attachmentFile['description']); ?>
+                            <?php } ?>
+                          </small>
+                        </p>
+                      <?php } ?>
+                    <?php } ?>
+                  <?php } else { ?>
+                    <span class="muted">No additional attachments uploaded.</span>
+                  <?php } ?>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tab-pane" id="tab1">
           <!-- content for tab1 comes here -->
 
     <div class="row-fluid">
       <h4 class="text-success">
        Submitted Application :  (<?php echo $application['Application']['protocol_no'];?>) &mdash; <span class="muted">Amendment No.
         <?php
-          echo count($application['Amendment']);
+          echo $amendmentCount;
         ?>
         </span>
       </h4>
@@ -110,7 +215,7 @@ $this->start('form-actions');
 <?php $this->start('tabs'); ?>
 <ul>
   <li><a href="#tabs-1">1. Abstract</a></li>
-  <li><a href="#tabs-2">2. Investigator</a></li>
+  <li><a href="#tabs-2">2. Investigator &amp; Pharmacist</a></li>
   <li><a href="#tabs-3">3. Sponsor</a></li>
   <li><a href="#tabs-4">4. Participants</a></li>
   <li><a href="#tabs-5">5. Sites</a></li>
@@ -118,11 +223,12 @@ $this->start('form-actions');
   <li><a href="#tabs-7">7. Criteria</a></li>
   <li><a href="#tabs-8">8. Scope</a></li>
   <li><a href="#tabs-9">9. Design</a></li>
-  <li><a href="#tabs-10">10. Organizations</a></li>
-  <li><a href="#tabs-11">11. Other details</a></li>
-  <li><a href="#tabs-12">12. Checklist </a></li>
-  <li><a href="#tabs-13">13. Declaration</a></li>
-  <li><a href="#tabs-14">14. Notifications</a></li>
+  <li><a href="#tabs-15">10. Study Budget</a></li>
+  <li><a href="#tabs-10">11. Organizations</a></li>
+  <li><a href="#tabs-11">12. Other details</a></li>
+  <li><a href="#tabs-12">13. Checklist </a></li>
+  <li><a href="#tabs-13">14. Declaration</a></li>
+  <li><a href="#tabs-14">15. Notifications</a></li>
 </ul>
 <?php $this->end(); ?>
 
@@ -1213,8 +1319,3 @@ $this->start('form-actions');
     </td>
    </tr>
 <?php $this->end(); ?>
-
-
-
-
-

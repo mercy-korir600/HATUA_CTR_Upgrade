@@ -41,16 +41,66 @@ class AmendmentsController extends AppController {
 		$this->Amendment->Application->id = $id;
 
 		$application = $this->_isNewAmndt($id);
-		$this->Amendment->create();
-		$this->request->data['Amendment']['application_id'] = $id;
-		if ($this->Amendment->save($this->request->data, false)) {
-			$data = array('id' => $this->Amendment->id, 'application_id' => $application['Application']['id'],
-				'user_id' => $this->Auth->User('id'),'protocol_no' => $application['Application']['protocol_no']);
-			CakeResque::enqueue('default', 'NotificationShell', array('newAmndtNotifyApplicant', $data));
-			$this->Session->setFlash(__('New amendment'), 'alerts/flash_success');
-			$this->redirect(array('action' => 'edit',$this->Amendment->id));
-		} else {
-			$this->Session->setFlash(__('The amendment could not be saved. Please, try again.'));
+		$this->set('application', $application);
+
+		if ($this->request->is('post')) {
+			$errors = $this->_validateAmendmentInitialStep($this->request->data);
+			$this->_normalizeAmendmentInitialAttachments($this->request->data);
+
+			if (!empty($errors)) {
+				$this->Session->setFlash(implode('<br>', $errors), 'alerts/flash_error');
+				return;
+			}
+
+			$this->request->data['Amendment'] = array(
+				'application_id' => $id,
+				'submitted' => 0
+			);
+			if (empty($this->request->data['Amend']) || !is_array($this->request->data['Amend'])) {
+				$this->request->data['Amend'] = array();
+			}
+			$this->request->data['Amend']['application_id'] = $id;
+			$this->request->data['Amend']['submitted'] = 0;
+
+			$this->Amendment->create();
+			if ($this->Amendment->saveAssociated($this->request->data, array('validate' => 'first', 'deep' => true))) {
+				$data = array(
+					'id' => $this->Amendment->id,
+					'application_id' => $application['Application']['id'],
+					'user_id' => $this->Auth->User('id'),
+					'protocol_no' => $application['Application']['protocol_no']
+				);
+				CakeResque::enqueue('default', 'NotificationShell', array('newAmndtNotifyApplicant', $data));
+				$this->Session->setFlash(__('Amendment Step 1 completed. Continue with the full amendment form.'), 'alerts/flash_success');
+				return $this->redirect(array('action' => 'edit', $this->Amendment->id));
+			}
+
+			$modelErrors = array();
+				$errorSets = array(
+					$this->Amendment->validationErrors,
+					$this->Amendment->Amend->validationErrors,
+					$this->Amendment->Attachment->validationErrors,
+					$this->Amendment->CoverLetter->validationErrors,
+				);
+			foreach ($errorSets as $errorSet) {
+				if (empty($errorSet) || !is_array($errorSet)) {
+					continue;
+				}
+				foreach ($errorSet as $fieldErrors) {
+					if (is_array($fieldErrors)) {
+						foreach ($fieldErrors as $fieldError) {
+							$modelErrors[] = $fieldError;
+						}
+					} else {
+						$modelErrors[] = $fieldErrors;
+					}
+				}
+			}
+			if (!empty($modelErrors)) {
+				$this->Session->setFlash(implode('<br>', array_unique($modelErrors)), 'alerts/flash_error');
+			} else {
+				$this->Session->setFlash(__('The amendment could not be saved. Please, try again.'), 'alerts/flash_error');
+			}
 		}
 	}
 
@@ -76,7 +126,7 @@ class AmendmentsController extends AppController {
 		  	'Review' => array('conditions' => array('Review.type' => 'ppb_comment')))
 		));*/
 		$contains = $this->a_contain;
-		$contains['Amendment'] =  array('Attachment', 'CoverLetter');
+		$contains['Amendment'] =  array('Attachment', 'CoverLetter', 'Amend');
 		$contains['Review'] = array('conditions' => array('Review.type' => 'ppb_comment'));
 		$application = $this->Amendment->Application->find('first', array(
 		  'conditions' => array('Application.id' => $amndt['Amendment']['application_id']),
@@ -114,6 +164,15 @@ class AmendmentsController extends AppController {
 			}
 			else {
 				if ($this->Amendment->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
+					if ($validate) {
+						$this->Amendment->Amend->updateAll(
+							array(
+								'Amend.submitted' => 1,
+								'Amend.date_submitted' => "'" . date('Y-m-d H:i:s') . "'"
+							),
+							array('Amend.amendment_id' => $this->Amendment->id)
+						);
+					}
 					if($validate) {
 						$this->Session->setFlash(__('You have successfully submitted the amendment to PPB. PPB will review
 							this amendment and notify you on the progress. You can view the progress of the application by clicking on
@@ -195,5 +254,129 @@ class AmendmentsController extends AppController {
 			$this->Session->setFlash(__('Amendment already submitted to PPB. You may create a new amendment.'), 'alerts/flash_info');
 			$this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id));
 		}
+	}
+
+	protected function _normalizeAmendmentInitialAttachments(&$data) {
+		$requiredFields = array(
+			'cover_letter',
+			'summary',
+			'reason',
+			'objectives_impacts',
+			'endpoints_impacts',
+			'safety_impacts'
+		);
+
+		foreach ($requiredFields as $field) {
+			if (isset($data['Amend'][$field]) && is_string($data['Amend'][$field])) {
+				$data['Amend'][$field] = trim($data['Amend'][$field]);
+			}
+		}
+
+		$coverRows = array();
+		if (!empty($data['CoverLetter']) && is_array($data['CoverLetter'])) {
+			$coverRows = $data['CoverLetter'];
+		}
+
+		$normalizedCover = array();
+		foreach ($coverRows as $row) {
+			$file = isset($row['file']) ? $row['file'] : null;
+			$hasFile = is_array($file)
+				&& !empty($file['name'])
+				&& isset($file['error'])
+				&& (int) $file['error'] !== 4;
+			if (!$hasFile) {
+				continue;
+			}
+
+			$description = isset($row['description']) ? trim((string) $row['description']) : '';
+			if ($description === '') {
+				$description = 'Cover letter';
+			}
+
+			$normalizedCover[] = array(
+				'model' => 'Amendment',
+				'group' => 'cover_letter',
+				'description' => $description,
+				'file' => $file
+			);
+			break;
+		}
+		$data['CoverLetter'] = $normalizedCover;
+
+		$rows = array();
+		if (!empty($data['Attachment']) && is_array($data['Attachment'])) {
+			$rows = $data['Attachment'];
+		}
+
+		$normalized = array();
+		foreach ($rows as $index => $row) {
+			$file = isset($row['file']) ? $row['file'] : null;
+			$hasFile = is_array($file)
+				&& !empty($file['name'])
+				&& isset($file['error'])
+				&& (int) $file['error'] !== 4;
+			if (!$hasFile) {
+				continue;
+			}
+
+			$description = isset($row['description']) ? trim((string) $row['description']) : '';
+
+			$normalized[] = array(
+				'model' => 'Amendment',
+				'group' => 'attachment',
+				'description' => $description,
+				'file' => $file
+			);
+		}
+
+		$data['Attachment'] = $normalized;
+	}
+
+	protected function _validateAmendmentInitialStep($data) {
+		$errors = array();
+		$requiredLabels = array(
+			'cover_letter' => 'Cover letter',
+			'summary' => 'Summary of the proposed amendments',
+			'reason' => 'Reason for the amendment',
+			'objectives_impacts' => 'Impact of the amendment on the original study objectives',
+			'endpoints_impacts' => 'Impact of the amendments on the study endpoints and data generated',
+			'safety_impacts' => 'Impact of the proposed amendments on the safety and wellbeing of study participants',
+		);
+
+		foreach ($requiredLabels as $field => $label) {
+			$value = isset($data['Amend'][$field]) ? $data['Amend'][$field] : '';
+			if (!$this->_hasMeaningfulText($value)) {
+				$errors[] = __('Please provide: %s.', $label);
+			}
+		}
+
+		$coverLetterFile = null;
+		if (isset($data['CoverLetter'][0]['file'])) {
+			$coverLetterFile = $data['CoverLetter'][0]['file'];
+		}
+		$hasCoverLetter = is_array($coverLetterFile)
+			&& !empty($coverLetterFile['name'])
+			&& isset($coverLetterFile['error'])
+			&& (int) $coverLetterFile['error'] !== 4;
+
+		if (!$hasCoverLetter) {
+			$errors[] = __('Cover letter upload is required before continuing.');
+		}
+
+		return $errors;
+	}
+
+	protected function _hasMeaningfulText($value) {
+		$text = trim((string) $value);
+		if ($text === '') {
+			return false;
+		}
+
+		$text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+		$text = str_replace("\xC2\xA0", ' ', $text);
+		$text = strip_tags($text);
+		$text = preg_replace('/\s+/', ' ', $text);
+
+		return trim($text) !== '';
 	}
 }

@@ -3929,7 +3929,8 @@ class ApplicationsController extends AppController
     {
         // $response = $this->Application->isOwnedBy($id, $this->Auth->user('id'));
         $contains = $this->a_contain;
-        $contains['SiteInspection']['conditions'] = array('SiteInspection.summary_approved' => 2);
+        // Reporter/applicant view should show submitted inspections, not only final summary-approved ones.
+        $contains['SiteInspection']['conditions'] = array('SiteInspection.approved' => array(1, 2));
         $contains['Deviation']['conditions'] = array('Deviation.user_id' => $this->Auth->user('id'));
         $contains['Review']['conditions'] = array('Review.type' => 'ppb_comment');
 

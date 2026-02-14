@@ -265,18 +265,9 @@
     <h4 style="text-align: center; text-decoration: underline;">CONCOMITANT DRUG(S) AND HISTORY</h4>
     <?php echo $this->element('multi/concomittant_drugs'); ?>
 
-    <h4 style="text-align: center; text-decoration: underline;">MANUFACTURER INFORMATION</h4>
+    <h4 style="text-align: center; text-decoration: underline;">REPORT SOURCE</h4>
     <div class="row-fluid">
-        <div class="span6">
-            <?php
-                echo $this->Form->input('manufacturer_name', array('label' => array('class' => 'control-label required', 'text' => 'Name and Address of Manufacturer')));
-                echo $this->Form->input('mfr_no', array('label' => array('class' => 'control-label required', 'text' => 'MFR Control No.')));
-                echo $this->Form->input('manufacturer_date', array('type' => 'text', 'class' => 'datepickers',
-                    'label' => array('class' => 'control-label required', 'text' => 'Date Received by Manufacturer')));
-            ?>
-        </div>
-        <div class="span6">
-            <h5>Report Source <span class="sterix">*</span></h5><br>
+        <div class="span12">
             <?php
                 echo $this->Form->input('source_study', array('label' => array('class' => 'control-label', 'text' => 'Study')));
                 echo $this->Form->input('source_literature', array('label' => array('class' => 'control-label', 'text' => 'Literature')));

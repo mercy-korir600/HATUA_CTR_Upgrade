@@ -28,9 +28,16 @@ class TestShell extends AppShell {
        }
     }
     public function que(){
-           // Enqueue the job
-    $data=CakeResque::enqueue('default', 'NotificationShell', array('registrationEmail', array('email' => 'jkiprotich@intellisoftkenya.com'))); 
-    $this->log($data, $data);
+    $recipient = !empty($this->args[0]) ? $this->args[0] : 'jkiprotich@intellisoftkenya.com';
+    $payload = array(
+      'email' => $recipient,
+      'subject' => 'CTR Queue Test ' . date('Y-m-d H:i:s'),
+      'message' => 'Queue email test from TestShell::que'
+    );
+
+    $data = CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $payload));
+    $this->out('Enqueued job id: ' . $data);
+    $this->log($data, 'test_queue');
     // Wait for the job to be processed
     // $processed = false;
     // $start_time = time();

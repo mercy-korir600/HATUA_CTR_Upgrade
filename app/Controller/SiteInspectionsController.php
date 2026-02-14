@@ -37,7 +37,7 @@ class SiteInspectionsController extends AppController
 
         $criteria = $this->SiteInspection->parseCriteria($this->passedArgs);
         $criteria['Application.user_id'] = $this->Auth->User('id');
-        $criteria['SiteInspection.approved'] = 2;
+        $criteria['SiteInspection.approved'] = array(1, 2);
         $this->paginate['conditions'] = $criteria;
         $this->paginate['order'] = array('SiteInspection.created' => 'desc');
         $this->paginate['contain'] = array('Application');

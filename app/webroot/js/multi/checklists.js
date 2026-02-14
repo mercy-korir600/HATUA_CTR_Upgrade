@@ -1,9 +1,6 @@
-$(function () { 
-  $(".sample").on("click", function(){
-    
-    if ($(this).closest('div.checkcontrols').next().children().length == 0) {
-      $(this).closest('.control-group').find('.add-checklist').click();
-    }
+$(function () {
+  $(document).on('click', '.sample', function () {
+    $(this).closest('.control-group').find('.add-checklist').first().trigger('click');
   });
   $(document).on('click', '#tabs-12 .delete_file_link', delete_file);
   $(document).on('click', '#tabs-12 :input:checkbox', enable_checklist);
@@ -122,6 +119,9 @@ $(function () {
   setChecklistUpload();
   // function setChecklistUploade() {};
   function setChecklistUpload() {
+    if (!$.fn.fileupload) {
+      return;
+    }
     $('#tabs-12 :input:file').each(function () {
       $(this).fileupload({
         dataType: 'json',

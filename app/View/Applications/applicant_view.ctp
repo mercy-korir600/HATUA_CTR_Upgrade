@@ -130,7 +130,7 @@ $this->extend('/Elements/application/applicant_view');
             );
           } else {
             echo $this->Html->link(
-              'New Amendment',
+              'New Amendment (Step 1)',
               array('controller' => 'amendments', 'action' => 'add', $application['Application']['id']),
               array('escape' => false, 'class' => 'btn btn-primary', 'style' => 'margin-right: 10px;')
             );

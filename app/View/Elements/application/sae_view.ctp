@@ -172,31 +172,20 @@
     <?php } ?>
     <hr class="my-view">    
 
-    <h4 style="text-align: center; text-decoration: underline;">MANUFACTURER INFORMATION</h4>
+    <h4 style="text-align: center; text-decoration: underline;">REPORT SOURCE</h4>
     <table class="table  table-condensed">
       <tbody>
         <tr>
-          <td class="table-label required" width="25%"><p>Name and Address of Manufacturer</p></td>
-          <td  width="25%"><?php  echo $sae['Sae']['manufacturer_name']; ?></td>
-          <td colspan="2"><h5 style="text-align: center;">Report Source </h5></td>
-        </tr>
-        <tr>
-          <td class="table-label required"><p>MFR Control No.</p></td>
-          <td><?php  echo $sae['Sae']['mfr_no']; ?></td>
           <td class="table-label required"><p>Study</p></td>
           <td><?php  echo ($sae['Sae']['source_study']) ? $checked : $nChecked; ?></td>
-        </tr>
-        <tr>
-          <td class="table-label required"><p>Date Received by Manufacturer</p></td>
-          <td><?php  echo $sae['Sae']['manufacturer_date']; ?></td>
           <td class="table-label required"><p>Literature</p></td>
           <td><?php  echo ($sae['Sae']['source_literature']) ? $checked : $nChecked; ?></td>
         </tr>
         <tr>
-          <td></td>
-          <td></td>
           <td class="table-label required"><p>Health Professional</p></td>
           <td><?php  echo ($sae['Sae']['source_health_professional']) ? $checked : $nChecked; ?></td>
+          <td></td>
+          <td></td>
         </tr>
       </tbody>
     </table>

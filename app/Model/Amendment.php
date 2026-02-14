@@ -65,6 +65,14 @@ class Amendment extends AppModel {
 		),
        );
 
+	public $hasOne = array(
+		'Amend' => array(
+			'className' => 'Amend',
+			'foreignKey' => 'amendment_id',
+			'dependent' => true,
+		),
+	);
+
 	public function beforeSave() {
 		if (!empty($this->data['Amendment']['date_of_protocol'])) {
 			$this->data['Amendment']['date_of_protocol'] = $this->dateFormatBeforeSave($this->data['Amendment']['date_of_protocol']);

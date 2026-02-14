@@ -15,18 +15,25 @@ $(function() {
             </div>\
           </div><hr>\ ';
     // incremental development
-    $(".addUpload").click(function() {
-      intId = intId + 1;
-      //console.log($(this).closest('form').find('input[name="model"]').val());
-      //console.log($(this).closest('form').find('#model').val());
-      name = $(this).closest('form').find('input[name="model"]').val();
+    $(document).on('click', '.addUpload', function() {
+      var $button = $(this);
+      var $form = $button.closest('form');
+      var $uploadsTable = $button.closest('div.uploadsTable');
+      var attachmentCount = $uploadsTable.children('div.attacho').length;
+      var attachmentCategory =
+        $uploadsTable.data('attachmentCategory') ||
+        $form.find('input[name="data[Comment][model]"]').val() ||
+        $form.find('input[id$="Model"]').val() ||
+        'Comment';
 
-      if ($(this).closest('div.uploadsTable').children('div.attacho').length < 7) {            
-          trVar = $.parseHTML(trWrapper.replace(/{i}/g, intId).replace(/{n}/g, name));
-          $(this).closest("div.uploadsTable").append(trVar);
-      } else {
-          alert("Sorry, can't add more than "+intId+" Attachments at a time!");
+      if (attachmentCount >= 7) {
+        alert("Sorry, can't add more than 7 attachments at a time!");
+        return;
       }
+
+      intId = intId + 1;
+      var trVar = $.parseHTML(trWrapper.replace(/{i}/g, intId).replace(/{n}/g, attachmentCategory));
+      $uploadsTable.append(trVar);
     });
 
     function remove_attachment() {
