@@ -129,25 +129,63 @@
       <tbody>
     <?php
     foreach ($deviations as $deviation): ?>
+    <?php
+      $daysDifference = 0;
+      $bgColor = '';
+      $submissionDateRaw = '';
+
+      if (!empty($deviation['Deviation']['status']) && $deviation['Deviation']['status'] === 'Submitted') {
+        if (!empty($deviation['Deviation']['date_submitted'])) {
+          $submissionDateRaw = $deviation['Deviation']['date_submitted'];
+        } elseif (!empty($deviation['Deviation']['modified'])) {
+          $submissionDateRaw = $deviation['Deviation']['modified'];
+        } elseif (!empty($deviation['Deviation']['created'])) {
+          $submissionDateRaw = $deviation['Deviation']['created'];
+        }
+      }
+
+      $deviationDate = null;
+      if (!empty($deviation['Deviation']['deviation_date'])) {
+        $deviationDate = DateTime::createFromFormat('d-m-Y', $deviation['Deviation']['deviation_date']);
+        if (!$deviationDate) {
+          $deviationDate = DateTime::createFromFormat('Y-m-d', $deviation['Deviation']['deviation_date']);
+        }
+      }
+
+      if (!empty($submissionDateRaw) && $deviationDate instanceof DateTime) {
+        $submissionDate = new DateTime(date('Y-m-d', strtotime($submissionDateRaw)));
+        $daysDifference = (int)$submissionDate->diff($deviationDate)->days;
+
+        if ($daysDifference < 7) {
+          $bgColor = '#E8F5E9';
+        } elseif ($daysDifference <= 30) {
+          $bgColor = '#FFF8E1';
+        } else {
+          $bgColor = '#FDECEA';
+        }
+      }
+
+      $cellStyle = $bgColor ? 'background-color:' . $bgColor . ' !important;' : '';
+    ?>
     <tr class="">
-        <td><?php echo h($deviation['Deviation']['id']); ?>&nbsp;</td>
-        <td>
+        <td style="<?= h($cellStyle) ?>"><?php echo h($deviation['Deviation']['id']); ?>&nbsp;</td>
+        <td style="<?= h($cellStyle) ?>">
           <?php 
             // echo h($deviation['Deviation']['reference_no']); 
             //echo $this->Html->link($deviation['Deviation']['reference_no'], array('action' => 'view', $deviation['Deviation']['id']), array('escape'=>false));
             echo $this->Html->link($deviation['Deviation']['reference_no'],
                array('controller' => 'applications', 'action' => 'view', $deviation['Application']['id'], 'deviation_view' => $deviation['Deviation']['id']), array('escape'=>false));
         ?>&nbsp;</td>
-        <td><?php echo h($deviation['Deviation']['deviation_type']); ?>&nbsp;</td>
-        <td><?php 
+        <td style="<?= h($cellStyle) ?>"><?php echo h($deviation['Deviation']['deviation_type']); ?>&nbsp;</td>
+        <td style="<?= h($cellStyle) ?>"><?php 
           // echo h($deviation['Application']['protocol_no']); 
         echo $this->Html->link($deviation['Application']['protocol_no'], array('controller' => 'applications' , 'action' => 'view', $deviation['Application']['id']), array('escape' => false));
         ?>&nbsp;</td>
-        <td><?php echo h($deviation['Deviation']['pi_name']); ?>&nbsp;</td>
-        <td><?php echo h($deviation['Deviation']['deviation_date']); ?>&nbsp;</td>
-        <td><?php echo h($deviation['Deviation']['status']); ?>&nbsp;</td>
-        <td><?php echo h($deviation['Deviation']['created']); ?>&nbsp;</td>
-        <td class="actions">     
+        <td style="<?= h($cellStyle) ?>"><?php echo h($deviation['Deviation']['pi_name']); ?>&nbsp;</td>
+        <td style="<?= h($cellStyle) ?>"><?php echo h($deviation['Deviation']['deviation_date']); ?>&nbsp;</td>
+        <td style="<?= h($cellStyle) ?>"><?php echo h($deviation['Deviation']['status']); ?>&nbsp;</td>
+        <td style="<?= h($cellStyle) ?>"><?php echo h($deviation['Deviation']['created']); ?>&nbsp;</td>
+        <td style="<?= h($cellStyle) ?>" class="actions">     
             <?php echo $this->Html->link('<span class="label label-info"> View </span>',
                      array('controller' => 'applications', 'action' => 'view', $deviation['Application']['id'], 'deviation_view' => $deviation['Deviation']['id']), array('escape'=>false)); ?>  
             <?php //echo $this->Html->link(__('<label class="label label-info">View</label>'), array('action' => 'view', $deviation['Deviation']['id']), array('escape' => false)); ?> 

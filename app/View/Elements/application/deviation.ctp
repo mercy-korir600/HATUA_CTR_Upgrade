@@ -45,15 +45,52 @@ if (isset($this->params['named']['deviation_edit'])) {
       $deviationId = (int)$deviation['id'];
       $isSelected = ($selectedDeviationId === $deviationId);
       $rowAnchor = 'deviation-row-' . $deviationId;
+
+      $daysDifference = 0;
+      $bgColor = '';
+      $submissionDateRaw = '';
+
+      if (!empty($deviation['status']) && $deviation['status'] === 'Submitted') {
+        if (!empty($deviation['date_submitted'])) {
+          $submissionDateRaw = $deviation['date_submitted'];
+        } elseif (!empty($deviation['modified'])) {
+          $submissionDateRaw = $deviation['modified'];
+        } elseif (!empty($deviation['created'])) {
+          $submissionDateRaw = $deviation['created'];
+        }
+      }
+
+      $deviationDate = null;
+      if (!empty($deviation['deviation_date'])) {
+        $deviationDate = DateTime::createFromFormat('d-m-Y', $deviation['deviation_date']);
+        if (!$deviationDate) {
+          $deviationDate = DateTime::createFromFormat('Y-m-d', $deviation['deviation_date']);
+        }
+      }
+
+      if (!empty($submissionDateRaw) && $deviationDate instanceof DateTime) {
+        $submissionDate = new DateTime(date('Y-m-d', strtotime($submissionDateRaw)));
+        $daysDifference = (int)$submissionDate->diff($deviationDate)->days;
+
+        if ($daysDifference < 7) {
+          $bgColor = '#E8F5E9';
+        } elseif ($daysDifference <= 30) {
+          $bgColor = '#FFF8E1';
+        } else {
+          $bgColor = '#FDECEA';
+        }
+      }
+
+      $cellStyle = $bgColor ? 'background-color:' . $bgColor . ' !important;' : '';
     ?>
       <tr id="<?php echo h($rowAnchor); ?>" class="<?php echo $isSelected ? 'info' : ''; ?>">
-        <td><?php echo $deviation['id'] ?></td>
-        <td><?php echo $deviation['reference_no'] ?></td>
-        <td><?php echo $deviation['deviation_date'] ?></td>
-        <td><?php echo $deviation['deviation_type'] ?></td>
-        <td><?php echo $deviation['status'] ?></td>
-        <td><?php echo $deviation['created'] ?></td>
-        <td>
+        <td style="<?= h($cellStyle) ?>"><?php echo $deviation['id'] ?></td>
+        <td style="<?= h($cellStyle) ?>"><?php echo $deviation['reference_no'] ?></td>
+        <td style="<?= h($cellStyle) ?>"><?php echo $deviation['deviation_date'] ?></td>
+        <td style="<?= h($cellStyle) ?>"><?php echo $deviation['deviation_type'] ?></td>
+        <td style="<?= h($cellStyle) ?>"><?php echo $deviation['status'] ?></td>
+        <td style="<?= h($cellStyle) ?>"><?php echo $deviation['created'] ?></td>
+        <td style="<?= h($cellStyle) ?>">
           <?php
           if ($deviation['status'] === 'Unsubmitted') {
             if ($redir === 'applicant' && $deviation['user_id'] == $this->Session->read('Auth.User.id')) echo $this->Html->link(
