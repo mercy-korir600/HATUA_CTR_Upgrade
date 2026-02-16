@@ -182,7 +182,17 @@
                     </td>
                     <td>
                         <?php
-                
+                  echo $this->Form->input('phase', array(
+                      'type' => 'select', 'div' => false, 'class' => 'span12',
+                      'empty' => true,
+                      'options' => array(
+                          '1' => 'Phase I',
+                          '2' => 'Phase II',
+                          '3' => 'Phase III',
+                          '4' => 'Phase IV'
+                      ),
+                      'label' => array('class' => 'required', 'text' => 'Phase of Study')
+                  ));
               ?>
                     </td>
                     <td>

@@ -33,6 +33,7 @@ class Sae extends AppModel {
             'age_start' => array('type' => 'query', 'method' => 'ageFilter', 'encode' => true),
             'age_end' => array('type' => 'query', 'method' => 'ageFilter', 'encode' => true),
             'causality' => array('type' => 'value', 'encode' => true),
+            'phase' => array('type' => 'query', 'method' => 'phaseConditions', 'encode' => true),
         );
     
     public function dummy($data = array()) {
@@ -106,6 +107,38 @@ class Sae extends AppModel {
                 $this->alias . '.age_years between ? AND ?' => array($start1, $end1),
             ));
         return $cond;
+    }
+
+    public function phaseConditions($data = array()) {
+        if (empty($data['phase'])) {
+            return array();
+        }
+
+        $applicationConditions = array();
+        if ($data['phase'] == 1) {
+            $applicationConditions['Application.trial_human_pharmacology'] = 1;
+        } elseif ($data['phase'] == 2) {
+            $applicationConditions['Application.trial_therapeutic_exploratory'] = 1;
+        } elseif ($data['phase'] == 3) {
+            $applicationConditions['Application.trial_therapeutic_confirmatory'] = 1;
+        } elseif ($data['phase'] == 4) {
+            $applicationConditions['Application.trial_therapeutic_use'] = 1;
+        }
+
+        if (empty($applicationConditions)) {
+            return array();
+        }
+
+        $applicationIds = $this->Application->find('list', array(
+            'conditions' => $applicationConditions,
+            'fields' => array('Application.id', 'Application.id')
+        ));
+
+        if (empty($applicationIds)) {
+            $applicationIds = array(0);
+        }
+
+        return array($this->alias . '.application_id' => $applicationIds);
     }
 
     //The Associations below have been created with all possible keys, those that are not needed can be removed
