@@ -208,8 +208,14 @@
                       echo $this->Form->input('ercs', array(
                         'type' => 'select', 'div' => false, 'class' => 'span12',
                         'empty' => true,
-                        'options' => $ercs,
+                        'options' => isset($ercs) ? $ercs : array(),
                         'label' => array('class' => 'required', 'text' => 'ERCs'),
+                      ));
+                      echo $this->Form->input('sponsors', array(
+                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'empty' => true,
+                        'options' => isset($sponsor_options) ? $sponsor_options : array(),
+                        'label' => array('class' => 'required', 'text' => 'Sponsors'),
                       ));
                     }
                     ?>
@@ -248,6 +254,12 @@
                   <td>
                     <?php
                     if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
+                      echo $this->Form->input('trial_status_id', array(
+                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'empty' => true,
+                        'options' => isset($trial_statuses) ? $trial_statuses : array(),
+                        'label' => array('class' => 'required', 'text' => 'Trial Status'),
+                      ));
                       echo $this->Form->input('approved', array(
                         'type' => 'select', 'div' => false, 'class' => 'span12',
                         'empty' => true,
@@ -288,6 +300,8 @@
                     ?>
                   </td>
                 </tr>
+                <?php $showSummaryReportButtons = false; ?>
+                <?php if ($showSummaryReportButtons) { ?>
                 <tr class="searchmore" style="display: none;">
                 <td></td> 
                 <td colspan="1">
@@ -319,6 +333,7 @@
                     }
                     ?></td>     
                 </tr>
+                <?php } ?>
               </tbody>
             </table>
             <a href="#" id='moresearch' class="muted"><small><i class="icon-caret-right"></i> Extended search...</small></a>
@@ -555,8 +570,8 @@
     </div>
 </div>
 <script type="text/javascript">
-  $.expander.defaults.slicePoint = 220;
-  $(function() {
+$.expander.defaults.slicePoint = 220;
+$(function() {
     $(".morecontent").expander();
     var adates = $('#ApplicationStartDate, #ApplicationEndDate').datepicker({
       minDate: "-100Y",

@@ -129,14 +129,7 @@
                   'label' => array('class' => 'required', 'text' => 'Study Title'),
                   'type' => 'text',
                   ));
-                echo $this->Form->input('estimated_duration', array(
-                  'type' => 'number',
-                  'min' => 0,
-                  'step' => 1,
-                  'div' => false,
-                  'class' => 'span12 unauthorized_index',
-                  'label' => array('class' => 'required', 'text' => 'Estimated Duration (Months)'),
-                ));
+             
               ?>
               </td>
               <td colspan="2">
@@ -161,6 +154,41 @@
                   ));
                 ?>
               </td>
+            </tr>
+
+            <tr>
+
+            <td colspan="2">
+              <?php
+                 echo $this->Form->input('estimated_duration', array(
+                  'type' => 'number',
+                  'min' => 0,
+                  'step' => 1,
+                  'div' => false,
+                  'class' => 'span12 unauthorized_index',
+                  'label' => array('class' => 'required', 'text' => 'Estimated Duration (Months)'),
+                ));
+                ?></td>
+                <td><?php
+                echo $this->Form->input('sponsors', array(
+                  'type' => 'select',
+                  'div' => false,
+                  'class' => 'span12 unauthorized_index',
+                  'empty' => true,
+                  'options' => isset($sponsor_options) ? $sponsor_options : array(),
+                  'label' => array('class' => 'required', 'text' => 'Sponsors'),
+                ));  ?></td>
+                <td><?php
+                echo $this->Form->input('trial_status_id', array(
+                  'type' => 'select',
+                  'div' => false,
+                  'class' => 'span12 unauthorized_index',
+                  'empty' => true,
+                  'options' => isset($trial_statuses) ? $trial_statuses : array(),
+                  'label' => array('class' => 'required', 'text' => 'Trial Status'),
+                ));
+                ?>
+            </td>
             </tr>
             <tr class="warning">
               <td colspan="2" style="text-align: center;">

@@ -37,6 +37,7 @@ class Application extends AppModel
         'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Application.date_submitted BETWEEN ? AND ?'),
         'investigator' => array('type' => 'query', 'method' => 'findByInvestigators', 'encode' => true),
         'users' => array('type' => 'query', 'method' => 'findByReviewer', 'encode' => true),
+        'sponsors' => array('type' => 'query', 'method' => 'findBySponsor', 'encode' => true),
         'ercs' => array('type' => 'query', 'method' => 'findByErc', 'encode' => true),
         'sites' => array('type' => 'query', 'method' => 'orSites', 'encode' => true),
         'stages' => array('type' => 'query', 'method' => 'findByStage', 'encode' => true),
@@ -72,6 +73,24 @@ class Application extends AppModel
             'fields' => array('application_id', 'application_id')
         )));
         return $cond;
+    }
+
+    public function findBySponsor($data = array())
+    {
+        if (empty($data['sponsors'])) {
+            return array();
+        }
+
+        $applicationIds = $this->Sponsor->find('list', array(
+            'conditions' => array('Sponsor.sponsor' => $data['sponsors']),
+            'fields' => array('application_id', 'application_id')
+        ));
+
+        if (empty($applicationIds)) {
+            $applicationIds = array(0);
+        }
+
+        return array($this->alias . '.id' => $applicationIds);
     }
 
     public function findByErc($data = array())
@@ -154,11 +173,21 @@ class Application extends AppModel
     }
     public function makeRangeCondition($data = array())
     {
-        if (!empty($data['start_date'])) $start_date = date('Y-m-d', strtotime($data['start_date']));
-        else $start_date = date('Y-m-d', strtotime('2012-05-01'));
+        if (!empty($data['start_date'])) {
+            $start = DateTime::createFromFormat('d-m-Y', $data['start_date']);
+            if ($start instanceof DateTime) $start_date = $start->format('Y-m-d');
+            else $start_date = date('Y-m-d', strtotime($data['start_date']));
+        } else {
+            $start_date = date('Y-m-d', strtotime('2012-05-01'));
+        }
 
-        if (!empty($data['end_date'])) $end_date = date('Y-m-d', strtotime($data['end_date']));
-        else $end_date = date('Y-m-d');
+        if (!empty($data['end_date'])) {
+            $end = DateTime::createFromFormat('d-m-Y', $data['end_date']);
+            if ($end instanceof DateTime) $end_date = $end->format('Y-m-d');
+            else $end_date = date('Y-m-d', strtotime($data['end_date']));
+        } else {
+            $end_date = date('Y-m-d');
+        }
 
         return array($start_date, $end_date);
     }

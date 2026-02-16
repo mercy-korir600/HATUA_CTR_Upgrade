@@ -26,7 +26,33 @@ class ApplicationsController extends AppController
 
         $this->Auth->allow('index', 'admin_extra', 'report_invoice', 'applicant_submitall', 'admin_suspend', 'manager_amendment_summary', 'genereateQRCode', 'manager_stages_summary', 'view', 'view.pdf', 'apl',  'study_title', 'myindex', 'download_invoice');
 
+        $action = isset($this->request->params['action']) ? $this->request->params['action'] : null;
+        $prefix = isset($this->request->params['prefix']) ? $this->request->params['prefix'] : null;
+
+        $usesSponsorFilter =
+            ($prefix === 'manager' && in_array($action, array('index', 'workflow'), true)) ||
+            ($prefix === 'admin' && $action === 'index') ||
+            ($prefix === 'inspector' && $action === 'index') ||
+            in_array($action, array('manager_index', 'manager_workflow', 'admin_index', 'inspector_index'), true);
+
+        if ($usesSponsorFilter) {
+            $this->_setSponsorFilterOptions();
+        }
+
         // $this->Security->unlockedFields = array('submit_type');
+    }
+
+    protected function _setSponsorFilterOptions()
+    {
+        $sponsorOptions = $this->Application->Sponsor->find('list', array(
+            'fields' => array('Sponsor.sponsor', 'Sponsor.sponsor'),
+            'conditions' => array('Sponsor.sponsor !=' => ''),
+            'group' => array('Sponsor.sponsor'),
+            'order' => array('Sponsor.sponsor' => 'ASC'),
+            'recursive' => -1
+        ));
+
+        $this->set('sponsor_options', $sponsorOptions);
     }
     public function admin_extra($id = null)
     {
@@ -1540,7 +1566,7 @@ class ApplicationsController extends AppController
     public function manager_workflow()
     {
         $this->Prg->commonProcess();
-        $page_options = array('5' => '5', '10' => '10');
+        $page_options = array('20' => '20', '50' => '50','100'=>'100');
         if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) $this->passedArgs['range'] = true;
         // debug($this->params['named']['stages']);
 
@@ -1583,6 +1609,9 @@ class ApplicationsController extends AppController
 
         $this->set('page_options', $page_options);
         $this->set('applications', Sanitize::clean($this->paginate(), array('encode' => false)));
+
+        $trial_statuses = $this->Application->TrialStatus->find('list');
+        $this->set(compact('trial_statuses'));
     }
 
     public function inspector_index()
