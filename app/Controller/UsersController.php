@@ -10,7 +10,7 @@ class UsersController extends AppController
 {
 
     public $paginate = array();
-    public $uses = array('User', 'Application', 'Sae', 'Message', 'MeetingDate');
+    public $uses = array('User', 'Application', 'Sae', 'Message', 'MeetingDate', 'DeletionSetting');
     public $components = array('Search.Prg');
     public $presetVars = true;
 
@@ -318,6 +318,7 @@ class UsersController extends AppController
     public function admin_dashboard()
     {
         $this->loadModel('Outsource');
+        $this->_ensureDeletionSettingsTable();
         $this->request->data['Feedback']['user_id'] = $this->Auth->User('id');
         $this->User->Feedback->recursive = -1;
         $this->set('previous_messages', $this->User->Feedback->find('all', array('limit' => 3, 'order' => array('id' => 'desc'))));
@@ -325,6 +326,54 @@ class UsersController extends AppController
             'limit' => 3, 
             'conditions'=>array('Outsource.approved'=>0),
             'order' => array('Outsource.id' => 'desc'))));
+        $this->set('auto_deletion_period_months', $this->_getAutoDeletionPeriodMonths());
+    }
+
+    public function admin_deletion_settings()
+    {
+        $this->_ensureDeletionSettingsTable();
+
+        if (!$this->request->is('post') && !$this->request->is('put')) {
+            return $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'admin' => true));
+        }
+
+        $months = '';
+        if (isset($this->request->data['DeletionSetting']['duration_months'])) {
+            $months = trim($this->request->data['DeletionSetting']['duration_months']);
+        }
+
+        if (!preg_match('/^[1-9][0-9]*$/', $months)) {
+            $this->Session->setFlash(__('Please enter a valid automatic deletion period in months.'), 'alerts/flash_error');
+        } elseif ($this->_saveAutoDeletionPeriodMonths((int)$months)) {
+            $this->Session->setFlash(__('Automatic deletion period has been updated.'), 'alerts/flash_success');
+        } else {
+            $this->Session->setFlash(__('Automatic deletion period could not be saved. Please try again.'), 'alerts/flash_error');
+        }
+
+        return $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'admin' => true));
+    }
+
+    protected function _getAutoDeletionPeriodMonths()
+    {
+        if (!$this->_ensureDeletionSettingsTable()) {
+            return AppModel::AUTO_DELETION_PERIOD_DEFAULT_MONTHS;
+        }
+
+        return (int)$this->DeletionSetting->getCurrentMonths(AppModel::AUTO_DELETION_PERIOD_DEFAULT_MONTHS);
+    }
+
+    protected function _saveAutoDeletionPeriodMonths($months)
+    {
+        if (!$this->_ensureDeletionSettingsTable()) {
+            return false;
+        }
+
+        return (bool)$this->DeletionSetting->saveCurrentMonths((int)$months, $this->Auth->User('id'));
+    }
+
+    protected function _ensureDeletionSettingsTable()
+    {
+        return (bool)$this->DeletionSetting->ensureTable();
     }
 
      public function getUserIpAddress()

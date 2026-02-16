@@ -21,6 +21,7 @@
  */
 
 App::uses('Model', 'Model');
+App::uses('ClassRegistry', 'Utility');
 
 /**
  * Application model for Cake.
@@ -32,7 +33,9 @@ App::uses('Model', 'Model');
  */
 class AppModel extends Model {
 
-	
+	const AUTO_DELETION_PERIOD_DEFAULT_MONTHS = 3;
+
+		
 	function dateFormatAfterFind($dateString) {
 		return date('d-m-Y', strtotime($dateString));
 	}
@@ -47,5 +50,37 @@ class AppModel extends Model {
 
 	public function dateTimeFormatBeforeSave($dateString) {
 		return date('Y-m-d H:i', strtotime($dateString));
+	}
+
+	public static function getAutoDeletionPeriodMonths($defaultMonths = null) {
+		$fallback = (int) $defaultMonths;
+		if ($fallback < 1) {
+			$fallback = self::AUTO_DELETION_PERIOD_DEFAULT_MONTHS;
+		}
+
+		$DeletionSetting = ClassRegistry::init('DeletionSetting');
+		if (empty($DeletionSetting)) {
+			return $fallback;
+		}
+
+		if (method_exists($DeletionSetting, 'ensureTable') && !$DeletionSetting->ensureTable()) {
+			return $fallback;
+		}
+
+		if (method_exists($DeletionSetting, 'getCurrentMonths')) {
+			try {
+				$months = (int)$DeletionSetting->getCurrentMonths($fallback);
+				return ($months > 0) ? $months : $fallback;
+			} catch (Exception $e) {
+				return $fallback;
+			}
+		}
+
+		return $fallback;
+	}
+
+	public static function getAutoDeletionExpirationString($defaultMonths = null) {
+		$months = self::getAutoDeletionPeriodMonths($defaultMonths);
+		return '-' . (int) $months . ' months';
 	}
 }

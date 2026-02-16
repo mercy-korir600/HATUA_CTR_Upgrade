@@ -17,6 +17,8 @@
  * @package utils
  * @subpackage utils.models.behaviors
  */
+App::uses('AppModel', 'Model');
+
 class SoftDeleteBehavior extends ModelBehavior {
 
 /**
@@ -206,7 +208,8 @@ class SoftDeleteBehavior extends ModelBehavior {
  * @param mixed $expiration anything parseable by strtotime(), by default '-90 days'
  * @return integer
  */
-    public function purgeDeletedCount($model, $expiration = '-90 days') {
+    public function purgeDeletedCount($model, $expiration = null) {
+        $expiration = $this->_resolveExpiration($expiration);
         $this->softDelete($model, false);
         return $model->find('count', array(
 			'conditions' => $this->_purgeDeletedConditions($model, $expiration), 
@@ -220,7 +223,8 @@ class SoftDeleteBehavior extends ModelBehavior {
  * @param mixed $expiration anything parseable by strtotime(), by default '-90 days'
  * @return boolean if there were some outdated records
  */
-    public function purgeDeleted($model, $expiration = '-90 days') {
+    public function purgeDeleted($model, $expiration = null) {
+        $expiration = $this->_resolveExpiration($expiration);
         $this->softDelete($model, false);
         $records = $model->find('all', array(
 			'conditions' => $this->_purgeDeletedConditions($model, $expiration), 
@@ -242,7 +246,8 @@ class SoftDeleteBehavior extends ModelBehavior {
  * @param mixed $expiration anything parseable by strtotime(), by default '-90 days'
  * @return array
  */
-    protected function _purgeDeletedConditions($model, $expiration = '-90 days') {
+    protected function _purgeDeletedConditions($model, $expiration = null) {
+        $expiration = $this->_resolveExpiration($expiration);
         $purgeDate = date('Y-m-d H:i:s', strtotime($expiration));
         $conditions = array();
         foreach ($this->settings[$model->alias] as $flag => $date) {
@@ -252,6 +257,14 @@ class SoftDeleteBehavior extends ModelBehavior {
             }
         }
         return $conditions;
+    }
+
+    protected function _resolveExpiration($expiration = null) {
+        if (!empty($expiration)) {
+            return $expiration;
+        }
+
+        return AppModel::getAutoDeletionExpirationString();
     }
 
 /**

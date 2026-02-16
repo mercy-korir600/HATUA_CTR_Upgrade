@@ -256,6 +256,15 @@ $this->assign('Dashboard', 'active');
       <li>
         <?php
         echo $this->Html->link(
+          '<i class="icon-cog"></i> Automatic Deletion Period <small class="muted">(Current: ' . (int)$auto_deletion_period_months . ' months)</small>',
+          '#autoDeletionPeriodModal',
+          array('escape' => false, 'data-toggle' => 'modal')
+        );
+        ?>
+      </li>
+      <li>
+        <?php
+        echo $this->Html->link(
           '<i class="icon-question-sign"></i> Site Inspection Questions <small class="muted">(Site inspection questions)</small>',
           array('controller' => 'site_questions', 'action' => 'index', 'admin' => true),
           array('escape' => false)
@@ -282,38 +291,6 @@ $this->assign('Dashboard', 'active');
       </li>
     </ul>
 
-<<<<<<< HEAD
-    <h5>Checklist items <small class="muted">(For protocol and annual approval)</small> </h5>
-    <ul class="nav nav-tabs nav-stacked">
-      <li>
-        <?php
-        echo $this->Html->link(
-          '<i class="icon-check-sign"></i> Protocol Approval Checklist <small class="muted">(Files required)</small>',
-          array('controller' => 'pockets', 'action' => 'lindex', 'admin' => true),
-          array('escape' => false)
-        );
-        ?>
-      </li>
-      <li>
-        <?php
-        echo $this->Html->link(
-          '<i class="icon-check"></i> Annual Approval Checklist <small class="muted">(Files required)</small>',
-          array('controller' => 'pockets', 'action' => 'cindex', 'admin' => true),
-          array('escape' => false)
-        );
-        ?>
-      </li>
-      <li>
-        <?php
-        echo $this->Html->link(
-          '<i class="icon-file"></i> Amendment Checklist <small class="muted">(Files required)</small>',
-          array('controller' => 'pockets', 'action' => 'aindex', 'admin' => true),
-          array('escape' => false)
-        );
-        ?>
-      </li>
-    </ul>
-=======
       <h5>Checklist items <small class="muted">(For protocol and annual approval)</small> </h5>
       <ul class="nav nav-tabs nav-stacked">
         <li>
@@ -335,7 +312,6 @@ $this->assign('Dashboard', 'active');
           ?>
         </li>
       </ul>
->>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
 
     <h5>Initial & Annual approval Letters <small class="muted">(Templates)</small> </h5>
     <ul class="nav nav-tabs nav-stacked">
@@ -358,6 +334,35 @@ $this->assign('Dashboard', 'active');
         ?>
       </li>
     </ul>
+
+    <div id="autoDeletionPeriodModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="autoDeletionPeriodModalLabel" aria-hidden="true">
+      <?php echo $this->Form->create('DeletionSetting', array(
+        'url' => array('controller' => 'users', 'action' => 'deletion_settings', 'admin' => true),
+        'class' => 'form-horizontal',
+      )); ?>
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="autoDeletionPeriodModalLabel">Automatic Deletion Period</h4>
+      </div>
+      <div class="modal-body">
+        <p class="muted">Set retention duration in months for automatic deletion cleanup.</p>
+        <?php
+        echo $this->Form->input('duration_months', array(
+          'type' => 'number',
+          'min' => 1,
+          'step' => 1,
+          'class' => 'input-small',
+          'value' => (int)$auto_deletion_period_months,
+          'label' => array('text' => 'Duration (Months)'),
+        ));
+        ?>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+        <?php echo $this->Form->button('<i class="icon-save"></i> Save', array('type' => 'submit', 'class' => 'btn btn-primary', 'escape' => false)); ?>
+      </div>
+      <?php echo $this->Form->end(); ?>
+    </div>
   </div>
 </div> <!-- /row -->
 <hr>
@@ -378,5 +383,8 @@ $this->assign('Dashboard', 'active');
   $.expander.defaults.slicePoint = 70;
   $(function() {
     $(".morecontent").expander();
+    if (window.location.hash === '#autoDeletionPeriodModal') {
+      $('#autoDeletionPeriodModal').modal('show');
+    }
   });
 </script>
