@@ -39,7 +39,7 @@
               array('div' => false, 'class' => 'span12 unauthorized_index', 'label' => array('class' => 'required', 'text' => 'ECCT Reference No.')));
         ?>
         </div>
-        <div class="span3">
+        <div class="span2">
         <?php
           echo $this->Form->input('filter', array('div' => false, 'class' => 'span12 unauthorized_index',
             'label' => array('class' => 'required', 'text' => 'Study Title / Abstract'),
@@ -47,7 +47,19 @@
             ));
         ?>
         </div>
-        <div class="span4">
+        <div class="span2">
+        <?php
+          echo $this->Form->input('estimated_duration', array(
+            'type' => 'number',
+            'min' => 0,
+            'step' => 1,
+            'div' => false,
+            'class' => 'span12 unauthorized_index',
+            'label' => array('class' => 'required', 'text' => 'Duration (Months)'),
+          ));
+        ?>
+        </div>
+        <div class="span3">
         <?php
           echo $this->Form->input('start_date',
             array('div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index', 'after' => '-to-',

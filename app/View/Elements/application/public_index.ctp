@@ -161,7 +161,16 @@
                 ?>
               </td>
               <td colspan="3">
-                <!-- Remaining space for detailed search-->
+                <?php
+                  echo $this->Form->input('estimated_duration', array(
+                    'type' => 'number',
+                    'min' => 0,
+                    'step' => 1,
+                    'div' => false,
+                    'class' => 'span6 unauthorized_index',
+                    'label' => array('class' => 'required', 'text' => 'Estimated Duration (Months)'),
+                  ));
+                ?>
               </td>
             </tr>
           </tbody>
