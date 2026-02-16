@@ -98,6 +98,8 @@ class Attachment extends AppModel {
 			return $this->Application->field('user_id',	array('id' => $ndata['Attachment']['foreign_key'])) === $user;
 		}  elseif ($ndata['Attachment']['model'] == 'AnnualApproval') {
 			return $this->Application->field('user_id',	array('id' => $ndata['Attachment']['foreign_key'])) === $user;
+		}  elseif ($ndata['Attachment']['model'] == 'AmendmentChecklist') {
+			return $this->Application->field('user_id', array('id' => $ndata['Attachment']['foreign_key'])) === $user;
 		} 
 	}
 

@@ -28,6 +28,14 @@
                         foreach ($application['AmendmentChecklist'] as $anc) {
                             if ($anc['year'] == $year && $anc['pocket_name'] == $rem) {
                                 $id = $anc['id'];
+                                $deleteUrl = array('controller' => 'attachments', 'action' => 'delete', $id, 'ext' => 'json');
+                                if (isset($redir) && $redir === 'applicant') {
+                                    $deleteUrl['applicant'] = true;
+                                } elseif (isset($redir) && $redir === 'manager') {
+                                    $deleteUrl['manager'] = true;
+                                }
+                                $deleteHref = $this->Html->url($deleteUrl);
+                                echo "<span id='amendmentAttachmentRow$id' class='amendment-attachment-row'>";
                                 echo "&nbsp;&nbsp; <span id='$rem$id'> &nbsp;<i class='icon-file-text-alt'></i> ";
                                 echo $this->Html->link(
                                     __($anc['basename']),
@@ -36,11 +44,13 @@
                                 );
                                 $version_no = $anc['version_no'];
                                 $file_date = $anc['file_date'];
+                                $uploaded_at = !empty($anc['created']) ? date('d-m-Y H:i', strtotime($anc['created'])) : 'N/A';
                                 echo "</span>&nbsp;
                           <span id='version$id' style='margin-left:10px;'>Version: $version_no</span>
                           <span id='fileDate$id' style='margin-left:10px;'>Dated: $file_date</span>
-                          <span id='AmendmentChecklist$id' style='margin-left:10px;' class='btn btn-mini'><i class='icon-remove'></i></span>
-                          <br>";
+                          <span id='uploadedAt$id' style='margin-left:10px;'>Uploaded: $uploaded_at</span>
+                          <span id='AmendmentChecklist$id' data-delete-url='$deleteHref' style='margin-left:10px;' class='btn btn-mini delete_amendment_checklist_file' title='Delete attachment'><i class='icon-remove'></i></span>
+                          </span><br>";
                             }
                         }
                         echo "</div>";
@@ -169,3 +179,36 @@ if ($redir == 'applicant') { ?>
     </div>
 <?php
 } ?>
+<script type="text/javascript">
+  $(function () {
+    $(document).off('click', '.delete_amendment_checklist_file').on('click', '.delete_amendment_checklist_file', function () {
+      var trigger = $(this);
+      if (!confirm('Are you sure you would like to delete this attachment?')) {
+        return;
+      }
+
+      var intId = parseInt(trigger.attr('id').replace(/\D/g, ''), 10);
+      if (!intId) {
+        alert('Invalid attachment selected.');
+        return;
+      }
+
+      var deleteUrl = trigger.attr('data-delete-url') || ('/attachments/delete/' + intId + '.json');
+      $.ajax({
+        type: 'POST',
+        url: deleteUrl,
+        data: { id: intId },
+        success: function () {
+          window.location.reload();
+        },
+        error: function (xhr) {
+          if (xhr && xhr.status === 200) {
+            window.location.reload();
+            return;
+          }
+          alert('Failed to delete attachment.');
+        }
+      });
+    });
+  });
+</script>

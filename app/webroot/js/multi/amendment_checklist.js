@@ -60,7 +60,7 @@ $(function () {
                       '+ data.result.content.Attachment.basename + '</a> \
                       <small class="muted">- '+ data.result.content.Attachment.created + '</small> \
                       <button id="AmendmentChecklist'+ data.result.content.Attachment.id + '" type="button" style="margin-left:10px;" \
-                                class="btn btn-mini btn-danger delete_file_link">&nbsp;<i class="icon-trash"></i>&nbsp;</button></div>');
+                                class="btn btn-mini btn-danger delete_amendment_checklist_file">&nbsp;<i class="icon-trash"></i>&nbsp;</button></div>');
             closestTd = $(this).closest('td');
             $('label[for=' + $(this).attr('id') + ']').remove();
             $(this).remove();
@@ -160,24 +160,37 @@ $(function () {
       }
     });
   
-    // $(".delete_file_link").on("click", delete_file);
-    $(document).on('click', '.delete_file_link', delete_file);
+    // $(".delete_amendment_checklist_file").on("click", delete_file);
+    $(document).off('click', '.delete_amendment_checklist_file').on('click', '.delete_amendment_checklist_file', delete_file);
     function delete_file() {
-      if (confirm("are you sure you would like to delete this attachment?")) {
-        intId = parseInt($(this).attr('id').replace(/\D/g, ''));
-        name = $(this).attr('id').replace(/\d/g, '');
-        if (intId) {
-          $.ajax({
-            type: 'POST',
-            url: '/attachments/delete/' + intId + '.json',
-            data: { 'id': intId },
-            success: function (data) {
-              // console.log(data);
-            }
-          });
-        }
-        $(this).parent('div').remove();
+      var trigger = $(this);
+      if (!confirm('Are you sure you would like to delete this attachment?')) {
+        return;
       }
+
+      var intId = parseInt(trigger.attr('id').replace(/\D/g, ''), 10);
+      if (!intId) {
+        alert('Invalid attachment selected.');
+        return;
+      }
+
+      var deleteUrl = trigger.attr('data-delete-url') || ('/attachments/delete/' + intId + '.json');
+      $.ajax({
+        type: 'POST',
+        url: deleteUrl,
+        data: { 'id': intId },
+        success: function () {
+          window.location.reload();
+        },
+        error: function (xhr) {
+          if (xhr && xhr.status === 200) {
+            window.location.reload();
+            return;
+          }
+
+          alert('Failed to delete attachment.');
+        }
+      });
     }
    
   });

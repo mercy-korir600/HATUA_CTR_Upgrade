@@ -187,16 +187,15 @@ $(function () {
       type: 'POST',
       url: '/attachments/delete/' + intId + '.json',
       data: { 'id': intId },
-      dataType: 'json',
-      success: function (data) {
-        if (data && data.message === 'Attachment deleted') {
+      success: function () {
+        window.location.reload();
+      },
+      error: function (xhr) {
+        if (xhr && xhr.status === 200) {
           window.location.reload();
           return;
         }
 
-        alert('Failed to delete attachment.');
-      },
-      error: function () {
         alert('Failed to delete attachment.');
       }
     });
