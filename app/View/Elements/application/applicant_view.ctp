@@ -1403,7 +1403,7 @@
           <?php echo $this->fetch('multiple_countries'); ?>
           <tr>
             <td class="table-label">
-              <p>Number of states anticipated in the trial</p>
+              <p>Number of countries anticipated in the trial</p>
             </td>
             <td>
               <p><?php echo $application['Application']['multiple_member_states']; ?> </p>

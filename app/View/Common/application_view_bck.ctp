@@ -442,7 +442,7 @@
               <td><p><?php echo $application['Application']['multiple_countries'] ; ?> </p></td>
             </tr>
             <tr>
-              <td class="table-label"><p>Number of states anticipated in the trial</p></td>
+              <td class="table-label"><p>Number of countries anticipated in the trial</p></td>
               <td><p><?php echo $application['Application']['multiple_member_states'] ; ?> </p></td>
             </tr>
             <tr>

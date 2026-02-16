@@ -1292,7 +1292,7 @@ $this->Html->script('save', array('inline' => false));
           'options' => array('No' => 'No'),
         ));
         echo $this->Form->input('multiple_member_states', array(
-          'label' => array('class' => 'control-label', 'text' => 'Number of states anticipated in the trial'),
+          'label' => array('class' => 'control-label', 'text' => 'Number of countries anticipated in the trial'),
           'placeholder' => ' ',
           'class' => 'input-xxlarge multiple_countries_f',
         ));

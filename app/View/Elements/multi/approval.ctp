@@ -138,6 +138,7 @@
                 foreach ($application['AnnualApproval'] as $anc) {
                   if($anc['year'] == $year && $anc['pocket_name'] == $rem) {
                     $id = $anc['id'];
+                    echo "<span id='annualAttachmentRow$id' class='annual-attachment-row'>";
                     echo "&nbsp;&nbsp; <span id='$rem$id'> &nbsp;<i class='icon-file-text-alt'></i> ";
                     echo $this->Html->link(__($anc['basename']),
                       array('controller' => 'attachments', 'action' => 'download', $anc['id'], 'full_base' => true),
@@ -145,11 +146,13 @@
                     );
                     $version_no = $anc['version_no'];
                     $file_date = $anc['file_date'];
+                    $uploaded_at = !empty($anc['created']) ? date('d-m-Y H:i', strtotime($anc['created'])) : 'N/A';
                     echo "</span>&nbsp;
                           <span id='version$id' style='margin-left:10px;'>Version: $version_no</span>
                           <span id='fileDate$id' style='margin-left:10px;'>Dated: $file_date</span>
-                          <span id='AnnualApproval$id' style='margin-left:10px;' class='btn btn-mini'><i class='icon-remove'></i></span>
-                          <br>";
+                          <span id='uploadedAt$id' style='margin-left:10px;'>Uploaded: $uploaded_at</span>
+                          <span id='AnnualApproval$id' style='margin-left:10px;' class='btn btn-mini delete_annual_approval_file' title='Delete attachment'><i class='icon-remove'></i></span>
+                          </span><br>";
                   }
                 }
               echo "</div>";
