@@ -110,12 +110,46 @@ class AmendmentLettersController extends AppController
             throw new NotFoundException(__('Invalid annual approval letter'));
         }
         if ($this->request->is('post') || $this->request->is('put')) {
+            $anl = $this->AmendmentLetter->find('first', array(
+                'contain' => array('Application'),
+                'conditions' => array('AmendmentLetter.id' => $id)
+            ));
+            $wasSubmitted = ((string) $anl['AmendmentLetter']['submitted'] === '1');
+            $isDraftSave = isset($this->request->data['saveDraft']);
+            $targetSubmitted = $isDraftSave ? '0' : '1';
+
+            $this->request->data['AmendmentLetter']['id'] = $id;
+            $this->request->data['AmendmentLetter']['submitted'] = $targetSubmitted;
+
             if ($this->AmendmentLetter->save($this->request->data)) {
-                $this->approval($id);
-            } else {
-                $this->Session->setFlash(__('The amendment approval letter could not be saved. Please, try again.'), 'alerts/flash_error');
+                if ($targetSubmitted !== '1') {
+                    $this->Session->setFlash(__('The amendment approval letter draft has been saved'), 'alerts/flash_success');
+                    return $this->redirect(array(
+                        'controller' => 'applications',
+                        'action' => 'view',
+                        $anl['Application']['id'],
+                        'ame' => $id,
+                        'manager' => true
+                    ));
+                }
+
+                // Avoid re-sending approval notifications when editing an already submitted letter.
+                if (!$wasSubmitted) {
+                    return $this->approval($id);
+                }
+
+                $this->Session->setFlash(__('The amendment approval letter has been saved'), 'alerts/flash_success');
+                return $this->redirect(array(
+                    'controller' => 'applications',
+                    'action' => 'view',
+                    $anl['Application']['id'],
+                    'aml' => $id,
+                    'manager' => true
+                ));
             }
-            $this->redirect($this->referer());
+
+            $this->Session->setFlash(__('The amendment approval letter could not be saved. Please, try again.'), 'alerts/flash_error');
+            return $this->redirect($this->referer());
         }
     }
     public function applicant_download($id = null)

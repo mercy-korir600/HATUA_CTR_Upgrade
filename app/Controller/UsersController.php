@@ -986,6 +986,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/ParticipantFlows');
         $this->Acl->allow($group, 'controllers/Comments');        
         $this->Acl->allow($group, 'controllers/Comments/manager_add_annual_letter');
+        $this->Acl->allow($group, 'controllers/Comments/manager_add_amendment_discussion');
         $this->Acl->allow($group, 'controllers/Saes');
         $this->Acl->allow($group, 'controllers/Cioms');
         $this->Acl->allow($group, 'controllers/Reports');
@@ -1106,6 +1107,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Comments/applicant_add_si_external');
         $this->Acl->allow($group, 'controllers/Comments/applicant_add_dev_external');
         $this->Acl->allow($group, 'controllers/Comments/applicant_add_sae_external');
+        $this->Acl->allow($group, 'controllers/Comments/applicant_add_amendment_discussion');
         $this->Acl->allow($group, 'controllers/Saes/applicant_add');
         $this->Acl->allow($group, 'controllers/Saes/applicant_edit');
         $this->Acl->allow($group, 'controllers/Saes/applicant_index');

@@ -80,6 +80,149 @@ class CommentsController extends AppController
         $this->add_annual_letter();
     }
 
+    public function manager_add_amendment_discussion()
+    {
+        $this->add_amendment_discussion();
+    }
+
+    public function applicant_add_amendment_discussion()
+    {
+        $this->add_amendment_discussion();
+    }
+
+    public function add_amendment_discussion()
+    {
+        if (!$this->request->is('post')) {
+            return $this->redirect($this->referer());
+        }
+
+        if (empty($this->request->data['Comment'])) {
+            $this->Session->setFlash(__('Please enter a message before submitting.'), 'alerts/flash_error');
+            return $this->redirect($this->referer());
+        }
+
+        $comment = &$this->request->data['Comment'];
+        $applicationId = !empty($comment['model_id']) ? (int) $comment['model_id'] : 0;
+        if (empty($applicationId) && !empty($comment['foreign_key'])) {
+            $applicationId = (int) $comment['foreign_key'];
+        }
+
+        $category = !empty($comment['category']) ? trim((string) $comment['category']) : '';
+        $amendment = !empty($comment['amendment']) ? trim((string) $comment['amendment']) : '';
+        if (empty($amendment) && strpos($category, 'amendment-discussion-') === 0) {
+            $amendment = preg_replace('/^amendment-discussion-/', '', $category);
+        }
+
+        $content = !empty($comment['content']) ? trim((string) $comment['content']) : '';
+        $subject = !empty($comment['subject']) ? trim((string) $comment['subject']) : '';
+
+        if (empty($applicationId) || empty($amendment) || empty($content)) {
+            $this->Session->setFlash(__('Please enter a message before submitting.'), 'alerts/flash_error');
+            return $this->redirect($this->referer());
+        }
+
+        $senderName = $this->Auth->user('name');
+        if (empty($senderName)) {
+            $senderName = $this->Auth->user('username');
+        }
+
+        $safeAmendment = preg_replace('/[^a-zA-Z0-9_-]/', '', $amendment);
+        if (strpos($category, 'amendment-discussion-') !== 0) {
+            $category = 'amendment-discussion-' . $safeAmendment;
+        }
+        if (empty($subject)) {
+            $amendmentLabel = preg_replace('/^amd-/', '', $amendment);
+            $subject = 'Amendment ' . $amendmentLabel . ' Discussion';
+        }
+
+        $comment['foreign_key'] = $applicationId;
+        $comment['model_id'] = $applicationId;
+        $comment['model'] = 'Amendment';
+        $comment['category'] = $category;
+        $comment['user_id'] = $this->Auth->user('id');
+        $comment['sender'] = !empty($comment['sender']) ? $comment['sender'] : $senderName;
+        $comment['subject'] = $subject;
+        $comment['content'] = $content;
+
+        if (!empty($this->request->data['Attachment']) && is_array($this->request->data['Attachment'])) {
+            foreach ($this->request->data['Attachment'] as $idx => $attachment) {
+                if (empty($this->request->data['Attachment'][$idx]['model'])) {
+                    $this->request->data['Attachment'][$idx]['model'] = 'Comments';
+                }
+                if (empty($this->request->data['Attachment'][$idx]['category'])) {
+                    $this->request->data['Attachment'][$idx]['category'] = 'Amendment';
+                }
+            }
+        }
+
+        $this->Comment->create();
+        if (!$this->Comment->saveAssociated($this->request->data, array('deep' => true))) {
+            $this->Session->setFlash(__('The discussion message could not be saved. Please, try again.'), 'alerts/flash_error');
+            return $this->redirect($this->referer());
+        }
+
+        // Notify managers and the applicant about the new amendment discussion message.
+        $this->loadModel('Message');
+        $this->loadModel('Application');
+        $html = new HtmlHelper(new ThemeView());
+        $message = $this->Message->find('first', array('conditions' => array('name' => 'review_response')));
+        $app = $this->Application->find('first', array(
+            'contain' => array(),
+            'conditions' => array('Application.id' => $applicationId)
+        ));
+
+        if (!empty($message) && !empty($app['Application']['id'])) {
+            $users = $this->Comment->User->find('all', array(
+                'contain' => array(),
+                'conditions' => array('OR' => array('User.id' => $app['Application']['user_id'], 'User.group_id' => 2))
+            ));
+
+            foreach ($users as $user) {
+                if ($user['User']['group_id'] == 2) {
+                    $actioner = 'manager';
+                } elseif ($user['User']['group_id'] == 3) {
+                    $actioner = 'reviewer';
+                } else {
+                    $actioner = 'applicant';
+                }
+
+                $variables = array(
+                    'name' => $user['User']['name'],
+                    'protocol_no' => $app['Application']['protocol_no'],
+                    'comment_subject' => $subject,
+                    'comment_content' => $content,
+                    'reference_link' => $html->link(
+                        $app['Application']['protocol_no'],
+                        array(
+                            'controller' => 'applications',
+                            'action' => 'view',
+                            $app['Application']['id'],
+                            $actioner => true,
+                            'full_base' => true
+                        ),
+                        array('escape' => false)
+                    ),
+                );
+
+                $datum = array(
+                    'email' => $user['User']['email'],
+                    'id' => $applicationId,
+                    'user_id' => $user['User']['id'],
+                    'type' => 'review_response',
+                    'model' => 'Amendment',
+                    'subject' => String::insert($message['Message']['subject'], $variables),
+                    'message' => String::insert($message['Message']['content'], $variables)
+                );
+
+                CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
+                CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
+            }
+        }
+
+        $this->Session->setFlash(__('Discussion message sent successfully.'), 'alerts/flash_success');
+        return $this->redirect($this->referer());
+    }
+
     public function add_annual_letter()
     {
         if ($this->request->is('post')) {

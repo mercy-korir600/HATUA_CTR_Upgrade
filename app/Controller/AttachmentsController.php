@@ -92,17 +92,28 @@ class AttachmentsController extends AppController
         $approval_letter = $this->Pocket->find('first', array('conditions' => array('Pocket.name' => 'amendment_letter')));
         $application = $this->Application->find('first', array('conditions' => array('Application.id' => $application_id)));
         $checklist = array();
+        $additionalFiles = array();
         $data = $application['AmendmentChecklist'];
 
 
         foreach ($data as $formdata) {
             if ($formdata['year'] == $id) {
-                $pocket_name = !empty($formdata['pocket_name']) ? $formdata['pocket_name'] : $formdata['description'];
-
                 $file_link = $html->link(__($formdata['basename']), array('controller' => 'attachments',   'action' => 'download', $formdata['id'], 'admin' => false, 'full_base' => true));
-                (isset($checklist[$formdata['pocket_name']])) ?
-                    $checklist[$pocket_name] .= $file_link . ' dated ' . date('jS F Y', strtotime($formdata['file_date'])) . ' Version ' . $formdata['version_no'] . '<br>' :
-                    $checklist[$pocket_name] = $file_link . ' dated ' . date('jS F Y', strtotime($formdata['file_date'])) . ' Version ' . $formdata['version_no'] . '<br>';
+                $fileLine = $file_link . ' dated ' . date('jS F Y', strtotime($formdata['file_date'])) . ' Version ' . $formdata['version_no'] . '<br>';
+                $pocketName = trim((string)$formdata['pocket_name']);
+
+                if ($pocketName === '') {
+                    $descriptionLabel = trim(strip_tags((string)$formdata['description']));
+                    if (!empty($descriptionLabel)) {
+                        $fileLine = $descriptionLabel . ': ' . $fileLine;
+                    }
+                    $additionalFiles[] = $fileLine;
+                    continue;
+                }
+
+                (isset($checklist[$pocketName])) ?
+                    $checklist[$pocketName] .= $fileLine :
+                    $checklist[$pocketName] = $fileLine;
             }
         }
         $deeds = $this->Pocket->find('list', array(
@@ -111,13 +122,54 @@ class AttachmentsController extends AppController
             'recursive' => 0
         ));
 
+        $coverKey = null;
+        foreach ($checklist as $checkKey => $checkValue) {
+            $sectionTitleText = isset($deeds[$checkKey]) ? strip_tags((string)$deeds[$checkKey]) : (string)$checkKey;
+            $keyLower = strtolower((string)$checkKey);
+            $titleLower = strtolower($sectionTitleText);
+            if (strpos($keyLower, 'cover') !== false || strpos($titleLower, 'cover letter') !== false || strpos($titleLower, 'covering letter') !== false) {
+                $coverKey = $checkKey;
+                break;
+            }
+        }
+
+        $orderedSections = array();
+        if ($coverKey !== null && isset($checklist[$coverKey])) {
+            $orderedSections[] = array(
+                'title' => (isset($deeds[$coverKey]) ? $deeds[$coverKey] : $coverKey),
+                'body' => $checklist[$coverKey]
+            );
+        }
+
+        if (!empty($additionalFiles)) {
+            $additionalBody = '';
+            $additionalCounter = 0;
+            foreach ($additionalFiles as $additionalFileLine) {
+                $additionalCounter++;
+                $additionalBody .= $additionalCounter . '. ' . $additionalFileLine;
+            }
+            $orderedSections[] = array(
+                'title' => 'Additional Files',
+                'body' => $additionalBody
+            );
+        }
+
+        foreach ($checklist as $checkKey => $checkValue) {
+            if ($coverKey !== null && (string)$checkKey === (string)$coverKey) {
+                continue;
+            }
+            $orderedSections[] = array(
+                'title' => (isset($deeds[$checkKey]) ? $deeds[$checkKey] : $checkKey),
+                'body' => $checkValue
+            );
+        }
+
 
         $checkstring = '';
         $num = 0;
-        foreach ($checklist as $kech => $check) {
+        foreach ($orderedSections as $section) {
             $num++;
-            // $checkstring .= $num . '. ' . $deeds[$kech] . '<br>' . $check;
-            $checkstring .= $num . '. ' . (isset($deeds[$kech]) ? $deeds[$kech] : $kech) . '<br>' . $check;
+            $checkstring .= $num . '. ' . $section['title'] . '<br>' . $section['body'];
         }
         // debug($checkstring);
         // exit;

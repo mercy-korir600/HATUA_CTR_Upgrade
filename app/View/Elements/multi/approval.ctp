@@ -108,6 +108,16 @@
   </div>
   
 <!-- Annual Approval Checklists -->
+  <style type="text/css">
+    .approval-uploaded-meta {
+      margin-left: 6px;
+      font-size: 10px;
+      line-height: 12px;
+      color: #888;
+      white-space: nowrap;
+      display: inline-block;
+    }
+  </style>
   <h4 style="background-color: #37732c; color: #fff; text-align: center;">Annual Approval Checklist </h4>
   <p><small>All submitted documents should be version referenced and dated.</small></p>
   <table  class="table table-bordered table-condensed table-striped">
@@ -150,7 +160,7 @@
                     echo "</span>&nbsp;
                           <span id='version$id' style='margin-left:10px;'>Version: $version_no</span>
                           <span id='fileDate$id' style='margin-left:10px;'>Dated: $file_date</span>
-                          <span id='uploadedAt$id' style='margin-left:10px;'>Uploaded: $uploaded_at</span>
+                          <span id='uploadedAt$id' class='approval-uploaded-meta'>Uploaded: $uploaded_at</span>
                           <span id='AnnualApproval$id' style='margin-left:10px;' class='btn btn-mini delete_annual_approval_file' title='Delete attachment'><i class='icon-remove'></i></span>
                           </span><br>";
                   }
