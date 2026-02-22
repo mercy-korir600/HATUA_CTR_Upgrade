@@ -133,8 +133,12 @@ $(function () {
   function yeardataset() {
 
     if ($('.checklistyearyear').val() != $('.amendmentyear').val()) {
+      var selectedYear = $('.amendmentyear').val().trim();
+      if (selectedYear.indexOf('amd-') !== 0) {
+        selectedYear = 'amd-' + selectedYear;
+      }
       $('.amendmentyear').closest('table').find('input[name*="year"]').each(function () {
-        $(this).val('amd-' + $('.amendmentyear').val().trim());
+        $(this).val(selectedYear);
       });
     }
   }

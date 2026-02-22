@@ -2,20 +2,29 @@ $(function () {
     $(document).on('click', '.remove-row-amendment', remove_row);
     $(document).on('click', '.update-row-amendment', update_description);
 
+    function normalizeAmendmentYear(value) {
+      var normalized = (value || '').trim();
+      if (normalized !== '' && normalized.indexOf('amd-') !== 0) {
+        normalized = 'amd-' + normalized;
+      }
+      return normalized;
+    }
+
     yeardataset();
     $('.amendmentyear').change(function () {
       // Get the selected value
       var selectedYear = $(this).val(); 
       console.log("Selected year " +selectedYear); 
-      $('.selected-year-name').text(selectedYear);
+      $('.selected-year-name').text(normalizeAmendmentYear(selectedYear));
       yeardataset();
     });
   
     function yeardataset() {
-      $('.selected-year-name').text($('.amendmentyear').val().trim());
+      var selectedYear = normalizeAmendmentYear($('.amendmentyear').val());
+      $('.selected-year-name').text(selectedYear);
       if ($('.checklistyearyear').val() != $('.amendmentyear').val()) {
         $('.amendmentyear').closest('table').find('input[name*="year"]').each(function () {
-          $(this).val($('.amendmentyear').val().trim());
+          $(this).val(selectedYear);
           
         });
       }

@@ -947,7 +947,7 @@ class ApplicationsController extends AppController
             $this->set(compact('applications'));
             // $this->layout = false;
             // $this->render('csv_export');
-            $this->pdfConfig = array('filename' => 'Applications',  'orientation' => 'portrait');
+            $this->pdfConfig = array('filename' => 'Applications',  'orientation' => 'landscape');
         }
         //end pdf export
 

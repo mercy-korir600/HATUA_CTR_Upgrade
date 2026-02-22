@@ -1,195 +1,80 @@
-<<<<<<< HEAD
- 
-   
-   <div style="text-align: center;">
-        <h3 style="text-align: center;">
-            <img height="86" src="https://lh7-us.googleusercontent.com/eOWVvo3AHW74GguHveDaqdgy3YwNZqOqOO0QtscRoV4hJfcvt8Q6v4oLN3beVNvClvoD1ncu1RhB5D4iuAY-5R9h1aD2lEGqUorBVcQ0azfxsdvIz-WhbF3rA9-VQomtusnP2bNZTuYLFTC6vQ46nQ" style="background-color: transparent; color: rgb(0, 0, 0); font-family: &quot;Bookman Old Style&quot;, serif; font-size: 11pt; white-space-collapse: preserve; margin-left: 0px; margin-top: 0px;" width="116" />
-        </h3>
-        <p style="text-align: center;">
-            <span style="font-family:bookman old style,serif;"><strong>MINISTRY</strong> <strong>OF</strong> <strong>HEALTH</strong></span>
-        </p>
-        <p style="text-align: center;">
-            <span style="font-family:bookman old style,serif;"><strong>PHARMACY</strong> <strong>AND</strong> <strong>POISONS</strong> <strong>BOARD</strong></span>
-        </p>
-
-    </div>
-
-    <div class="row-fluid">
-        <div class="span12">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:3%">#</th>
-                        <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
-                        <th style="width: 60%">Application Stages </th>
-                        <th style="width: 10%">Date Submitted</th>
-                        <th style="width: 10%">Date Approved</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    <?php
-                    $count = 0;
-                    foreach ($applications as $application) {
-                    ?>
-                        <tr class="<?php
-                                    $stages = $this->requestAction('applications/stages/' . $application['Application']['id']);
-                                    if (Hash::check($stages, '{s}[color!=success]')) {
-                                        $var = Hash::extract($stages, '{s}[color!=success].color');
-                                        if (in_array('warning', $var)) echo 'warning';
-                                        if (in_array('danger', $var)) echo 'error';
-                                    }
-                                    ?>">
-                            <td><?php $count++;
-                                echo $count; ?></td>
-                            <td> <?php echo $application['Application']['protocol_no']; ?></td>
-                            <td>
-                                <!-- In table start -->
-                                <table >
-                                    <thead>
-                                        <tr>
-                                            <th>
-                                                <p class="text-warning"><strong>Stage</strong></p>
-                                            </th>
-                                            <th>
-                                                <p class="text-warning"><strong>Start Date</strong></p>
-                                            </th>
-                                            <th>
-                                                <p class="text-warning"><strong>End Date</strong></p>
-                                            </th>
-                                            <th>
-                                                <p class="text-warning"><strong>Days</strong></p>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <?php
-                                    $cound = 0;
-                                    ?>
-                                    <tbody>
-                                        <?php
-                                        foreach ($stages as $sk => $stage) {
-                                            $cound++;
-
-                                            echo "<tr>";
-                                            echo "<td>" . $cound . '. ' . strip_tags($stage['label']) . (($sk == 'AnnualApproval') ? ' (to expiry)' : '');
-                                            echo "</td>";
-                                            echo "<td>" . $stage['start_date'];
-                                            echo "</td>";
-                                            echo "<td>" . $stage['end_date'];
-                                            echo "</td>";
-                                            echo "<td>" . $stage['days'];
-                                            echo "</td>";
-                                            echo "</tr>";
-                                        }
-                                        ?>
-                                    </tbody>
-                                </table>
-                            </td>
-                            <td> <?php echo $application['Application']['date_submitted']; ?></td>
-                            <td> <?php echo $application['Application']['approval_date']; ?></td>
-                        </tr>
-                    <?php } ?>
-                </tbody>
-            </table>
-            <!-- In table end -->
-        </div>
-    </div>
- 
-    <style>
-        
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 0px auto;
-        }
-
-        th, td {
-            border: 1px solid gray;
-            padding: 8px;
-            text-align: left;
-        }
-
-        
-    </style>
-=======
-<?php
-echo $this->Html->image('cake.power.png', array('fullBase' => true, 'alt' => 'Pharmacy and Poisons Board', 'style' => 'border: 0;'));
-?>
-
 <div class="row-fluid">
-    <div class="span12">
-        <table class="table  table-bordered">
-            <thead>
-                <tr>
-                    <th style="width:3%">#</th>
-                    <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
-                    <th style="width: 70%">Application Stages </th>
-                </tr>
-            </thead>
-            <tbody>
+  <div class="span12">
+    <h3 style="text-align: center; margin-bottom: 15px;">Application Stages Summary</h3>
 
+    <?php
+    $stageColumns = array(
+      array('key' => 'Creation', 'label' => 'Application<br>Creation', 'annual' => false),
+      array('key' => 'Screening', 'label' => 'Screening', 'annual' => false),
+      array('key' => 'ScreeningSubmission', 'label' => 'Response to<br>Queries', 'annual' => false),
+      array('key' => 'Assign', 'label' => 'Assigned to<br>Reviewers', 'annual' => false),
+      array('key' => 'Review', 'label' => 'Review<br>Comments', 'annual' => false),
+      array('key' => 'ReviewSubmission', 'label' => 'Sponsor<br>Feedback', 'annual' => false),
+      array('key' => 'FinalDecision', 'label' => 'Final<br>Decision', 'annual' => false),
+      array('key' => 'AnnualApproval', 'label' => 'Annual<br>Approval', 'annual' => true),
+    );
+    ?>
+
+    <table style="border-collapse: collapse; width: 100%; margin: 0 auto; font-size: 8px;">
+      <thead>
+        <tr>
+          <th style="border: 1px solid #999; padding: 4px; text-align: left;">#</th>
+          <th style="border: 1px solid #999; padding: 4px; text-align: left;">ECCT Reference No</th>
+          <?php foreach ($stageColumns as $stageColumn) { ?>
+            <th style="border: 1px solid #999; padding: 4px; text-align: left;"><?php echo $stageColumn['label']; ?></th>
+          <?php } ?>
+          <th style="border: 1px solid #999; padding: 4px; text-align: left;">Date Submitted</th>
+          <th style="border: 1px solid #999; padding: 4px; text-align: left;">Date Approved</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php
+        $count = 0;
+        foreach ($applications as $application) {
+          $stages = $this->requestAction('applications/stages/' . $application['Application']['id']);
+          $rowClass = '';
+
+          if (Hash::check($stages, '{s}[color!=success]')) {
+            $colors = Hash::extract($stages, '{s}[color!=success].color');
+            if (in_array('danger', $colors)) {
+              $rowClass = 'error';
+            } elseif (in_array('warning', $colors)) {
+              $rowClass = 'warning';
+            }
+          }
+        ?>
+          <tr class="<?php echo $rowClass; ?>">
+            <td style="border: 1px solid #999; padding: 4px; text-align: left;"><?php $count++; echo $count; ?></td>
+            <td style="border: 1px solid #999; padding: 4px; text-align: left;"><?php echo h($application['Application']['protocol_no']); ?></td>
+            <?php foreach ($stageColumns as $stageColumn) { ?>
+              <td style="border: 1px solid #999; padding: 4px; text-align: left;">
                 <?php
-                $count = 0;
-                foreach ($applications as $application) {
-                ?>
-                    <tr class="<?php
-                      $stages = $this->requestAction('applications/stages/'.$application['Application']['id']);
-                      if(Hash::check($stages, '{s}[color!=success]')) {
-                          $var = Hash::extract($stages, '{s}[color!=success].color');
-                          if(in_array('warning', $var)) echo 'warning';
-                          if(in_array('danger', $var)) echo 'error';
-                      }
-                   ?>">
-                        <td><?php $count++;
-                            echo $count; ?></td>
-                        <td> <?php echo $application['Application']['protocol_no']; ?></td>
-                        <td>
-                            <!-- In table start -->
-                            <table class="table table-condensed table-intable" style="margin: 1px; border:1px">
-                                <thead>
-                                    <tr>
-                                        <th>
-                                            <p class="text-warning"><strong>Stage</strong></p>
-                                        </th>
-                                        <th>
-                                            <p class="text-warning"><strong>Start Date</strong></p>
-                                        </th>
-                                        <th>
-                                            <p class="text-warning"><strong>End Date</strong></p>
-                                        </th>
-                                        <th>
-                                            <p class="text-warning"><strong>Days</strong></p>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <?php
-                                $cound = 0; 
-                                ?>
-                                <tbody>
-                                    <?php
-                                    foreach ($stages as $sk => $stage) {
-                                        $cound++;
+                $stageValue = '';
+                if (isset($stages[$stageColumn['key']])) {
+                  $stageDate = !empty($stages[$stageColumn['key']]['start_date']) ? $stages[$stageColumn['key']]['start_date'] : '';
+                  $stageDays = ($stages[$stageColumn['key']]['days'] === '' || $stages[$stageColumn['key']]['days'] === null)
+                    ? ''
+                    : (string)$stages[$stageColumn['key']]['days'];
+                  $stageValue = $stageDate;
 
-                                        echo "<tr>";
-                                        echo "<td>" . $cound . '. ' . strip_tags($stage['label']) . (($sk == 'AnnualApproval') ? ' (to expiry)' : '');
-                                        echo "</td>";
-                                        echo "<td>" . $stage['start_date'];
-                                        echo "</td>";
-                                        echo "<td>" . $stage['end_date'];
-                                        echo "</td>";
-                                        echo "<td>" . $stage['days'];
-                                        echo "</td>";
-                                        echo "</tr>";
-                                    }
-                                    ?>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <?php }?>
-            </tbody>
-        </table>
-        <!-- In table end --> 
-    </div>
+                  if ($stageDays !== '') {
+                    $dayUnit = ($stageDays === '0' || $stageDays === '1') ? 'day' : 'days';
+                    if ($stageColumn['annual']) {
+                      $stageValue = trim($stageDate . ' (' . $stageDays . ' ' . $dayUnit . ' to expiry)');
+                    } else {
+                      $stageValue = trim($stageDate . ' (' . $stageDays . ' ' . $dayUnit . ')');
+                    }
+                  }
+                }
+                echo h($stageValue);
+                ?>
+              </td>
+            <?php } ?>
+            <td style="border: 1px solid #999; padding: 4px; text-align: left;"><?php echo h($application['Application']['date_submitted']); ?></td>
+            <td style="border: 1px solid #999; padding: 4px; text-align: left;"><?php echo h($application['Application']['approval_date']); ?></td>
+          </tr>
+        <?php } ?>
+      </tbody>
+    </table>
+  </div>
 </div>
->>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2

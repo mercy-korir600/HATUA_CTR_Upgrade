@@ -4,6 +4,16 @@ $add_checklist = '<p><button class="btn btn-mini tiptip add-checklist" data-orig
                                 style="margin-left:10px;" type="button">&nbsp;<i class="icon-plus-sign"></i>&nbsp; </button>';
 $num = 0;
 ?>
+<style type="text/css">
+    .checklist-uploaded-meta {
+        margin-left: 6px;
+        font-size: 10px;
+        line-height: 12px;
+        color: #888;
+        white-space: nowrap;
+        display: inline-block;
+    }
+</style>
 <h5>CHECKLIST <span class="sterix">*</span></h5>
 <h5>All submitted documents should be version referenced and dated.?</h5>
 
@@ -59,6 +69,8 @@ foreach ($medals as $lad => $medal) {
                         );
                         echo "&nbsp;<span>version: " . $protocol['version_no'] . "</span>";
                         echo "&nbsp;<span>date: " . $protocol['file_date'] . "</span>";
+                        $uploadedAt = !empty($protocol['created']) ? date('d-m-Y H:i', strtotime($protocol['created'])) : 'N/A';
+                        echo "&nbsp;<span class='checklist-uploaded-meta'>Uploaded: " . h($uploadedAt) . "</span>";
 
                         echo '<button value="' . $protocol['id'] . '" type="button" class="btn btn-mini btn-danger delete_file_link">
                         &nbsp;<i class="icon-trash"></i>&nbsp;</button>';

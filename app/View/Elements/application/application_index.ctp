@@ -1,5 +1,5 @@
 <div class="row-fluid">
-    <div class="span12">
+  <div class="span12">
 
     <?php echo $this->fetch('header'); ?>
     <?php
@@ -91,7 +91,8 @@
         <?php
         echo $this->Form->create('Application', array(
           'url' => array_merge(array('action' => 'index'), $this->params['pass']),
-          'class' => 'ctr-groups', 'style' => array('padding:9px;', 'background-color: #F5F5F5'),
+          'class' => 'ctr-groups',
+          'style' => array('padding:9px;', 'background-color: #F5F5F5'),
         ));
         ?>
         <div class="row-fluid">
@@ -117,7 +118,8 @@
                   <th>
                     <?php
                     echo $this->Form->input('filter', array(
-                      'div' => false, 'class' => 'span12 unauthorized_index',
+                      'div' => false,
+                      'class' => 'span12 unauthorized_index',
                       'label' => array('class' => 'required', 'text' => 'Study Title'),
                       'type' => 'text',
                     ));
@@ -126,7 +128,8 @@
                   <th>
                     <?php
                     echo $this->Form->input('investigator', array(
-                      'div' => false, 'class' => 'span12 unauthorized_index',
+                      'div' => false,
+                      'class' => 'span12 unauthorized_index',
                       'label' => array('class' => 'required', 'text' => 'Principal Investigator(s)'),
                       'type' => 'text',
                     ));
@@ -135,7 +138,8 @@
                   <th>
                     <?php
                     echo $this->Form->input('sites', array(
-                      'div' => false, 'class' => 'span12 unauthorized_index',
+                      'div' => false,
+                      'class' => 'span12 unauthorized_index',
                       'label' => array('class' => 'required', 'text' => 'Name of Site / County'),
                       'type' => 'text',
                     ));
@@ -144,7 +148,10 @@
                   <th>
                     <?php
                     echo $this->Form->input('pages', array(
-                      'type' => 'select', 'div' => false, 'class' => 'span12', 'selected' => $this->request->params['paging']['Application']['limit'],
+                      'type' => 'select',
+                      'div' => false,
+                      'class' => 'span12',
+                      'selected' => $this->request->params['paging']['Application']['limit'],
                       'empty' => true,
                       'options' => $page_options,
                       'label' => array('class' => 'required', 'text' => 'Pages'),
@@ -154,7 +161,9 @@
                   <th rowspan="2" style="width: 14%;">
                     <?php
                     echo $this->Form->button('<i class="icon-search icon-white"></i> Search', array(
-                      'class' => 'btn btn-inverse', 'div' => 'control-group', 'div' => false,
+                      'class' => 'btn btn-inverse',
+                      'div' => 'control-group',
+                      'div' => false,
                       'style' => array('margin-bottom: 5px')
                     ));
 
@@ -173,19 +182,27 @@
                     echo $this->Form->input(
                       'start_date',
                       array(
-                        'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index', 'after' => '-to-',
-                        'label' => array('class' => 'required', 'text' => 'Application Submission Dates'), 'placeHolder' => 'Start Date'
+                        'div' => false,
+                        'type' => 'text',
+                        'class' => 'input-small unauthorized_index',
+                        'after' => '-to-',
+                        'label' => array('class' => 'required', 'text' => 'Application Submission Dates'),
+                        'placeHolder' => 'Start Date'
                       )
                     );
                     echo $this->Form->input(
                       'end_date',
                       array(
-                        'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index',
+                        'div' => false,
+                        'type' => 'text',
+                        'class' => 'input-small unauthorized_index',
                         'after' => '<a style="font-weight:normal" onclick="$(\'.unauthorized_index\').val(\'\');" >
                             <em class="accordion-toggle">clear!</em></a>',
-                        'label' => false, 'placeHolder' => 'End Date'
+                        'label' => false,
+                        'placeHolder' => 'End Date'
                       )
                     );
+
                     ?>
                   </td>
                   <td>
@@ -193,7 +210,9 @@
                     //pr($this->request->params); //REMEMBER to limit this for administrators, managers and inspector only
                     if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
                       echo $this->Form->input('users', array(
-                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'type' => 'select',
+                        'div' => false,
+                        'class' => 'span12',
                         'empty' => true,
                         'options' => $users,
                         'label' => array('class' => 'required', 'text' => 'Reviewers'),
@@ -201,24 +220,49 @@
                     }
                     ?>
                   </td>
-                  <td colspan="3">
+                  <td colspan="2">
                     <?php
                     //pr($this->request->params); //REMEMBER to limit this for administrators, managers and inspector only
                     if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
                       echo $this->Form->input('ercs', array(
-                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'type' => 'select',
+                        'div' => false,
+                        'class' => 'span12',
                         'empty' => true,
                         'options' => isset($ercs) ? $ercs : array(),
                         'label' => array('class' => 'required', 'text' => 'ERCs'),
                       ));
                       echo $this->Form->input('sponsors', array(
-                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'type' => 'select',
+                        'div' => false,
+                        'class' => 'span12',
                         'empty' => true,
                         'options' => isset($sponsor_options) ? $sponsor_options : array(),
                         'label' => array('class' => 'required', 'text' => 'Sponsors'),
                       ));
                     }
+
+
                     ?>
+                  </td>
+                  <td>
+                    <?php
+                    if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
+
+                      echo '<div style="text-align: right; margin-top: 8px;">';
+                      echo $this->Html->link(
+                        '<i class="icon-file-alt"></i> Summary Excel',
+                        array_merge(array('controller' => 'applications', 'action' => 'stages_summary', 'manager' => true, 'ext' => 'csv'), $this->request->named),
+                        array('class' => 'btn btn-success', 'escape' => false, 'style' => 'margin-right: 6px;')
+                      );
+                      echo "<br> \n";
+                      echo $this->Html->link(
+                        '<i class="icon-file"></i> Summary PDF',
+                        array_merge(array('controller' => 'applications', 'action' => 'stages_summary', 'manager' => true, 'ext' => 'pdf'), $this->request->named),
+                        array('class' => 'btn btn-primary', 'escape' => false)
+                      );
+                      echo '</div>';
+                    } ?>
                   </td>
                 </tr>
                 <tr class="searchmore" style="display: none;">
@@ -230,7 +274,9 @@
                         array('div' => false, 'class' => 'span12 unauthorized_index', 'label' => array('class' => 'required', 'text' => 'Disease Condition'))
                       );
                       echo $this->Form->input('phase', array(
-                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'type' => 'select',
+                        'div' => false,
+                        'class' => 'span12',
                         'empty' => true,
                         'options' => array(
                           '1' => 'Phase I',
@@ -255,13 +301,17 @@
                     <?php
                     if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
                       echo $this->Form->input('trial_status_id', array(
-                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'type' => 'select',
+                        'div' => false,
+                        'class' => 'span12',
                         'empty' => true,
                         'options' => isset($trial_statuses) ? $trial_statuses : array(),
                         'label' => array('class' => 'required', 'text' => 'Trial Status'),
                       ));
                       echo $this->Form->input('approved', array(
-                        'type' => 'select', 'div' => false, 'class' => 'span12',
+                        'type' => 'select',
+                        'div' => false,
+                        'class' => 'span12',
                         'empty' => true,
                         'options' => array(
                           '2' => 'Approved',
@@ -300,40 +350,6 @@
                     ?>
                   </td>
                 </tr>
-                <?php $showSummaryReportButtons = false; ?>
-                <?php if ($showSummaryReportButtons) { ?>
-                <tr class="searchmore" style="display: none;">
-                <td></td> 
-                <td colspan="1">
-                    <?php
-                    if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
-                      echo $this->Html->link('<i class="icon-file-alt"></i> Summary Report', array_merge(array('action' => 'stages_summary', 'ext' => 'csv'), $this->request->named), array('class' => 'btn btn-success', 'escape' => false)); 
-                    }
-                    ?>
-                  </td>
-                  <td colspan="2">
-                    <?php
-                    if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
-                      echo $this->Html->link('<i class="icon-file"></i> Summary Report PDF', array_merge(array('action' => 'stages_summary', 'ext' => 'pdf'), $this->request->named), array('class' => 'btn btn-primary', 'escape' => false)); 
-                    }
-                    ?>
-                  </td>
-                  <td>
-                    <?php
-                  if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
-                   
-                      // echo $this->Html->link('<i class="icon-file-alt"></i> Amendment Report', array_merge(array('action' => 'amendment_summary', 'ext' => 'csv'), $this->request->named), array('class' => 'btn btn-success', 'escape' => false));
-                    }
-                    ?>
-                  </td>
-                    <td colspan="2"> <?php
-                  if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
-                   
-                      // echo $this->Html->link('<i class="icon-file"></i> Amendment Report PDF', array_merge(array('action' => 'amendment_summary', 'ext' => 'pdf'), $this->request->named), array('class' => 'btn btn-primary', 'escape' => false));
-                    }
-                    ?></td>     
-                </tr>
-                <?php } ?>
               </tbody>
             </table>
             <a href="#" id='moresearch' class="muted"><small><i class="icon-caret-right"></i> Extended search...</small></a>
@@ -567,11 +583,11 @@
       </div>
     </div>
 
-    </div>
+  </div>
 </div>
 <script type="text/javascript">
-$.expander.defaults.slicePoint = 220;
-$(function() {
+  $.expander.defaults.slicePoint = 220;
+  $(function() {
     $(".morecontent").expander();
     var adates = $('#ApplicationStartDate, #ApplicationEndDate').datepicker({
       minDate: "-100Y",

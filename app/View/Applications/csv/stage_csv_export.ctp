@@ -1,114 +1,69 @@
 <?php
-<<<<<<< HEAD
+$stageColumns = array(
+    'application_creation' => array('key' => 'Creation', 'label' => 'Application Creation', 'annual' => false),
+    'screening' => array('key' => 'Screening', 'label' => 'Screening', 'annual' => false),
+    'response_to_queries' => array('key' => 'ScreeningSubmission', 'label' => 'Response to Queries', 'annual' => false),
+    'assigned_to_reviewers' => array('key' => 'Assign', 'label' => 'Assigned to Reviewers', 'annual' => false),
+    'review_comments' => array('key' => 'Review', 'label' => 'Review Comments', 'annual' => false),
+    'sponsor_feedback' => array('key' => 'ReviewSubmission', 'label' => 'Sponsor Feedback', 'annual' => false),
+    'final_decision' => array('key' => 'FinalDecision', 'label' => 'Final Decision', 'annual' => false),
+    'annual_approval' => array('key' => 'AnnualApproval', 'label' => 'Annual Approval', 'annual' => true),
+);
 
 $header = array(
     'id' => '#',
     'protocol_no' => 'ECCT Reference No.',
-    'created' => 'Application Creation',
-    'screening_stage' => 'Screening',
-    'response_to_queries_stage' => 'Response to Queries',
-    'assigned_to_reviewers_stage' => 'Assigned to Reviewers',
-    'review_comments_stage' => 'Review Comments',
-    'sponsor_feedback_stage' => 'Sponsor Feedback',
-    'final_decision_stage' => 'Final Decision',
-    'annual_approval_stage' => 'Annual Approval',
+    'application_creation' => 'Application Creation',
+    'screening' => 'Screening',
+    'response_to_queries' => 'Response to Queries',
+    'assigned_to_reviewers' => 'Assigned to Reviewers',
+    'review_comments' => 'Review Comments',
+    'sponsor_feedback' => 'Sponsor Feedback',
+    'final_decision' => 'Final Decision',
+    'annual_approval' => 'Annual Approval',
     'date_submitted' => 'Date Submitted',
     'approval_date' => 'Date Approved'
 );
-=======
-$header = array('id' => '#', 'protocol_no' => 'ECCT Reference No.', 'stages' => 'Stages');
->>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
-echo implode(',', $header) . "\n";
-foreach ($applications as $application) :
-    $content = '';
-    $row = [];
-    $stages = $this->requestAction(
-        'applications/stages/' . $application['Application']['id']  //get first element of array
-    );
-<<<<<<< HEAD
-    foreach ($header as $key => $val) {
-        if (array_key_exists($key, $application['Application'])) {
-            $row[$key] = '"' . preg_replace('/"/', '""', $application['Application'][$key]) . '"';
-        } elseif ($key == 'screening_stage') {
-            $stage = Hash::extract($stages, 'Screening.start_date');
-            $startDate = !empty($stage) ? $stage[0] : null; 
-            if (!empty($startDate) && strtotime($startDate)) {
-                $row[$key] = date('d-m-y', strtotime($startDate));
-            } else {
-                $row[$key] = '';
-            }
-        }
-        elseif ($key == 'response_to_queries_stage') {
-            $stage = Hash::extract($stages, 'ScreeningSubmission.start_date');
-            $startDate = !empty($stage) ? $stage[0] : null; 
-            if (!empty($startDate) && strtotime($startDate)) {
-                $row[$key] = date('d-m-y', strtotime($startDate));
-            } else {
-                $row[$key] = '';
-            }
-        }
-        elseif ($key == 'assigned_to_reviewers_stage') {
-            $stage = Hash::extract($stages, 'Assign.start_date');
-            $startDate = !empty($stage) ? $stage[0] : null; 
-            if (!empty($startDate) && strtotime($startDate)) {
-                $row[$key] = date('d-m-y', strtotime($startDate));
-            } else {
-                $row[$key] = '';
-            }
-        }
-        elseif ($key == 'review_comments_stage') {
-            $stage = Hash::extract($stages, 'Review.start_date');
-            $startDate = !empty($stage) ? $stage[0] : null; 
-            if (!empty($startDate) && strtotime($startDate)) {
-                $row[$key] = date('d-m-y', strtotime($startDate));
-            } else {
-                $row[$key] = '';
-            }
-        }
-        elseif ($key == 'sponsor_feedback_stage') {
-            $stage = Hash::extract($stages, 'ReviewSubmission.start_date');
-            $startDate = !empty($stage) ? $stage[0] : null; 
-            if (!empty($startDate) && strtotime($startDate)) {
-                $row[$key] = date('d-m-y', strtotime($startDate));
-            } else {
-                $row[$key] = '';
-            }
-        }
-        elseif ($key == 'final_decision_stage') {
-            $stage = Hash::extract($stages, 'FinalDecision.start_date');
-            $startDate = !empty($stage) ? $stage[0] : null; 
-            if (!empty($startDate) && strtotime($startDate)) {
-                $row[$key] = date('d-m-y', strtotime($startDate));
-            } else {
-                $row[$key] = '';
-            }
-        }
-        elseif ($key == 'annual_approval_stage') {
-            $stage = Hash::extract($stages, 'AnnualApproval.start_date');
-            $startDate = !empty($stage) ? $stage[0] : null; 
-            if (!empty($startDate) && strtotime($startDate)) {
-                $row[$key] = date('d-m-y', strtotime($startDate));
-            } else {
-                $row[$key] = '';
-            }
-        } else {
-            $row[$key] = '';
-=======
-    // debug($stages);
-    // exit;
-    foreach ($header as $key => $val) {
-        if (array_key_exists($key, $application['Application'])) {
-            $row[$key] = '"' . preg_replace('/"/', '""', $application['Application'][$key]) . '"';
-        } elseif ($key == 'stages') {
-            foreach ($stages as $stage) {
-                if (!empty($stage['start_date'])) {
 
-                    (isset($row[$key])) ? $row[$key] .= '; ' . $stage['label'] . ':' . $stage['start_date'] . ':' . $stage['end_date'] : $row[$key] = $stage['label'] . ':' . $stage['start_date'] . ':' . $stage['end_date'];
-                }}
-                (isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/', '""', $row[$key]) . '"' : $row[$key] = '""';
-            
->>>>>>> 123a14be9c332510d471ebbbbe868ade284b22e2
+echo implode(',', $header) . "\n";
+
+foreach ($applications as $application) :
+    $row = array();
+    $stages = $this->requestAction('applications/stages/' . $application['Application']['id']);
+
+    foreach ($header as $key => $label) {
+        if (array_key_exists($key, $application['Application'])) {
+            $row[$key] = '"' . preg_replace('/"/', '""', $application['Application'][$key]) . '"';
+            continue;
         }
+
+        if (isset($stageColumns[$key])) {
+            $stageKey = $stageColumns[$key]['key'];
+            $stageValue = '';
+
+            if (isset($stages[$stageKey])) {
+                $stageDate = !empty($stages[$stageKey]['start_date']) ? $stages[$stageKey]['start_date'] : '';
+                $stageDays = ($stages[$stageKey]['days'] === '' || $stages[$stageKey]['days'] === null)
+                    ? ''
+                    : (string)$stages[$stageKey]['days'];
+                $stageValue = $stageDate;
+
+                if ($stageDays !== '') {
+                    $dayUnit = ($stageDays === '0' || $stageDays === '1') ? 'day' : 'days';
+                    if ($stageColumns[$key]['annual']) {
+                        $stageValue = trim($stageDate . ' (' . $stageDays . ' ' . $dayUnit . ' to expiry)');
+                    } else {
+                        $stageValue = trim($stageDate . ' (' . $stageDays . ' ' . $dayUnit . ')');
+                    }
+                }
+            }
+
+            $row[$key] = '"' . preg_replace('/"/', '""', $stageValue) . '"';
+            continue;
+        }
+
+        $row[$key] = '""';
     }
+
     echo implode(',', $row) . "\n";
 endforeach;
