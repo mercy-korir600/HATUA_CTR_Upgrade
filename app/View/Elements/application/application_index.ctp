@@ -247,20 +247,21 @@
                   </td>
                   <td>
                     <?php
-                    if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
+                    if ($this->fetch('is-manager') == 'true') {
 
                       echo '<div style="text-align: right; margin-top: 8px;">';
                       echo $this->Html->link(
                         '<i class="icon-file-alt"></i> Summary Excel',
                         array_merge(array('controller' => 'applications', 'action' => 'stages_summary', 'manager' => true, 'ext' => 'csv'), $this->request->named),
                         array('class' => 'btn btn-success', 'escape' => false, 'style' => 'margin-right: 6px;')
-                      );
-                      echo "<br> \n";
+                      );       echo "<br>\n";
                       echo $this->Html->link(
                         '<i class="icon-file"></i> Summary PDF',
                         array_merge(array('controller' => 'applications', 'action' => 'stages_summary', 'manager' => true, 'ext' => 'pdf'), $this->request->named),
                         array('class' => 'btn btn-primary', 'escape' => false)
                       );
+                      echo "<br>\n";
+                     
                       echo '</div>';
                     } ?>
                   </td>
@@ -329,26 +330,43 @@
                       echo $this->Form->input('product_type_biologicals', array('label' => 'Biologicals', 'hiddenField' => false));
                       echo $this->Form->input('product_type_proteins', array('label' => 'Proteins', 'hiddenField' => false));
                       echo $this->Form->input('product_type_immunologicals', array('label' => 'Immunologicals', 'hiddenField' => false));
+                      echo $this->Form->input('product_type_vaccines', array('label' => 'Vaccines', 'hiddenField' => false));
                     }
                     ?>
                   </td>
                   <td>
                     <?php
                     if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
-                      echo $this->Form->input('product_type_vaccines', array('label' => 'Vaccines', 'hiddenField' => false));
+                      
                       echo $this->Form->input('product_type_hormones', array('label' => 'Hormones', 'hiddenField' => false));
                       echo $this->Form->input('product_type_toxoid', array('label' => 'Toxoid', 'hiddenField' => false));
                     }
-                    ?>
+                    
+
+                     if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
+                      echo $this->Form->input('product_type_chemical', array('label' => 'Chemical', 'hiddenField' => false));
+                      echo $this->Form->input('product_type_medical_device', array('label' => 'Medical Device', 'hiddenField' => false));
+                    }?>
                   </td>
                   <td>
                     <?php
-                    if ($this->fetch('is-admin') == 'true' || $this->fetch('is-manager') == 'true' || $this->fetch('is-inspector') == 'true') {
-                      echo $this->Form->input('product_type_chemical', array('label' => 'Chemical', 'hiddenField' => false));
-                      echo $this->Form->input('product_type_medical_device', array('label' => 'Medical Device', 'hiddenField' => false));
-                    }
+                        echo '<div style="text-align: right; margin-top: 8px;">';
+                         echo $this->Html->link(
+                        '<i class="icon-file-alt"></i> Amendment Excel',
+                        array_merge(array('controller' => 'applications', 'action' => 'amendment_summary', 'manager' => true, 'ext' => 'csv'), $this->request->named),
+                        array('class' => 'btn btn-success', 'escape' => false, 'style' => 'margin-top: 6px; margin-right: 6px;')
+                      );
+                      echo $this->Html->link(
+                        '<i class="icon-file"></i> Amendment PDF',
+                        array_merge(array('controller' => 'applications', 'action' => 'amendment_summary', 'manager' => true, 'ext' => 'pdf'), $this->request->named),
+                        array('class' => 'btn btn-primary', 'escape' => false, 'style' => 'margin-top: 6px;')
+                      );
+                         echo "<br>\n";
+                     
+                      echo '</div>';
                     ?>
                   </td>
+                   
                 </tr>
               </tbody>
             </table>
