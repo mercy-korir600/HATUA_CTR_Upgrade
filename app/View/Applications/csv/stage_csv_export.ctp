@@ -27,11 +27,18 @@ $header = array(
 
 echo implode(',', $header) . "\n";
 
+$count = 0;
 foreach ($applications as $application) :
+    $count++;
     $row = array();
     $stages = $this->requestAction('applications/stages/' . $application['Application']['id']);
 
     foreach ($header as $key => $label) {
+        if ($key === 'id') {
+            $row[$key] = '"' . $count . '"';
+            continue;
+        }
+
         if (array_key_exists($key, $application['Application'])) {
             $row[$key] = '"' . preg_replace('/"/', '""', $application['Application'][$key]) . '"';
             continue;
