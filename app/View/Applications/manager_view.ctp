@@ -338,7 +338,7 @@ echo $this->Session->flash();
 
         <div class="span6">
         <h4 class="text-success">Assigned Internal Reviewers (<?php echo $count_internal_reviews; ?>)</h4>
-        <p><small class="muted">Assign one internal reviewer at a time. The next assignment unlocks only after the previous reviewer submits assessment feedback.</small></p>
+        <p><small class="muted">Assign one internal reviewer at a time. If the current reviewer cannot proceed, use Revoke Access before response and assign the next reviewer.</small></p>
         <hr>
           <?php
           echo $this->Form->create(
@@ -361,6 +361,16 @@ echo $this->Session->flash();
                   if ($response['conflict'] != '') {
                     echo '<p>Has Conflict of interest? <b>' . $response['conflict'] . '</b> </p>';
                   }
+                  echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
+                  echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
+                  echo $this->Html->link(
+                    __('<small class="muted"> No response yet? Revoke Access</small>'),
+                    array('controller' => 'reviews', 'action' => 'revoke', $response['id'], $application['Application']['id']),
+                    array('escape' => false),
+                    __('Are you sure you want to revoke access for %s?', $user)
+                  );
+                  echo '<hr>';
                 } elseif ($response['type'] == 'request' && $response['accepted'] == 'accepted') {
                   $responded = true;
                   echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';

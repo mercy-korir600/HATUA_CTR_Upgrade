@@ -55,6 +55,72 @@ $formatReviewComments = function ($comments) {
 
   return implode('', $items);
 };
+
+$priorInternalFeedbackLookup = (!empty($priorInternalFeedbackLookup) && is_array($priorInternalFeedbackLookup))
+  ? $priorInternalFeedbackLookup
+  : array();
+
+$reviewList = (!empty($reviewList) && is_array($reviewList))
+  ? array_values($reviewList)
+  : array_values((!empty($application['Review']) && is_array($application['Review'])) ? $application['Review'] : array());
+
+$extractLinkedSourceReviewId = function ($title) {
+  $title = trim((string)$title);
+  if ($title !== '' && preg_match('/^internal_source_review:(\d+)$/', $title, $matches)) {
+    return (int)$matches[1];
+  }
+  return 0;
+};
+
+$buildComparisonKey = function ($questionType, $questionNumber, $questionText) {
+  $questionType = strtolower(trim((string) $questionType));
+  $questionNumber = trim((string) $questionNumber);
+  if ($questionNumber !== '' && is_numeric($questionNumber)) {
+    $questionNumber = number_format((float) $questionNumber, 2, '.', '');
+  }
+  $questionText = strtolower(preg_replace('/\s+/', ' ', trim((string) $questionText)));
+  return $questionType . '|' . $questionNumber . '|' . $questionText;
+};
+
+$buildComparisonPayload = function ($sourceReviewId) use ($priorInternalFeedbackLookup, $buildComparisonKey) {
+  $payload = array(
+    'map' => array(),
+    'reviewer_name' => 'Previous internal reviewer',
+    'source_review_id' => 0
+  );
+
+  if ($sourceReviewId <= 0 || empty($priorInternalFeedbackLookup[$sourceReviewId])) {
+    return $payload;
+  }
+
+  $feedback = $priorInternalFeedbackLookup[$sourceReviewId];
+  $payload['source_review_id'] = (int) $sourceReviewId;
+
+  if (!empty($feedback['User']['name'])) {
+    $payload['reviewer_name'] = $feedback['User']['name'];
+  } elseif (!empty($feedback['User']['username'])) {
+    $payload['reviewer_name'] = $feedback['User']['username'];
+  }
+
+  foreach ((array)$feedback['ReviewAnswer'] as $answer) {
+    $value = '';
+    if (trim((string)$answer['answer']) !== '') {
+      $value = trim((string)$answer['answer']);
+    } elseif (trim((string)$answer['workspace']) !== '') {
+      $value = trim((string)$answer['workspace']);
+    } elseif (trim((string)$answer['comment']) !== '') {
+      $value = trim((string)$answer['comment']);
+    }
+    if ($value === '') {
+      continue;
+    }
+
+    $comparisonKey = $buildComparisonKey($answer['question_type'], $answer['question_number'], $answer['question']);
+    $payload['map'][$comparisonKey] = $value;
+  }
+
+  return $payload;
+};
 ?>
 <div class="marketing">
   <div class="row-fluid">
@@ -124,7 +190,7 @@ $formatReviewComments = function ($comments) {
       </thead>
       <tbody>
         <?php
-        foreach ($application['Review'] as $akey => $rreview) {
+        foreach ($reviewList as $akey => $rreview) {
         ?>
           <tr>
             <td><?php echo $akey + 1; ?></td>
@@ -231,7 +297,16 @@ if (isset($this->params['named']['rreview_view'])) {
           <div style="position: relative; border-top: 1px solid #ddd;">
             <?php
             if ($rreview['status'] == 'Unsubmitted') {
-              echo $this->element('/application/rreview_edit', array('rreview' => $rreview, 'akey' => $akey));
+              $sourceReviewId = $extractLinkedSourceReviewId(!empty($rreview['title']) ? $rreview['title'] : '');
+              $comparisonPayload = $buildComparisonPayload($sourceReviewId);
+
+              echo $this->element('/application/rreview_edit', array(
+                'rreview' => $rreview,
+                'akey' => $akey,
+                'comparisonReviewAnswerMap' => $comparisonPayload['map'],
+                'comparisonReviewerName' => $comparisonPayload['reviewer_name'],
+                'comparisonSourceReviewId' => $comparisonPayload['source_review_id']
+              ));
             } else {
               echo $this->Html->link(
                 __('<i class="icon-download-alt"></i> Download PDF'),

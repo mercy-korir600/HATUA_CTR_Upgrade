@@ -24,11 +24,73 @@
 
         return '<p>' . nl2br(h($content)) . '</p>';
       };
+
+      $extractLinkedSourceReviewId = function ($title) {
+        $title = trim((string) $title);
+        if ($title !== '' && preg_match('/^internal_source_review:(\d+)$/', $title, $matches)) {
+          return (int) $matches[1];
+        }
+        return 0;
+      };
+
+      $buildAnswerComparisonKey = function ($questionType, $questionNumber, $questionText) {
+        $questionType = strtolower(trim((string) $questionType));
+        $questionNumber = trim((string) $questionNumber);
+        if ($questionNumber !== '' && is_numeric($questionNumber)) {
+          $questionNumber = number_format((float) $questionNumber, 2, '.', '');
+        }
+        $questionText = strtolower(preg_replace('/\s+/', ' ', trim((string) $questionText)));
+        return $questionType . '|' . $questionNumber . '|' . $questionText;
+      };
+
+      $extractAnswerText = function ($answer) {
+        $questionType = !empty($answer['question_type']) ? strtolower(trim((string) $answer['question_type'])) : '';
+        if ($questionType === 'workspace') {
+          return trim((string) $answer['workspace']);
+        }
+        if ($questionType === 'comment') {
+          return trim((string) $answer['comment']);
+        }
+        if ($questionType === 'yesno' || $questionType === 'text') {
+          return trim((string) $answer['answer']);
+        }
+
+        foreach (array('answer', 'workspace', 'comment') as $field) {
+          if (!empty($answer[$field]) && trim((string) $answer[$field]) !== '') {
+            return trim((string) $answer[$field]);
+          }
+        }
+        return '';
+      };
+
+      $normalizeAnswerComparisonText = function ($value) {
+        $value = trim((string) $value);
+        if ($value === '') {
+          return '';
+        }
+
+        $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+        $value = strtolower(strip_tags($value));
+        $value = preg_replace('/\s+/', ' ', $value);
+        return trim((string) $value);
+      };
+
+      $allMyReviews = (!empty($application['Review']) && is_array($application['Review']))
+        ? $application['Review']
+        : array();
+      $nonLinkedMyReviews = array();
+      foreach ($allMyReviews as $myReviewEntry) {
+        $sourceReviewId = $extractLinkedSourceReviewId(!empty($myReviewEntry['title']) ? $myReviewEntry['title'] : '');
+        if ($sourceReviewId <= 0) {
+          $nonLinkedMyReviews[] = $myReviewEntry;
+        }
+      }
+      $displayMyReviewCount = count($nonLinkedMyReviews);
     ?>
     <div class="tabbable tabs-left"> <!-- Only required for left/right tabs -->
       <ul class="nav nav-tabs">
           <li class="active"><a href="#tab1" data-toggle="tab">Application</a></li>
-          <li><a href="#tab2" data-toggle="tab">My Reviews <small>(<?php echo count($application['Review']);?>)</small></a></li>
+          <li><a href="#tab2" data-toggle="tab">My Reviews <small>(<?php echo (int) $displayMyReviewCount; ?>)</small></a></li>
           <li><a href="#tab3" data-toggle="tab">Manager Reviews <small>(<?php echo count($application['ManagerReview']);?>)</small></a></li>
       </ul>
       <div class="tab-content my-tab-content">
@@ -126,10 +188,76 @@
     <div class="tab-pane" id="tab2">
       <div class="row-fluid">
         <div class="span12">
+          <?php
+            $myLinkedResponseBySource = array();
+            foreach ($allMyReviews as $myReview) {
+              $sourceReviewId = $extractLinkedSourceReviewId(!empty($myReview['title']) ? $myReview['title'] : '');
+              if ($sourceReviewId <= 0) {
+                continue;
+              }
+
+              $answerMap = array();
+              foreach ((array) $myReview['ReviewAnswer'] as $myAnswer) {
+                $answerValue = $extractAnswerText($myAnswer);
+                if ($answerValue === '') {
+                  continue;
+                }
+                $comparisonKey = $buildAnswerComparisonKey(
+                  !empty($myAnswer['question_type']) ? $myAnswer['question_type'] : '',
+                  !empty($myAnswer['question_number']) ? $myAnswer['question_number'] : '',
+                  !empty($myAnswer['question']) ? $myAnswer['question'] : ''
+                );
+                $answerMap[$comparisonKey] = $answerValue;
+              }
+
+              $currentReviewId = !empty($myReview['id']) ? (int) $myReview['id'] : 0;
+              if ($currentReviewId <= 0) {
+                continue;
+              }
+              $existingReviewId = !empty($myLinkedResponseBySource[$sourceReviewId]['id']) ? (int) $myLinkedResponseBySource[$sourceReviewId]['id'] : 0;
+              if ($existingReviewId >= $currentReviewId) {
+                continue;
+              }
+
+              $linkedReviewerName = '2nd Reviewer';
+              if (!empty($myReview['User']['name'])) {
+                $linkedReviewerName = $myReview['User']['name'];
+              } elseif (!empty($myReview['User']['username'])) {
+                $linkedReviewerName = $myReview['User']['username'];
+              }
+
+              $myLinkedResponseBySource[$sourceReviewId] = array(
+                'id' => $currentReviewId,
+                'status' => !empty($myReview['status']) ? (string) $myReview['status'] : '',
+                'reviewer_name' => $linkedReviewerName,
+                'answer_map' => $answerMap
+              );
+            }
+          ?>
           <?php if (!empty($priorInternalFeedback)) { ?>
             <div class="alert alert-info">
               Previous internal reviewer feedback is shown below.
             </div>
+            <style type="text/css">
+              .internal-modal-reviewer1 {
+                border-left: 4px solid #1d5fbf;
+                background: #eef5ff;
+                color: #1d5fbf;
+                padding: 8px;
+                margin-bottom: 8px;
+              }
+              .internal-modal-reviewer2 {
+                border-left: 4px solid #b30000;
+                background: #fff1f1;
+                color: #b30000;
+                padding: 8px;
+                margin-top: 8px;
+              }
+              .internal-modal-reviewer1 p,
+              .internal-modal-reviewer2 p {
+                margin: 0;
+              }
+            </style>
             <table class="table table-bordered table-striped table-condensed">
               <thead>
                 <tr>
@@ -207,6 +335,23 @@
                       <button type="button" class="btn btn-mini btn-primary" data-toggle="modal" data-target="#<?php echo h($viewModalId); ?>">
                         View
                       </button>
+                      <?php if ($feedbackReviewId > 0 && !empty($feedback['Review']['assessment_type'])) { ?>
+                        <?php
+                          echo '&nbsp;';
+                          echo $this->Html->link(
+                            'Respond',
+                            array(
+                              'internalreviewer' => true,
+                              'controller' => 'reviews',
+                              'action' => 'add',
+                              $application['Application']['id'],
+                              trim((string) $feedback['Review']['assessment_type']),
+                              'source_review' => $feedbackReviewId
+                            ),
+                            array('class' => 'btn btn-mini btn-warning')
+                          );
+                        ?>
+                      <?php } ?>
                     </td>
                   </tr>
                 <?php } ?>
@@ -238,13 +383,26 @@
             <?php foreach ($priorInternalFeedback as $feedbackIndex => $feedback) { ?>
               <?php
                 $selectedReviewId = !empty($feedback['Review']['id']) ? (int) $feedback['Review']['id'] : 0;
-                $selectedAssessmentType = !empty($feedback['Review']['assessment_type']) ? ucfirst($feedback['Review']['assessment_type']) : 'Assessment';
+                $selectedAssessmentTypeRaw = !empty($feedback['Review']['assessment_type']) ? trim((string) $feedback['Review']['assessment_type']) : '';
+                $selectedAssessmentType = ($selectedAssessmentTypeRaw !== '') ? ucfirst($selectedAssessmentTypeRaw) : 'Assessment';
                 $viewModalId = 'priorInternalViewModal' . $selectedReviewId . '_' . (int) $feedbackIndex;
                 $assessmentTabId = 'priorInternalViewAssessmentTab' . $selectedReviewId . '_' . (int) $feedbackIndex;
                 $commentsTabId = 'priorInternalViewCommentsTab' . $selectedReviewId . '_' . (int) $feedbackIndex;
                 $modalReview = $feedback['Review'];
                 $modalReview['ReviewAnswer'] = !empty($feedback['ReviewAnswer']) ? $feedback['ReviewAnswer'] : array();
                 $modalComments = !empty($feedback['InternalComment']) ? $feedback['InternalComment'] : array();
+                $sourceReviewerName = 'Reviewer 1';
+                if (!empty($feedback['User']['name'])) {
+                  $sourceReviewerName = $feedback['User']['name'];
+                } elseif (!empty($feedback['User']['username'])) {
+                  $sourceReviewerName = $feedback['User']['username'];
+                } elseif (!empty($feedback['Review']['user_id'])) {
+                  $sourceReviewerName = 'Reviewer #' . (int) $feedback['Review']['user_id'];
+                }
+                $linkedReviewDetails = !empty($myLinkedResponseBySource[$selectedReviewId]) ? $myLinkedResponseBySource[$selectedReviewId] : array();
+                $linkedReviewId = !empty($linkedReviewDetails['id']) ? (int) $linkedReviewDetails['id'] : 0;
+                $linkedAnswerMap = !empty($linkedReviewDetails['answer_map']) ? (array) $linkedReviewDetails['answer_map'] : array();
+                $linkedReviewerName = !empty($linkedReviewDetails['reviewer_name']) ? $linkedReviewDetails['reviewer_name'] : '2nd Reviewer';
               ?>
               <div id="<?php echo h($viewModalId); ?>" class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true" style="width: 900px; margin-left: -450px;">
                 <div class="modal-header">
@@ -258,6 +416,34 @@
                   </ul>
                   <div class="tab-content">
                     <div class="tab-pane active" id="<?php echo h($assessmentTabId); ?>">
+                      <?php if ($selectedReviewId > 0 && $selectedAssessmentTypeRaw !== '') { ?>
+                        <div class="alert alert-info" style="margin-bottom: 10px;">
+                          <?php
+                            echo $this->Html->link(
+                              '<i class="icon-edit"></i> Create/Edit My Linked Response',
+                              array(
+                                'internalreviewer' => true,
+                                'controller' => 'reviews',
+                                'action' => 'add',
+                                $application['Application']['id'],
+                                $selectedAssessmentTypeRaw,
+                                'source_review' => $selectedReviewId
+                              ),
+                              array('escape' => false, 'class' => 'btn btn-primary btn-small')
+                            );
+                          ?>
+                          <span class="muted" style="margin-left: 8px;">
+                            This opens your own response form linked to review #<?php echo (int) $selectedReviewId; ?>.
+                          </span>
+                        </div>
+                      <?php } ?>
+                      <?php if ($linkedReviewId > 0) { ?>
+                        <div class="alert alert-success" style="margin-bottom: 10px;">
+                          Linked response found: #<?php echo (int) $linkedReviewId; ?>.
+                          Only changed sections show <strong><?php echo h($sourceReviewerName); ?> in blue</strong> and <strong><?php echo h($linkedReviewerName); ?> in red</strong>.
+                          Matching sections are shown once in default color.
+                        </div>
+                      <?php } ?>
                       <h3 style="text-align: center;"><?php echo h($selectedAssessmentType); ?> Assessment Form</h3>
                       <hr class="soften" style="margin: 10px 0px;">
 
@@ -295,29 +481,53 @@
                         </thead>
                         <tbody>
                           <?php foreach ((array) $modalReview['ReviewAnswer'] as $answer) { ?>
-                            <?php if ($answer['question_type'] == 'label') { ?>
+                            <?php
+                              $questionType = !empty($answer['question_type']) ? strtolower(trim((string) $answer['question_type'])) : '';
+                              $reviewerOneAnswer = $extractAnswerText($answer);
+                              $comparisonKey = $buildAnswerComparisonKey(
+                                $questionType,
+                                !empty($answer['question_number']) ? $answer['question_number'] : '',
+                                !empty($answer['question']) ? $answer['question'] : ''
+                              );
+                              $reviewerTwoAnswer = !empty($linkedAnswerMap[$comparisonKey]) ? trim((string) $linkedAnswerMap[$comparisonKey]) : '';
+                              $hasReviewerOneAnswer = ($reviewerOneAnswer !== '');
+                              $hasReviewerTwoAnswer = ($reviewerTwoAnswer !== '');
+                              $sameAnswer = false;
+                              if ($hasReviewerOneAnswer && $hasReviewerTwoAnswer) {
+                                $sameAnswer = (
+                                  $normalizeAnswerComparisonText($reviewerOneAnswer) ===
+                                  $normalizeAnswerComparisonText($reviewerTwoAnswer)
+                                );
+                              }
+                            ?>
+                            <?php if ($questionType == 'label') { ?>
                               <tr class="success">
                                 <td colspan="2"><strong><?php echo h($answer['question']); ?></strong></td>
                               </tr>
-                            <?php } elseif ($answer['question_type'] == 'yesno') { ?>
+                            <?php } else { ?>
                               <tr>
                                 <td><?php echo h($answer['question']); ?></td>
-                                <td><?php echo h($answer['answer']); ?></td>
-                              </tr>
-                            <?php } elseif ($answer['question_type'] == 'text') { ?>
-                              <tr>
-                                <td><?php echo h($answer['question']); ?></td>
-                                <td><?php echo $formatFeedbackContent($answer['answer']); ?></td>
-                              </tr>
-                            <?php } elseif ($answer['question_type'] == 'workspace') { ?>
-                              <tr>
-                                <td><?php echo h($answer['question']); ?></td>
-                                <td><?php echo $formatFeedbackContent($answer['workspace']); ?></td>
-                              </tr>
-                            <?php } elseif ($answer['question_type'] == 'comment') { ?>
-                              <tr>
-                                <td><?php echo h($answer['question']); ?></td>
-                                <td><?php echo $formatFeedbackContent($answer['comment']); ?></td>
+                                <td>
+                                  <?php if ($hasReviewerOneAnswer && $hasReviewerTwoAnswer && !$sameAnswer) { ?>
+                                    <div class="internal-modal-reviewer1">
+                                      <strong><?php echo h($sourceReviewerName); ?>:</strong>
+                                      <?php echo $formatFeedbackContent($reviewerOneAnswer); ?>
+                                    </div>
+                                    <div class="internal-modal-reviewer2">
+                                      <strong><?php echo h($linkedReviewerName); ?>:</strong>
+                                      <?php echo $formatFeedbackContent($reviewerTwoAnswer); ?>
+                                    </div>
+                                  <?php } elseif ($hasReviewerOneAnswer && $hasReviewerTwoAnswer && $sameAnswer) { ?>
+                                    <?php echo $formatFeedbackContent($reviewerOneAnswer); ?>
+                                  <?php } elseif ($hasReviewerOneAnswer) { ?>
+                                    <?php echo $formatFeedbackContent($reviewerOneAnswer); ?>
+                                  <?php } elseif ($hasReviewerTwoAnswer) { ?>
+                                    <strong><?php echo h($linkedReviewerName); ?>:</strong>
+                                    <?php echo $formatFeedbackContent($reviewerTwoAnswer); ?>
+                                  <?php } else { ?>
+                                    <span class="muted">No response provided.</span>
+                                  <?php } ?>
+                                </td>
                               </tr>
                             <?php } ?>
                           <?php } ?>
@@ -358,7 +568,21 @@
               </div>
             <?php } ?>
           <?php } ?>
-          <?php echo $this->element('application/review'); ?>
+          <?php
+            $priorInternalFeedbackLookup = array();
+            if (!empty($priorInternalFeedback) && is_array($priorInternalFeedback)) {
+              foreach ($priorInternalFeedback as $feedbackEntry) {
+                $feedbackReviewId = !empty($feedbackEntry['Review']['id']) ? (int) $feedbackEntry['Review']['id'] : 0;
+                if ($feedbackReviewId > 0) {
+                  $priorInternalFeedbackLookup[$feedbackReviewId] = $feedbackEntry;
+                }
+              }
+            }
+            echo $this->element('application/review', array(
+              'priorInternalFeedbackLookup' => $priorInternalFeedbackLookup,
+              'reviewList' => $nonLinkedMyReviews
+            ));
+          ?>
         </div>
       </div>
     </div>

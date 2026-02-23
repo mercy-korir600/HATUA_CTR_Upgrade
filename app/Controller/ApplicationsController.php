@@ -2472,7 +2472,16 @@ class ApplicationsController extends AppController
             'contain' => array(
                 'User' => array('fields' => array('User.id', 'User.name', 'User.username')),
                 'ReviewAnswer' => array(
-                    'fields' => array('ReviewAnswer.id', 'ReviewAnswer.question_number', 'ReviewAnswer.question', 'ReviewAnswer.answer', 'ReviewAnswer.workspace', 'ReviewAnswer.comment'),
+                    'fields' => array(
+                        'ReviewAnswer.id',
+                        'ReviewAnswer.question_type',
+                        'ReviewAnswer.review_type',
+                        'ReviewAnswer.question_number',
+                        'ReviewAnswer.question',
+                        'ReviewAnswer.answer',
+                        'ReviewAnswer.workspace',
+                        'ReviewAnswer.comment'
+                    ),
                     'order' => array('ReviewAnswer.question_number' => 'ASC', 'ReviewAnswer.id' => 'ASC')
                 ),
                 'InternalComment' => array('Attachment')
