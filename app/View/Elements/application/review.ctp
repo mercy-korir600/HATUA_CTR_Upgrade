@@ -221,7 +221,7 @@ if (isset($this->params['named']['rreview_view'])) {
 
       <ul id="rreview_tab" class="nav nav-tabs">
         <li class="active"><a href="#rreview_form" data-toggle="tab">Assessment Form</a></li>
-        <li><a href="#exit_summary" data-toggle="tab">Exit report</a></li>
+       
         <li><a href="#rreview_summary" data-toggle="tab">Summary report</a></li>
         <li><a href="#rreview_comments" data-toggle="tab">Comments (<?php echo count($rreview['InternalComment']); ?>)</a></li>
       </ul>
@@ -243,18 +243,7 @@ if (isset($this->params['named']['rreview_view'])) {
             ?>
           </div>
         </div>
-        <div class="tab-pane" id="exit_summary">
-          <div style="position: relative; border-top: 1px solid #ddd;">
-            <?php
-            echo $this->Html->link(
-              __('<i class="icon-download-alt"></i> Download PDF'),
-              array('controller' => 'reviews', 'ext' => 'pdf', 'action' => 'download_exit_summary', $rreview['id']),
-              array('escape' => false, 'class' => 'btn btn-small btn-info topright')
-            );
-            echo $this->element('/application/exit_summary', array('rreview' => $rreview, 'akey' => $akey));
-            ?>
-          </div>
-        </div>
+       
         <div class="tab-pane" id="rreview_summary">
           <div style="position: relative; border-top: 1px solid #ddd;">
             <?php
