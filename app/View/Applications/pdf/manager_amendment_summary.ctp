@@ -6,10 +6,6 @@ $summary = !empty($amendmentTimelineSummary) && is_array($amendmentTimelineSumma
     : array('rows' => array(), 'max_amendments' => 0);
 
 $rows = !empty($summary['rows']) && is_array($summary['rows']) ? $summary['rows'] : array();
-$maxAmendments = !empty($summary['max_amendments']) ? (int)$summary['max_amendments'] : 0;
-if ($maxAmendments < 1) {
-    $maxAmendments = 1;
-}
 
 $formatProtocolReference = function ($protocolNo) {
     $protocolNo = trim((string)$protocolNo);
@@ -18,6 +14,7 @@ $formatProtocolReference = function ($protocolNo) {
     }
 
     $protocolNo = html_entity_decode($protocolNo, ENT_QUOTES, 'UTF-8');
+    $protocolNo = str_replace(array("\xC2\xA0", "\xA0"), ' ', $protocolNo);
     $protocolNo = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $protocolNo);
     $protocolNo = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $protocolNo);
 
@@ -38,6 +35,64 @@ $formatProtocolReference = function ($protocolNo) {
         $protocolNo
     );
 };
+
+$formatAmendmentLabel = function ($label) {
+    $label = html_entity_decode((string)$label, ENT_QUOTES, 'UTF-8');
+    $label = str_replace(array("\xC2\xA0", "\xA0"), ' ', $label);
+    $label = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $label);
+    $label = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $label);
+    if (preg_match('/([0-9]+(?:\.[0-9]+)?)/', (string)$label, $matches)) {
+        $label = (string)$matches[1];
+    }
+    $label = trim((string)$label);
+    $label = preg_replace('/^[\-\s_]+/', '', $label);
+    $label = preg_replace('/^amd[\s_-]*/iu', '', $label);
+
+    if ($label === '') {
+        return 'AMD';
+    }
+    if (is_numeric($label)) {
+        $numericValue = (float)$label;
+        if (floor($numericValue) == $numericValue) {
+            $label = (string)(int)$numericValue;
+        } else {
+            $label = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+        }
+    }
+
+    return 'AMD-' . strtoupper((string)$label);
+};
+
+$tableRows = array();
+foreach ($rows as $rowData) {
+    $application = !empty($rowData['application']) ? $rowData['application'] : array();
+    $timelines = !empty($rowData['timelines']) && is_array($rowData['timelines']) ? $rowData['timelines'] : array();
+    $protocolNo = Hash::get($application, 'Application.protocol_no', '');
+    $formattedProtocolNo = $formatProtocolReference($protocolNo);
+
+    if (empty($timelines)) {
+        $tableRows[] = array(
+            'protocol_no' => $formattedProtocolNo,
+            'amendment' => '',
+            'created' => '',
+            'submitted' => '',
+            'review' => '',
+            'approval' => ''
+        );
+        continue;
+    }
+
+    foreach ($timelines as $timelineIndex => $timeline) {
+        $tableRows[] = array(
+            'protocol_no' => ($timelineIndex === 0) ? $formattedProtocolNo : '',
+            'amendment' => $formatAmendmentLabel(!empty($timeline['label']) ? $timeline['label'] : ''),
+            'created' => Hash::get($timeline, 'stages.created.date', '-'),
+            'submitted' => Hash::get($timeline, 'stages.submitted.date', '-'),
+            'review' => Hash::get($timeline, 'stages.review.date', '-'),
+            'approval' => Hash::get($timeline, 'stages.approved.date', '-')
+        );
+    }
+}
 ?>
 <div style="text-align: center;">
     <h3 style="text-align: center;">
@@ -63,49 +118,32 @@ $formatProtocolReference = function ($protocolNo) {
                 <tr>
                     <th style="width: 4%;">#</th>
                     <th style="width: 16%;">ECCT Reference No.</th>
-                    <?php for ($column = 1; $column <= $maxAmendments; $column++) { ?>
-                        <th>AMD-<?php echo $column; ?> Timeline</th>
-                    <?php } ?>
+                    <th style="width: 12%;">Amendment</th>
+                    <th style="width: 13%;">Created</th>
+                    <th style="width: 13%;">Submitted</th>
+                    <th style="width: 13%;">Review</th>
+                    <th style="width: 13%;">Approval</th>
                 </tr>
             </thead>
             <tbody>
-                <?php if (empty($rows)) { ?>
+                <?php if (empty($tableRows)) { ?>
                     <tr>
-                        <td colspan="<?php echo 2 + $maxAmendments; ?>">No amendment timelines found.</td>
+                        <td colspan="7">No amendment timelines found.</td>
                     </tr>
                 <?php } else { ?>
                     <?php
                     $count = 0;
-                    foreach ($rows as $rowData) {
+                    foreach ($tableRows as $timelineRow) {
                         $count++;
-                        $application = !empty($rowData['application']) ? $rowData['application'] : array();
-                        $timelines = !empty($rowData['timelines']) && is_array($rowData['timelines']) ? $rowData['timelines'] : array();
-                        $protocolNo = Hash::get($application, 'Application.protocol_no', '');
                     ?>
                         <tr>
                             <td><?php echo $count; ?></td>
-                            <td><?php echo h($formatProtocolReference($protocolNo)); ?></td>
-                            <?php for ($column = 0; $column < $maxAmendments; $column++) { ?>
-                                <td>
-                                    <?php if (empty($timelines[$column])) { ?>
-                                        <span class="muted">-</span>
-                                    <?php } else { ?>
-                                        <?php
-                                        $timeline = $timelines[$column];
-                                        $timelineLabel = !empty($timeline['label']) ? $timeline['label'] : ('AMD-' . ($column + 1));
-                                        $createdDate = Hash::get($timeline, 'stages.created.date', '-');
-                                        $submittedDate = Hash::get($timeline, 'stages.submitted.date', '-');
-                                        $reviewDate = Hash::get($timeline, 'stages.review.date', '-');
-                                        $approvedDate = Hash::get($timeline, 'stages.approved.date', '-');
-                                        ?>
-                                        <strong><?php echo h($timelineLabel); ?></strong><br>
-                                        <small><strong>Created:</strong> <?php echo h($createdDate); ?></small><br>
-                                        <small><strong>Submitted:</strong> <?php echo h($submittedDate); ?></small><br>
-                                        <small><strong>Review:</strong> <?php echo h($reviewDate); ?></small><br>
-                                        <small><strong>Approval:</strong> <?php echo h($approvedDate); ?></small>
-                                    <?php } ?>
-                                </td>
-                            <?php } ?>
+                            <td><?php echo h($timelineRow['protocol_no']); ?></td>
+                            <td><?php echo h($timelineRow['amendment']); ?></td>
+                            <td><?php echo h($timelineRow['created']); ?></td>
+                            <td><?php echo h($timelineRow['submitted']); ?></td>
+                            <td><?php echo h($timelineRow['review']); ?></td>
+                            <td><?php echo h($timelineRow['approval']); ?></td>
                         </tr>
                     <?php } ?>
                 <?php } ?>

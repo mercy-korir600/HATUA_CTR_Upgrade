@@ -74,7 +74,7 @@ if (isset($this->params['named']['deviation_edit'])) {
 
         if ($daysDifference < 7) {
           $bgColor = '#E8F5E9';
-        } elseif ($daysDifference <= 30) {
+        } elseif ($daysDifference <= 15) {
           $bgColor = '#FFF8E1';
         } else {
           $bgColor = '#FDECEA';

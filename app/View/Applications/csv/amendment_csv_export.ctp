@@ -14,6 +14,7 @@ $formatProtocolReference = function ($protocolNo) {
     }
 
     $protocolNo = html_entity_decode($protocolNo, ENT_QUOTES, 'UTF-8');
+    $protocolNo = str_replace(array("\xC2\xA0", "\xA0"), ' ', $protocolNo);
     $protocolNo = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $protocolNo);
     $protocolNo = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $protocolNo);
 
@@ -33,6 +34,35 @@ $formatProtocolReference = function ($protocolNo) {
         },
         $protocolNo
     );
+};
+
+$formatAmendmentLabel = function ($label) {
+    $label = html_entity_decode((string)$label, ENT_QUOTES, 'UTF-8');
+    $label = str_replace(array("\xC2\xA0", "\xA0"), ' ', $label);
+    $label = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $label);
+    $label = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $label);
+    if (preg_match('/([0-9]+(?:\.[0-9]+)?)/', (string)$label, $matches)) {
+        $label = (string)$matches[1];
+    }
+    $label = trim((string)$label);
+    $label = preg_replace('/^[\-\s_]+/', '', $label);
+    $label = preg_replace('/^amd[\s_-]*/iu', '', $label);
+    $label = trim((string)$label);
+
+    if ($label === '') {
+        return 'AMD';
+    }
+
+    if (is_numeric($label)) {
+        $numericValue = (float)$label;
+        if (floor($numericValue) == $numericValue) {
+            $label = (string)(int)$numericValue;
+        } else {
+            $label = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+        }
+    }
+
+    return 'AMD-' . strtoupper((string)$label);
 };
 
 $escape = function ($value) {
@@ -62,7 +92,7 @@ foreach ($rows as $rowData) {
         $row = array(
             $count,
             $referenceValue,
-            !empty($timeline['label']) ? (string)$timeline['label'] : '',
+            $formatAmendmentLabel(!empty($timeline['label']) ? (string)$timeline['label'] : ''),
             Hash::get($timeline, 'stages.created.date', '-'),
             Hash::get($timeline, 'stages.submitted.date', '-'),
             Hash::get($timeline, 'stages.review.date', '-'),

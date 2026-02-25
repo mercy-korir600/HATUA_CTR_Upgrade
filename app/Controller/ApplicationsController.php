@@ -1066,9 +1066,14 @@ class ApplicationsController extends AppController
 
     private function _normalizeAmendmentTimelineKey($value)
     {
-        $normalized = strtolower(trim((string)$value));
+        $normalized = html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
+        $normalized = str_replace(array("\xC2\xA0", "\xA0"), ' ', $normalized);
+        $normalized = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $normalized);
+        $normalized = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $normalized);
+        $normalized = strtolower(trim((string)$normalized));
+        $normalized = preg_replace('/^[\-\s_]+/', '', $normalized);
         $normalized = preg_replace('/^\-+/', '', $normalized);
-        $normalized = preg_replace('/^amd[\s_-]*/', '', $normalized);
+        $normalized = preg_replace('/^amd[\s_-]*/u', '', $normalized);
         if ($normalized === '') {
             return '';
         }
@@ -1085,6 +1090,34 @@ class ApplicationsController extends AppController
         }
 
         return trim((string)$normalized);
+    }
+
+    private function _formatAmendmentTimelineLabel($value)
+    {
+        $raw = html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
+        $raw = str_replace(array("\xC2\xA0", "\xA0"), ' ', $raw);
+        $raw = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $raw);
+        $raw = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $raw);
+
+        if (preg_match('/([0-9]+(?:\.[0-9]+)?)/', (string)$raw, $matches)) {
+            $number = trim((string)$matches[1]);
+            if (is_numeric($number)) {
+                $numericValue = (float)$number;
+                if (floor($numericValue) == $numericValue) {
+                    $number = (string)(int)$numericValue;
+                } else {
+                    $number = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+                }
+            }
+            return 'AMD-' . strtoupper((string)$number);
+        }
+
+        $key = $this->_normalizeAmendmentTimelineKey($raw);
+        if ($key === '') {
+            return 'AMD';
+        }
+
+        return 'AMD-' . strtoupper((string)$key);
     }
 
     private function _extractAmendmentTimelineNumber($value)
@@ -1157,7 +1190,7 @@ class ApplicationsController extends AppController
     {
         return array(
             'key' => (string)$key,
-            'label' => 'AMD-' . strtoupper((string)$key),
+            'label' => $this->_formatAmendmentTimelineLabel($key),
             'sort_ts' => 0,
             'stages' => array(
                 'created' => array('ts' => 0, 'date' => '-'),
