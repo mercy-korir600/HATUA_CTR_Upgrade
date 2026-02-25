@@ -8,6 +8,39 @@ $extractAmendmentNumber = function ($value) {
     return null;
 };
 
+$normalizeAmendmentDisplayNumber = function ($value) {
+    $normalized = trim((string)$value);
+    if ($normalized === '') {
+        return '';
+    }
+
+    if (is_numeric($normalized)) {
+        $numericValue = (float)$normalized;
+        if (floor($numericValue) == $numericValue) {
+            return (string)(int)$numericValue;
+        }
+
+        return rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+    }
+
+    return $normalized;
+};
+
+$formatProtocolReference = function ($protocolNo) use ($normalizeAmendmentDisplayNumber) {
+    $protocolNo = trim((string)$protocolNo);
+    if ($protocolNo === '') {
+        return '';
+    }
+
+    return preg_replace_callback(
+        '/\s*-?\s*AMD\s*([0-9]+(?:\.[0-9]+)?)\s*$/i',
+        function ($matches) use ($normalizeAmendmentDisplayNumber) {
+            return ' AMD-' . $normalizeAmendmentDisplayNumber($matches[1]);
+        },
+        $protocolNo
+    );
+};
+
 $buildAmendmentDates = function ($application) use ($extractAmendmentNumber) {
     $datesByAmendment = array();
 
@@ -126,10 +159,11 @@ foreach ($applications as $application) {
                     $count = 0;
                     foreach ($rows as $rowData) {
                         $count++;
+                        $protocolNo = Hash::get($rowData, 'application.Application.protocol_no', '');
                     ?>
                         <tr>
                             <td><?php echo $count; ?></td>
-                            <td><?php echo h(Hash::get($rowData, 'application.Application.protocol_no', '')); ?></td>
+                            <td><?php echo h($formatProtocolReference($protocolNo)); ?></td>
                             <?php for ($column = 0; $column < $maxAmendments; $column++) { ?>
                                 <td><?php echo h(isset($rowData['dates'][$column]) ? $rowData['dates'][$column] : ''); ?></td>
                             <?php } ?>
