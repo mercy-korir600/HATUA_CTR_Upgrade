@@ -1,32 +1,17 @@
 <?php
 App::uses('Hash', 'Utility');
 
-$extractAmendmentNumber = function ($value) {
-    if (preg_match('/(\d+)/', (string)$value, $matches)) {
-        return (int)$matches[1];
-    }
-    return null;
-};
+$summary = !empty($amendmentTimelineSummary) && is_array($amendmentTimelineSummary)
+    ? $amendmentTimelineSummary
+    : array('rows' => array(), 'max_amendments' => 0);
 
-$normalizeAmendmentDisplayNumber = function ($value) {
-    $normalized = trim((string)$value);
-    if ($normalized === '') {
-        return '';
-    }
+$rows = !empty($summary['rows']) && is_array($summary['rows']) ? $summary['rows'] : array();
+$maxAmendments = !empty($summary['max_amendments']) ? (int)$summary['max_amendments'] : 0;
+if ($maxAmendments < 1) {
+    $maxAmendments = 1;
+}
 
-    if (is_numeric($normalized)) {
-        $numericValue = (float)$normalized;
-        if (floor($numericValue) == $numericValue) {
-            return (string)(int)$numericValue;
-        }
-
-        return rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
-    }
-
-    return $normalized;
-};
-
-$formatProtocolReference = function ($protocolNo) use ($normalizeAmendmentDisplayNumber) {
+$formatProtocolReference = function ($protocolNo) {
     $protocolNo = trim((string)$protocolNo);
     if ($protocolNo === '') {
         return '';
@@ -38,91 +23,21 @@ $formatProtocolReference = function ($protocolNo) use ($normalizeAmendmentDispla
 
     return preg_replace_callback(
         '/\s*-?\s*AMD\s*([0-9]+(?:\.[0-9]+)?)\s*$/iu',
-        function ($matches) use ($normalizeAmendmentDisplayNumber) {
-            return ' AMD-' . $normalizeAmendmentDisplayNumber($matches[1]);
+        function ($matches) {
+            $number = trim((string)$matches[1]);
+            if (is_numeric($number)) {
+                $numericValue = (float)$number;
+                if (floor($numericValue) == $numericValue) {
+                    $number = (string)(int)$numericValue;
+                } else {
+                    $number = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+                }
+            }
+            return ' AMD-' . $number;
         },
         $protocolNo
     );
 };
-
-$buildAmendmentDates = function ($application) use ($extractAmendmentNumber) {
-    $datesByAmendment = array();
-
-    $checklists = Hash::get($application, 'AmendmentChecklist', array());
-    foreach ($checklists as $checklist) {
-        $amendmentKey = trim((string)Hash::get($checklist, 'year', ''));
-        if ($amendmentKey === '') {
-            continue;
-        }
-
-        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
-            $datesByAmendment[$amendmentKey] = '';
-        }
-
-        $fileDate = trim((string)Hash::get($checklist, 'file_date', ''));
-        if ($fileDate !== '' && $datesByAmendment[$amendmentKey] === '') {
-            $datesByAmendment[$amendmentKey] = $fileDate;
-        }
-    }
-
-    $approvals = Hash::get($application, 'AmendmentApproval', array());
-    foreach ($approvals as $approval) {
-        $amendmentKey = trim((string)Hash::get($approval, 'amendment', ''));
-        if ($amendmentKey === '') {
-            continue;
-        }
-
-        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
-            $datesByAmendment[$amendmentKey] = '';
-        }
-
-        $approvalDate = trim((string)Hash::get($approval, 'approval_date', ''));
-        if ($approvalDate !== '') {
-            $datesByAmendment[$amendmentKey] = $approvalDate;
-        }
-    }
-
-    if (empty($datesByAmendment)) {
-        return array();
-    }
-
-    $amendmentKeys = array_keys($datesByAmendment);
-    usort($amendmentKeys, function ($left, $right) use ($extractAmendmentNumber) {
-        $leftNumber = $extractAmendmentNumber($left);
-        $rightNumber = $extractAmendmentNumber($right);
-
-        if ($leftNumber === $rightNumber) {
-            return strnatcasecmp((string)$left, (string)$right);
-        }
-        if ($leftNumber === null) {
-            return 1;
-        }
-        if ($rightNumber === null) {
-            return -1;
-        }
-        return ($leftNumber < $rightNumber) ? -1 : 1;
-    });
-
-    $dates = array();
-    foreach ($amendmentKeys as $amendmentKey) {
-        $dates[] = $datesByAmendment[$amendmentKey];
-    }
-
-    return $dates;
-};
-
-$rows = array();
-$maxAmendments = 0;
-
-foreach ($applications as $application) {
-    $dates = $buildAmendmentDates($application);
-    if (empty($dates)) {
-        continue;
-    }
-
-    $rows[] = array('application' => $application, 'dates' => $dates);
-    $maxAmendments = max($maxAmendments, count($dates));
-}
 ?>
 <div style="text-align: center;">
     <h3 style="text-align: center;">
@@ -147,29 +62,49 @@ foreach ($applications as $application) {
             <thead>
                 <tr>
                     <th style="width: 4%;">#</th>
-                    <th style="width: 20%;">ECCT Reference No.</th>
+                    <th style="width: 16%;">ECCT Reference No.</th>
                     <?php for ($column = 1; $column <= $maxAmendments; $column++) { ?>
-                        <th>AMD-<?php echo $column; ?></th>
+                        <th>AMD-<?php echo $column; ?> Timeline</th>
                     <?php } ?>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($rows)) { ?>
                     <tr>
-                        <td colspan="<?php echo 2 + $maxAmendments; ?>">No amendments found.</td>
+                        <td colspan="<?php echo 2 + $maxAmendments; ?>">No amendment timelines found.</td>
                     </tr>
                 <?php } else { ?>
                     <?php
                     $count = 0;
                     foreach ($rows as $rowData) {
                         $count++;
-                        $protocolNo = Hash::get($rowData, 'application.Application.protocol_no', '');
+                        $application = !empty($rowData['application']) ? $rowData['application'] : array();
+                        $timelines = !empty($rowData['timelines']) && is_array($rowData['timelines']) ? $rowData['timelines'] : array();
+                        $protocolNo = Hash::get($application, 'Application.protocol_no', '');
                     ?>
                         <tr>
                             <td><?php echo $count; ?></td>
                             <td><?php echo h($formatProtocolReference($protocolNo)); ?></td>
                             <?php for ($column = 0; $column < $maxAmendments; $column++) { ?>
-                                <td><?php echo h(isset($rowData['dates'][$column]) ? $rowData['dates'][$column] : ''); ?></td>
+                                <td>
+                                    <?php if (empty($timelines[$column])) { ?>
+                                        <span class="muted">-</span>
+                                    <?php } else { ?>
+                                        <?php
+                                        $timeline = $timelines[$column];
+                                        $timelineLabel = !empty($timeline['label']) ? $timeline['label'] : ('AMD-' . ($column + 1));
+                                        $createdDate = Hash::get($timeline, 'stages.created.date', '-');
+                                        $submittedDate = Hash::get($timeline, 'stages.submitted.date', '-');
+                                        $reviewDate = Hash::get($timeline, 'stages.review.date', '-');
+                                        $approvedDate = Hash::get($timeline, 'stages.approved.date', '-');
+                                        ?>
+                                        <strong><?php echo h($timelineLabel); ?></strong><br>
+                                        <small><strong>Created:</strong> <?php echo h($createdDate); ?></small><br>
+                                        <small><strong>Submitted:</strong> <?php echo h($submittedDate); ?></small><br>
+                                        <small><strong>Review:</strong> <?php echo h($reviewDate); ?></small><br>
+                                        <small><strong>Approval:</strong> <?php echo h($approvedDate); ?></small>
+                                    <?php } ?>
+                                </td>
                             <?php } ?>
                         </tr>
                     <?php } ?>
@@ -189,7 +124,9 @@ foreach ($applications as $application) {
     th,
     td {
         border: 1px solid gray;
-        padding: 8px;
+        padding: 6px;
         text-align: left;
+        vertical-align: top;
+        font-size: 10px;
     }
 </style>

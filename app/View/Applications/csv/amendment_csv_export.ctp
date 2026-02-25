@@ -1,32 +1,13 @@
 <?php
 App::uses('Hash', 'Utility');
 
-$extractAmendmentNumber = function ($value) {
-    if (preg_match('/(\d+)/', (string)$value, $matches)) {
-        return (int)$matches[1];
-    }
-    return null;
-};
+$summary = !empty($amendmentTimelineSummary) && is_array($amendmentTimelineSummary)
+    ? $amendmentTimelineSummary
+    : array('rows' => array(), 'max_amendments' => 0);
 
-$normalizeAmendmentDisplayNumber = function ($value) {
-    $normalized = trim((string)$value);
-    if ($normalized === '') {
-        return '';
-    }
+$rows = !empty($summary['rows']) && is_array($summary['rows']) ? $summary['rows'] : array();
 
-    if (is_numeric($normalized)) {
-        $numericValue = (float)$normalized;
-        if (floor($numericValue) == $numericValue) {
-            return (string)(int)$numericValue;
-        }
-
-        return rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
-    }
-
-    return $normalized;
-};
-
-$formatProtocolReference = function ($protocolNo) use ($normalizeAmendmentDisplayNumber) {
+$formatProtocolReference = function ($protocolNo) {
     $protocolNo = trim((string)$protocolNo);
     if ($protocolNo === '') {
         return '';
@@ -38,115 +19,55 @@ $formatProtocolReference = function ($protocolNo) use ($normalizeAmendmentDispla
 
     return preg_replace_callback(
         '/\s*-?\s*AMD\s*([0-9]+(?:\.[0-9]+)?)\s*$/iu',
-        function ($matches) use ($normalizeAmendmentDisplayNumber) {
-            return ' AMD-' . $normalizeAmendmentDisplayNumber($matches[1]);
+        function ($matches) {
+            $number = trim((string)$matches[1]);
+            if (is_numeric($number)) {
+                $numericValue = (float)$number;
+                if (floor($numericValue) == $numericValue) {
+                    $number = (string)(int)$numericValue;
+                } else {
+                    $number = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+                }
+            }
+            return ' AMD-' . $number;
         },
         $protocolNo
     );
 };
 
-$buildAmendmentDates = function ($application) use ($extractAmendmentNumber) {
-    $datesByAmendment = array();
-
-    $checklists = Hash::get($application, 'AmendmentChecklist', array());
-    foreach ($checklists as $checklist) {
-        $amendmentKey = trim((string)Hash::get($checklist, 'year', ''));
-        if ($amendmentKey === '') {
-            continue;
-        }
-
-        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
-            $datesByAmendment[$amendmentKey] = '';
-        }
-
-        $fileDate = trim((string)Hash::get($checklist, 'file_date', ''));
-        if ($fileDate !== '' && $datesByAmendment[$amendmentKey] === '') {
-            $datesByAmendment[$amendmentKey] = $fileDate;
-        }
-    }
-
-    $approvals = Hash::get($application, 'AmendmentApproval', array());
-    foreach ($approvals as $approval) {
-        $amendmentKey = trim((string)Hash::get($approval, 'amendment', ''));
-        if ($amendmentKey === '') {
-            continue;
-        }
-
-        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
-            $datesByAmendment[$amendmentKey] = '';
-        }
-
-        $approvalDate = trim((string)Hash::get($approval, 'approval_date', ''));
-        if ($approvalDate !== '') {
-            $datesByAmendment[$amendmentKey] = $approvalDate;
-        }
-    }
-
-    if (empty($datesByAmendment)) {
-        return array();
-    }
-
-    $amendmentKeys = array_keys($datesByAmendment);
-    usort($amendmentKeys, function ($left, $right) use ($extractAmendmentNumber) {
-        $leftNumber = $extractAmendmentNumber($left);
-        $rightNumber = $extractAmendmentNumber($right);
-
-        if ($leftNumber === $rightNumber) {
-            return strnatcasecmp((string)$left, (string)$right);
-        }
-        if ($leftNumber === null) {
-            return 1;
-        }
-        if ($rightNumber === null) {
-            return -1;
-        }
-        return ($leftNumber < $rightNumber) ? -1 : 1;
-    });
-
-    $dates = array();
-    foreach ($amendmentKeys as $amendmentKey) {
-        $dates[] = $datesByAmendment[$amendmentKey];
-    }
-
-    return $dates;
-};
-
-$rows = array();
-$maxAmendments = 0;
-
-foreach ($applications as $application) {
-    $dates = $buildAmendmentDates($application);
-    if (empty($dates)) {
-        continue;
-    }
-
-    $rows[] = array('application' => $application, 'dates' => $dates);
-    $maxAmendments = max($maxAmendments, count($dates));
-}
-
-$header = array('#', 'ECCT Reference No.');
-for ($column = 1; $column <= $maxAmendments; $column++) {
-    $header[] = 'AMD-' . $column;
-}
-
 $escape = function ($value) {
     return '"' . str_replace('"', '""', (string)$value) . '"';
 };
 
+$header = array('#', 'ECCT Reference No.', 'Amendment', 'Created', 'Submitted', 'Review', 'Approval');
 echo implode(',', array_map($escape, $header)) . "\n";
 
 $count = 0;
 foreach ($rows as $rowData) {
-    $count++;
-    $protocolNo = Hash::get($rowData, 'application.Application.protocol_no', '');
-    $row = array(
-        $count,
-        $formatProtocolReference($protocolNo)
-    );
+    $application = !empty($rowData['application']) ? $rowData['application'] : array();
+    $timelines = !empty($rowData['timelines']) && is_array($rowData['timelines']) ? $rowData['timelines'] : array();
+    $protocolNo = Hash::get($application, 'Application.protocol_no', '');
+    $formattedProtocolNo = $formatProtocolReference($protocolNo);
 
-    for ($column = 0; $column < $maxAmendments; $column++) {
-        $row[] = isset($rowData['dates'][$column]) ? $rowData['dates'][$column] : '';
+    if (empty($timelines)) {
+        $count++;
+        $row = array($count, $formattedProtocolNo, '', '', '', '', '');
+        echo implode(',', array_map($escape, $row)) . "\n";
+        continue;
     }
 
-    echo implode(',', array_map($escape, $row)) . "\n";
+    foreach ($timelines as $timelineIndex => $timeline) {
+        $count++;
+        $referenceValue = ($timelineIndex === 0) ? $formattedProtocolNo : '';
+        $row = array(
+            $count,
+            $referenceValue,
+            !empty($timeline['label']) ? (string)$timeline['label'] : '',
+            Hash::get($timeline, 'stages.created.date', '-'),
+            Hash::get($timeline, 'stages.submitted.date', '-'),
+            Hash::get($timeline, 'stages.review.date', '-'),
+            Hash::get($timeline, 'stages.approved.date', '-')
+        );
+        echo implode(',', array_map($escape, $row)) . "\n";
+    }
 }

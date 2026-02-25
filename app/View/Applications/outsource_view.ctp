@@ -839,7 +839,11 @@ echo $this->Session->flash();
 </div>
 
 <script text="type/javascript">
-  $.expander.defaults.slicePoint = 170;
+  if ($.expander && $.expander.defaults) {
+    $.expander.defaults.slicePoint = 170;
+    $.expander.defaults.expandText = 'show more';
+    $.expander.defaults.userCollapseText = 'show less';
+  }
   $(function() {
     $(document).ajaxStop($.unblockUI);
     $("#tabs").tabs({
@@ -847,7 +851,9 @@ echo $this->Session->flash();
         expires: 1
       }
     });
-    $(".morecontent").expander();
+    if ($.fn.expander) {
+      $(".morecontent").expander();
+    }
 
     // var editor = $('#ApplicationFinalReport').ckeditor();
     if ($('#ApplicationFinalReport').length) {

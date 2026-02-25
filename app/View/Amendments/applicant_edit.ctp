@@ -43,30 +43,14 @@ $sectionOne = !empty($currentAmendment['Amend']) ? $currentAmendment['Amend'] : 
           </div>
           <table class="table table-condensed table-striped table-bordered">
             <tbody>
-              <tr>
-                <td class="table-label"><strong>1. Cover letter</strong></td>
-                <td><?php echo !empty($sectionOne['cover_letter']) ? $sectionOne['cover_letter'] : '<span class="muted">Not provided</span>'; ?></td>
-              </tr>
-              <tr>
-                <td class="table-label"><strong>2. Summary of the proposed amendments</strong></td>
-                <td><?php echo !empty($sectionOne['summary']) ? $sectionOne['summary'] : '<span class="muted">Not provided</span>'; ?></td>
-              </tr>
-              <tr>
-                <td class="table-label"><strong>3. Reason for the amendment</strong></td>
-                <td><?php echo !empty($sectionOne['reason']) ? $sectionOne['reason'] : '<span class="muted">Not provided</span>'; ?></td>
-              </tr>
-              <tr>
-                <td class="table-label"><strong>4. Impact on the original study objectives</strong></td>
-                <td><?php echo !empty($sectionOne['objectives_impacts']) ? $sectionOne['objectives_impacts'] : '<span class="muted">Not provided</span>'; ?></td>
-              </tr>
-              <tr>
-                <td class="table-label"><strong>5. Impact on study endpoints and data generated</strong></td>
-                <td><?php echo !empty($sectionOne['endpoints_impacts']) ? $sectionOne['endpoints_impacts'] : '<span class="muted">Not provided</span>'; ?></td>
-              </tr>
-              <tr>
-                <td class="table-label"><strong>6. Impact on the safety and wellbeing of participants</strong></td>
-                <td><?php echo !empty($sectionOne['safety_impacts']) ? $sectionOne['safety_impacts'] : '<span class="muted">Not provided</span>'; ?></td>
-              </tr>
+              <?php
+              echo $this->element('amendments/section_one_snapshot', array(
+                'sectionOne' => $sectionOne,
+                'format' => 'table_rows',
+                'allowHtml' => true,
+                'emptyText' => 'Not provided'
+              ));
+              ?>
               <tr>
                 <td class="table-label"><strong>Cover Letter File</strong></td>
                 <td>
@@ -272,26 +256,32 @@ $this->start('form-actions');
 </div>
 
 <script type="text/javascript">
-      $.expander.defaults.slicePoint = 170;
 	$(function() {
             $( "#tabs" ).tabs({
-                cookie: {
-                  expires: 1
-                }
-            });
-		$('.mapop').popover();
+	      cookie: {
+	                  expires: 1
+	                }
+	            });
+			$('.mapop').popover();
 		$('.tooltipper').tooltip();
 		$( ".datepickers" ).datepicker({
 			minDate:"-100Y", maxDate:"-0D", dateFormat:'dd-mm-yy', showButtonPanel:true, changeMonth:true, changeYear:true,
 			buttonImageOnly:true, showAnim:'show', showOn:'both', buttonImage:'/img/calendar.gif'
 		});
 		$('#AmendmentStudyTitle').ckeditor();
-             $('#AmendmentAbstractOfStudy').ckeditor();
-             $('#AmendmentNotification').ckeditor();
-		$('#AmendmentOrganizations').ckeditor();
-		// CKEDITOR.replace( 'data[Amendment][study_title]');
-            $(".morecontent").expander();
-	});
+	             $('#AmendmentAbstractOfStudy').ckeditor();
+	             $('#AmendmentNotification').ckeditor();
+			$('#AmendmentOrganizations').ckeditor();
+			// CKEDITOR.replace( 'data[Amendment][study_title]');
+			if ($.expander && $.expander.defaults) {
+			  $.expander.defaults.slicePoint = 170;
+			  $.expander.defaults.expandText = 'show more';
+			  $.expander.defaults.userCollapseText = 'show less';
+			}
+			if ($.fn.expander) {
+	            $(".morecontent").expander();
+	        }
+		});
 </script>
 <?php	$this->end(); ?>
 

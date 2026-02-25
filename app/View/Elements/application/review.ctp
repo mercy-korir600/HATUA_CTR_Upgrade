@@ -60,6 +60,38 @@ $priorInternalFeedbackLookup = (!empty($priorInternalFeedbackLookup) && is_array
   ? $priorInternalFeedbackLookup
   : array();
 
+if (empty($priorInternalFeedbackLookup)) {
+  $candidateGroups = array();
+  if (!empty($application['Review']) && is_array($application['Review'])) {
+    $candidateGroups[] = $application['Review'];
+  }
+  if (!empty($application['InternalReview']) && is_array($application['InternalReview'])) {
+    $candidateGroups[] = $application['InternalReview'];
+  }
+
+  foreach ($candidateGroups as $reviewGroup) {
+    foreach ($reviewGroup as $reviewEntry) {
+      $reviewId = !empty($reviewEntry['id']) ? (int) $reviewEntry['id'] : 0;
+      if ($reviewId <= 0 || !empty($priorInternalFeedbackLookup[$reviewId])) {
+        continue;
+      }
+
+      if (!empty($reviewEntry['type']) && $reviewEntry['type'] !== 'reviewer_comment') {
+        continue;
+      }
+
+      $priorInternalFeedbackLookup[$reviewId] = array(
+        'Review' => array(
+          'id' => $reviewId,
+          'user_id' => !empty($reviewEntry['user_id']) ? (int) $reviewEntry['user_id'] : 0
+        ),
+        'User' => !empty($reviewEntry['User']) ? $reviewEntry['User'] : array(),
+        'ReviewAnswer' => !empty($reviewEntry['ReviewAnswer']) ? $reviewEntry['ReviewAnswer'] : array()
+      );
+    }
+  }
+}
+
 $reviewList = (!empty($reviewList) && is_array($reviewList))
   ? array_values($reviewList)
   : array_values((!empty($application['Review']) && is_array($application['Review'])) ? $application['Review'] : array());
@@ -308,12 +340,20 @@ if (isset($this->params['named']['rreview_view'])) {
                 'comparisonSourceReviewId' => $comparisonPayload['source_review_id']
               ));
             } else {
+              $sourceReviewId = $extractLinkedSourceReviewId(!empty($rreview['title']) ? $rreview['title'] : '');
+              $comparisonPayload = $buildComparisonPayload($sourceReviewId);
               echo $this->Html->link(
                 __('<i class="icon-download-alt"></i> Download PDF'),
                 array('controller' => 'reviews', 'ext' => 'pdf', 'action' => 'download_assessment', $rreview['id']),
                 array('escape' => false, 'class' => 'btn btn-small btn-info topright')
               );
-              echo $this->element('/application/rreview_view', array('rreview' => $rreview, 'akey' => $akey));
+              echo $this->element('/application/rreview_view', array(
+                'rreview' => $rreview,
+                'akey' => $akey,
+                'comparisonReviewAnswerMap' => $comparisonPayload['map'],
+                'comparisonReviewerName' => $comparisonPayload['reviewer_name'],
+                'comparisonSourceReviewId' => $comparisonPayload['source_review_id']
+              ));
             }
             ?>
           </div>

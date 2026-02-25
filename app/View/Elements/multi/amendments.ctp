@@ -47,6 +47,79 @@ $formatAmendmentLabel = function ($value) use ($normalizeAmendmentYear) {
     return 'AMD-' . preg_replace('/^amd-/', '', $normalized);
 };
 
+$amendmentSectionOneMap = array();
+$amendmentRows = !empty($application['Amendment']) && is_array($application['Amendment']) ? array_values($application['Amendment']) : array();
+$needsSectionOneRefetch = false;
+foreach ($amendmentRows as $amendmentRow) {
+    if (empty($amendmentRow['Amend']) || !is_array($amendmentRow['Amend'])) {
+        $needsSectionOneRefetch = true;
+        break;
+    }
+}
+
+if ($needsSectionOneRefetch && !empty($application['Application']['id'])) {
+    $Amendment = ClassRegistry::init('Amendment');
+    $refetchedRows = $Amendment->find('all', array(
+        'conditions' => array('Amendment.application_id' => $application['Application']['id']),
+        'contain' => array('Amend', 'CoverLetter'),
+        'order' => array('Amendment.id' => 'ASC')
+    ));
+
+    $amendmentRows = array();
+    foreach ($refetchedRows as $resultRow) {
+        if (empty($resultRow['Amendment']) || !is_array($resultRow['Amendment'])) {
+            continue;
+        }
+        $flatRow = $resultRow['Amendment'];
+        $flatRow['Amend'] = !empty($resultRow['Amend']) ? $resultRow['Amend'] : array();
+        $flatRow['CoverLetter'] = !empty($resultRow['CoverLetter']) ? $resultRow['CoverLetter'] : array();
+        $amendmentRows[] = $flatRow;
+    }
+}
+
+if (!empty($amendmentRows)) {
+    usort($amendmentRows, function ($left, $right) {
+        $leftId = !empty($left['id']) ? (int) $left['id'] : 0;
+        $rightId = !empty($right['id']) ? (int) $right['id'] : 0;
+        if ($leftId === $rightId) {
+            return 0;
+        }
+        return ($leftId < $rightId) ? -1 : 1;
+    });
+
+    foreach ($amendmentRows as $index => $amendmentRow) {
+        $sectionOne = !empty($amendmentRow['Amend']) && is_array($amendmentRow['Amend']) ? $amendmentRow['Amend'] : array();
+        $coverLetters = !empty($amendmentRow['CoverLetter']) && is_array($amendmentRow['CoverLetter']) ? $amendmentRow['CoverLetter'] : array();
+        $coverFileName = '';
+        if (!empty($coverLetters)) {
+            $latestCover = end($coverLetters);
+            $coverFileName = !empty($latestCover['basename']) ? trim((string) $latestCover['basename']) : '';
+            reset($coverLetters);
+        }
+
+        $snapshot = array(
+            'cover_letter' => !empty($sectionOne['cover_letter']) ? trim((string) $sectionOne['cover_letter']) : '',
+            'summary' => !empty($sectionOne['summary']) ? trim((string) $sectionOne['summary']) : '',
+            'reason' => !empty($sectionOne['reason']) ? trim((string) $sectionOne['reason']) : '',
+            'objectives_impacts' => !empty($sectionOne['objectives_impacts']) ? trim((string) $sectionOne['objectives_impacts']) : '',
+            'endpoints_impacts' => !empty($sectionOne['endpoints_impacts']) ? trim((string) $sectionOne['endpoints_impacts']) : '',
+            'safety_impacts' => !empty($sectionOne['safety_impacts']) ? trim((string) $sectionOne['safety_impacts']) : '',
+            'cover_file' => $coverFileName,
+            'created' => !empty($amendmentRow['created']) ? date('d-M-Y H:i', strtotime($amendmentRow['created'])) : ''
+        );
+
+        $sequenceKey = $normalizeAmendmentYear($index + 1);
+        if ($sequenceKey !== '') {
+            $amendmentSectionOneMap[$sequenceKey] = $snapshot;
+        }
+
+        $ecctRefKey = $normalizeAmendmentYear(!empty($amendmentRow['ecct_ref_number']) ? $amendmentRow['ecct_ref_number'] : '');
+        if ($ecctRefKey !== '' && empty($amendmentSectionOneMap[$ecctRefKey])) {
+            $amendmentSectionOneMap[$ecctRefKey] = $snapshot;
+        }
+    }
+}
+
 $discussionByYear = array();
 if ($redir === 'manager' || $redir === 'applicant') {
     $Comment = ClassRegistry::init('Comment');
@@ -123,19 +196,36 @@ if ($redir === 'manager' || $redir === 'applicant') {
 
 <h4 style="background-color: #37732c; color: #fff; text-align: center;">Amendments Checklist </h4>
 <p><small>All submitted documents should be version referenced and dated.</small></p>
-<table class="table table-bordered table-condensed table-striped">
-    <thead>
-        <tr>
-            <th>Amendment</th>
-            <th class="actions"><?php echo __('Files'); ?></th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($years as $year) : ?>
-            <?php $yearLabel = $formatAmendmentLabel($year); ?>
+<div style="overflow-x:auto;">
+    <table class="table table-bordered table-condensed table-striped">
+        <thead>
             <tr>
-                <td><b><?php echo h($yearLabel); ?></b></td>
-                <td>
+                <th style="min-width: 110px;">Amendment</th>
+                <?php
+                echo $this->element('amendments/section_one_snapshot', array(
+                    'format' => 'column_headers'
+                ));
+                ?>
+                <th class="actions" style="min-width: 320px;"><?php echo __('Files'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($years as $year) : ?>
+                <?php
+                $yearLabel = $formatAmendmentLabel($year);
+                $yearKey = $normalizeAmendmentYear($year);
+                $sectionOneSnapshot = ($yearKey !== '' && !empty($amendmentSectionOneMap[$yearKey])) ? $amendmentSectionOneMap[$yearKey] : array();
+                ?>
+                <tr>
+                    <td><b><?php echo h($yearLabel); ?></b></td>
+                    <?php
+                    echo $this->element('amendments/section_one_snapshot', array(
+                        'sectionOne' => $sectionOneSnapshot,
+                        'format' => 'column_values',
+                        'emptyText' => 'Not provided'
+                    ));
+                    ?>
+                    <td>
                     <?php
                     $f = 0;
                     foreach ($former as $rem => $mer) {
@@ -679,11 +769,12 @@ if ($redir === 'manager' || $redir === 'applicant') {
                           }
                         </script>
                     <?php endif; ?>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-    </tbody>
-</table>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
 
 <hr>
 
