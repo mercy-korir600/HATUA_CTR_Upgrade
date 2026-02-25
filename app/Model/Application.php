@@ -34,7 +34,7 @@ class Application extends AppModel
         'trial_therapeutic_confirmatory' => array('type' => 'value'),
         'trial_therapeutic_use' => array('type' => 'value'),
         'approvedrange' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Application.approval_date BETWEEN ? AND ?'),
-        'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Application.date_submitted BETWEEN ? AND ?'),
+        'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => '(CASE WHEN Application.unsubmitted = 1 THEN IFNULL(Application.initial_date_submitted, Application.date_submitted) ELSE Application.date_submitted END) BETWEEN ? AND ?'),
         'investigator' => array('type' => 'query', 'method' => 'findByInvestigators', 'encode' => true),
         'users' => array('type' => 'query', 'method' => 'findByReviewer', 'encode' => true),
         'sponsors' => array('type' => 'query', 'method' => 'findBySponsor', 'encode' => true),
