@@ -64,6 +64,10 @@ class AmendmentsController extends AppController {
 
 			$this->Amendment->create();
 			if ($this->Amendment->saveAssociated($this->request->data, array('validate' => 'first', 'deep' => true))) {
+				$this->_syncAmendmentCoverLetterChecklistEntry(
+					(int) $this->Amendment->id,
+					(int) $application['Application']['id']
+				);
 				$data = array(
 					'id' => $this->Amendment->id,
 					'application_id' => $application['Application']['id'],
@@ -154,29 +158,32 @@ class AmendmentsController extends AppController {
 					18 MB in size. <small>If they are larger, compress (zip,tar...) them to the required size first</small>'), 'alerts/flash_error');
 				$this->redirect(array('action' => 'edit', $id));
 			}
-			elseif (!$this->Amendment->saveAll($filedata, array(
-				'validate' => 'only',
-				'fieldList' => array(
-			       	'Attachment' => 'file'
-			    	)))) {
-				$this->Session->setFlash(__('The file(s) is not valid. If the file(s) are more than
-					18 MB in size please compress them to below 18 MB first.'), 'alerts/flash_error');
-			}
-			else {
-				if ($this->Amendment->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
-					if ($validate) {
-						$this->Amendment->Amend->updateAll(
-							array(
-								'Amend.submitted' => 1,
-								'Amend.date_submitted' => "'" . date('Y-m-d H:i:s') . "'"
-							),
-							array('Amend.amendment_id' => $this->Amendment->id)
+				elseif (!$this->Amendment->saveAll($filedata, array(
+					'validate' => 'only',
+					'fieldList' => array(
+						'Attachment' => 'file'
+					)))) {
+					$this->Session->setFlash(__('The file(s) is not valid. If the file(s) are more than
+						18 MB in size please compress them to below 18 MB first.'), 'alerts/flash_error');
+				} else {
+					if ($this->Amendment->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
+						$this->_syncAmendmentCoverLetterChecklistEntry(
+							(int) $this->Amendment->id,
+							(int) $amndt['Amendment']['application_id']
 						);
-					}
-					if($validate) {
-						$this->Session->setFlash(__('You have successfully submitted the amendment to PPB. PPB will review
-							this amendment and notify you on the progress. You can view the progress of the application by clicking on
-							&#39;my applications&#39; on the dashboard menu. Thank you.'), 'alerts/flash_success');
+						if ($validate) {
+							$this->Amendment->Amend->updateAll(
+								array(
+									'Amend.submitted' => 1,
+									'Amend.date_submitted' => "'" . date('Y-m-d H:i:s') . "'"
+								),
+								array('Amend.amendment_id' => $this->Amendment->id)
+							);
+						}
+						if ($validate) {
+							$this->Session->setFlash(__('You have successfully submitted the amendment to PPB. PPB will review
+								this amendment and notify you on the progress. You can view the progress of the application by clicking on
+								&#39;my applications&#39; on the dashboard menu. Thank you.'), 'alerts/flash_success');
 						// CakeResque::enqueue('default', 'NotificationShell', array('submitAmndtNotifyManagersReviewers',
 						// 	$amndt['Amendment']['application_id']));
 						$this->redirect(array('controller' => 'applications', 'action' => 'view', $amndt['Amendment']['application_id']));
@@ -254,6 +261,130 @@ class AmendmentsController extends AppController {
 			$this->Session->setFlash(__('Amendment already submitted to PPB. You may create a new amendment.'), 'alerts/flash_info');
 			$this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id));
 		}
+	}
+
+	protected function _syncAmendmentCoverLetterChecklistEntry($amendmentId, $applicationId) {
+		$amendmentId = (int) $amendmentId;
+		$applicationId = (int) $applicationId;
+		if ($amendmentId < 1 || $applicationId < 1) {
+			return false;
+		}
+
+		$coverRow = $this->Amendment->CoverLetter->find('first', array(
+			'conditions' => array(
+				'CoverLetter.model' => 'Amendment',
+				'CoverLetter.group' => 'cover_letter',
+				'CoverLetter.foreign_key' => $amendmentId
+			),
+			'order' => array('CoverLetter.created' => 'DESC', 'CoverLetter.id' => 'DESC'),
+			'recursive' => -1
+		));
+		if (empty($coverRow['CoverLetter'])) {
+			return false;
+		}
+		$cover = $coverRow['CoverLetter'];
+
+		$sequence = (int) $this->Amendment->find('count', array(
+			'conditions' => array(
+				'Amendment.application_id' => $applicationId,
+				'Amendment.id <=' => $amendmentId
+			),
+			'recursive' => -1
+		));
+		if ($sequence < 1) {
+			$sequence = (int) $this->Amendment->find('count', array(
+				'conditions' => array('Amendment.application_id' => $applicationId),
+				'recursive' => -1
+			));
+		}
+		if ($sequence < 1) {
+			$sequence = 1;
+		}
+		$amendmentYear = 'amd-' . $sequence;
+
+		$pocketName = $this->_resolveAmendmentCoverPocketName();
+		$attachmentModel = $this->Amendment->Attachment;
+
+		$existing = $attachmentModel->find('first', array(
+			'conditions' => array(
+				'Attachment.model' => 'AmendmentChecklist',
+				'Attachment.foreign_key' => $applicationId,
+				'Attachment.year' => $amendmentYear,
+				'Attachment.pocket_name' => $pocketName
+			),
+			'order' => array('Attachment.id' => 'DESC'),
+			'recursive' => -1
+		));
+		if (!empty($existing['Attachment']['id'])) {
+			return true;
+		}
+
+		$derivedFileDate = date('Y-m-d');
+		if (!empty($cover['created']) && strtotime($cover['created']) !== false) {
+			$derivedFileDate = date('Y-m-d', strtotime($cover['created']));
+		}
+
+		$description = trim((string) (isset($cover['description']) ? $cover['description'] : ''));
+		if ($description === '') {
+			$description = 'Cover letter';
+		}
+
+		$saveData = array(
+			'Attachment' => array(
+				'model' => 'AmendmentChecklist',
+				'foreign_key' => $applicationId,
+				'group' => $pocketName,
+				'pocket_name' => $pocketName,
+				'year' => $amendmentYear,
+				'description' => $description,
+				'dirname' => $cover['dirname'],
+				'basename' => $cover['basename'],
+				'checksum' => $cover['checksum'],
+				'version_no' => !empty($cover['version_no']) ? $cover['version_no'] : '',
+				'file_date' => $derivedFileDate
+			)
+		);
+
+		if (!empty($cover['filesize'])) {
+			$saveData['Attachment']['filesize'] = $cover['filesize'];
+		}
+		if (!empty($cover['mimetype'])) {
+			$saveData['Attachment']['mimetype'] = $cover['mimetype'];
+		}
+
+		$attachmentModel->create();
+		return (bool) $attachmentModel->save($saveData, array('validate' => false));
+	}
+
+	protected function _resolveAmendmentCoverPocketName() {
+		$this->loadModel('Pocket');
+		$pockets = $this->Pocket->find('list', array(
+			'fields' => array('Pocket.name', 'Pocket.content'),
+			'conditions' => array('Pocket.type' => 'amendment'),
+			'order' => array('Pocket.item_number' => 'ASC'),
+			'recursive' => -1
+		));
+
+		if (empty($pockets)) {
+			return 'cover_letter';
+		}
+
+		reset($pockets);
+		$fallbackKey = key($pockets);
+
+		foreach ($pockets as $pocketKey => $pocketLabel) {
+			$keyLower = strtolower((string) $pocketKey);
+			$labelLower = strtolower(trim(strip_tags((string) $pocketLabel)));
+			if (
+				strpos($keyLower, 'cover') !== false
+				|| strpos($labelLower, 'cover letter') !== false
+				|| strpos($labelLower, 'covering letter') !== false
+			) {
+				return $pocketKey;
+			}
+		}
+
+		return !empty($fallbackKey) ? $fallbackKey : 'cover_letter';
 	}
 
 	protected function _normalizeAmendmentInitialAttachments(&$data) {
