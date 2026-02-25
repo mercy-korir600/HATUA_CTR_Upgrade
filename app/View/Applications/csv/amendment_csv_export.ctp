@@ -1,34 +1,114 @@
 <?php
 App::uses('Hash', 'Utility');
-$header = array('id' => '#', 'protocol_no' => 'ECCT Reference No.', 'amendment' => 'Amendments');
-echo implode(',', $header) . "\n";
-foreach ($applications as $application) :
-    $content = '';
-    $row = [];
 
-    // debug($application);
-    // exit;
+$extractAmendmentNumber = function ($value) {
+    if (preg_match('/(\d+)/', (string)$value, $matches)) {
+        return (int)$matches[1];
+    }
+    return null;
+};
 
-    foreach ($header as $key => $val) {
-        if (array_key_exists($key, $application['Application'])) {
-            $row[$key] = '"' . preg_replace('/"/', '""', $application['Application'][$key]) . '"';
-        } elseif ($key == 'amendment') {
-            if (!empty($application['AmendmentApproval'])) {
+$buildAmendmentDates = function ($application) use ($extractAmendmentNumber) {
+    $datesByAmendment = array();
 
-                $years = array_unique(Hash::extract($application['AmendmentChecklist'], '{n}.year'));
-                rsort($years);
-                foreach ($years as $year) {
-                    foreach ($application['AmendmentApproval'] as $apr) {
+    $checklists = Hash::get($application, 'AmendmentChecklist', array());
+    foreach ($checklists as $checklist) {
+        $amendmentKey = trim((string)Hash::get($checklist, 'year', ''));
+        if ($amendmentKey === '') {
+            continue;
+        }
 
-                        if ($apr['amendment'] == $year) {
+        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
+            $datesByAmendment[$amendmentKey] = '';
+        }
 
-                            (isset($row[$key])) ? $row[$key] .= '; ' . $year.'-'.$apr['approval_date'] : $row[$key] = $year.'-'.$apr['approval_date'] ;
-                        }
-                    }
-                }
-                (isset($row[$key])) ? $row[$key] = '"' . preg_replace('/"/', '""', $row[$key]) . '"' : $row[$key] = '""';
-            }
+        $fileDate = trim((string)Hash::get($checklist, 'file_date', ''));
+        if ($fileDate !== '' && $datesByAmendment[$amendmentKey] === '') {
+            $datesByAmendment[$amendmentKey] = $fileDate;
         }
     }
-    echo implode(',', $row) . "\n";
-endforeach;
+
+    $approvals = Hash::get($application, 'AmendmentApproval', array());
+    foreach ($approvals as $approval) {
+        $amendmentKey = trim((string)Hash::get($approval, 'amendment', ''));
+        if ($amendmentKey === '') {
+            continue;
+        }
+
+        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
+            $datesByAmendment[$amendmentKey] = '';
+        }
+
+        $approvalDate = trim((string)Hash::get($approval, 'approval_date', ''));
+        if ($approvalDate !== '') {
+            $datesByAmendment[$amendmentKey] = $approvalDate;
+        }
+    }
+
+    if (empty($datesByAmendment)) {
+        return array();
+    }
+
+    $amendmentKeys = array_keys($datesByAmendment);
+    usort($amendmentKeys, function ($left, $right) use ($extractAmendmentNumber) {
+        $leftNumber = $extractAmendmentNumber($left);
+        $rightNumber = $extractAmendmentNumber($right);
+
+        if ($leftNumber === $rightNumber) {
+            return strnatcasecmp((string)$left, (string)$right);
+        }
+        if ($leftNumber === null) {
+            return 1;
+        }
+        if ($rightNumber === null) {
+            return -1;
+        }
+        return ($leftNumber < $rightNumber) ? -1 : 1;
+    });
+
+    $dates = array();
+    foreach ($amendmentKeys as $amendmentKey) {
+        $dates[] = $datesByAmendment[$amendmentKey];
+    }
+
+    return $dates;
+};
+
+$rows = array();
+$maxAmendments = 0;
+
+foreach ($applications as $application) {
+    $dates = $buildAmendmentDates($application);
+    if (empty($dates)) {
+        continue;
+    }
+
+    $rows[] = array('application' => $application, 'dates' => $dates);
+    $maxAmendments = max($maxAmendments, count($dates));
+}
+
+$header = array('#', 'ECCT Reference No.');
+for ($column = 1; $column <= $maxAmendments; $column++) {
+    $header[] = 'AMD-' . $column;
+}
+
+$escape = function ($value) {
+    return '"' . str_replace('"', '""', (string)$value) . '"';
+};
+
+echo implode(',', array_map($escape, $header)) . "\n";
+
+$count = 0;
+foreach ($rows as $rowData) {
+    $count++;
+    $row = array(
+        $count,
+        Hash::get($rowData, 'application.Application.protocol_no', '')
+    );
+
+    for ($column = 0; $column < $maxAmendments; $column++) {
+        $row[] = isset($rowData['dates'][$column]) ? $rowData['dates'][$column] : '';
+    }
+
+    echo implode(',', array_map($escape, $row)) . "\n";
+}

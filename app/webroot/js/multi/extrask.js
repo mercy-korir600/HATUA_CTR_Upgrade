@@ -3,11 +3,55 @@ $(function () {
     $(document).on('click', '.update-row-amendment', update_description);
 
     function normalizeAmendmentYear(value) {
-      var normalized = (value || '').trim();
-      if (normalized !== '' && normalized.indexOf('amd-') !== 0) {
-        normalized = 'amd-' + normalized;
+      var normalized = (value || '').toString().trim().toLowerCase();
+      normalized = normalized.replace(/^-+/, '');
+      normalized = normalized.replace(/^amd[\s_-]*/i, '');
+      if (normalized === '') {
+        return '';
       }
+
+      if (/^\d+(\.\d+)?$/.test(normalized)) {
+        var numericValue = parseFloat(normalized);
+        if (!isNaN(numericValue)) {
+          if (Math.floor(numericValue) === numericValue) {
+            normalized = String(parseInt(numericValue, 10));
+          } else {
+            normalized = String(numericValue).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
+          }
+        }
+      }
+
+      return normalized ? 'amd-' + normalized : '';
+    }
+
+    function formatAmendmentLabel(value) {
+      var normalized = normalizeAmendmentYear(value);
+      if (!normalized) {
+        return '';
+      }
+
+      return 'AMD-' + normalized.replace(/^amd-/, '');
+    }
+
+    function setSelectedYearDisplay(value) {
+      var normalized = normalizeAmendmentYear(value);
+      var label = formatAmendmentLabel(value);
+
+      $('.selected-year-name')
+        .text(label)
+        .attr('data-year-value', normalized);
+
       return normalized;
+    }
+
+    function getSelectedYearValue() {
+      var selectedEl = $('.selected-year-name');
+      var storedValue = (selectedEl.attr('data-year-value') || '').trim();
+      if (storedValue !== '') {
+        return normalizeAmendmentYear(storedValue);
+      }
+
+      return normalizeAmendmentYear(selectedEl.text());
     }
 
     yeardataset();
@@ -15,13 +59,12 @@ $(function () {
       // Get the selected value
       var selectedYear = $(this).val(); 
       console.log("Selected year " +selectedYear); 
-      $('.selected-year-name').text(normalizeAmendmentYear(selectedYear));
+      setSelectedYearDisplay(selectedYear);
       yeardataset();
     });
   
     function yeardataset() {
-      var selectedYear = normalizeAmendmentYear($('.amendmentyear').val());
-      $('.selected-year-name').text(selectedYear);
+      var selectedYear = setSelectedYearDisplay($('.amendmentyear').val());
       if ($('.checklistyearyear').val() != $('.amendmentyear').val()) {
         $('.amendmentyear').closest('table').find('input[name*="year"]').each(function () {
           $(this).val(selectedYear);
@@ -108,7 +151,7 @@ $(function () {
     });
     function constructATr(intId) {
       var intId2 = intId + 1;
-      var otherPValue = $(document).find('p.selected-year-name').text();
+      var otherPValue = getSelectedYearValue();
       var trWrapper = '\
           <tr class="fieldwrapper" id="field{i}">\
           <td>{i2}</td>\
@@ -153,7 +196,7 @@ $(function () {
         alert('Please enter date');
         return;
       }
-      var otherPValue = $(document).find('p.selected-year-name').text();
+      var otherPValue = getSelectedYearValue();
   
       console.log('Amendment ID:', otherPValue);
       var serverId = tr.find('input:hidden[id^="AmendmentChecklist"][name$="[server-id]"]').val();

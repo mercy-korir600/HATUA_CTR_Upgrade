@@ -986,7 +986,7 @@ class ApplicationsController extends AppController
             'SiteDetail' => array('County')
         );
 
-        $limit = isset($this->paginate['limit']) ? $this->paginate['limit'] : 1000;
+        $exportLimit = 10000;
 
         //in case of csv export
         if (isset($this->request->params['ext']) && $this->request->params['ext'] == 'csv') {
@@ -997,13 +997,13 @@ class ApplicationsController extends AppController
                 array(
                     'conditions' => $this->paginate['conditions'],
                     'order' => $this->paginate['order'],
-                    'contain' => $this->a_contain,
-                    'limit' => 10000
+                    'contain' => $this->paginate['contain'],
+                    'limit' => $exportLimit
                 )
             );
 
             foreach ($apps as $app) {
-                if (!empty($app['AmendmentApproval'])) {
+                if (!empty($app['AmendmentApproval']) || !empty($app['AmendmentChecklist'])) {
                     $applications[] = $app;
                 }
             }
@@ -1012,28 +1012,31 @@ class ApplicationsController extends AppController
             $this->set(compact('applications'));
             $this->layout = false;
             $this->render('amendment_csv_export');
+            return;
         }
         //end csv exports
 
 
         //in case of pdf export
         if (isset($this->request->params['ext']) && $this->request->params['ext'] == 'pdf') {
-
-
-            $contain = $this->a_contain;
             $apps = $this->Application->find(
                 'all',
                 array(
                     'conditions' => $this->paginate['conditions'],
                     'order' => $this->paginate['order'],
-                    'contain' => $contain,
-                    'limit' => $limit
+                    'contain' => $this->paginate['contain'],
+                    'limit' => $exportLimit
                 )
             );
-
-
+            $applications = array();
+            foreach ($apps as $app) {
+                if (!empty($app['AmendmentApproval']) || !empty($app['AmendmentChecklist'])) {
+                    $applications[] = $app;
+                }
+            }
             $this->set(compact('applications'));
             $this->pdfConfig = array('filename' => 'Applications',  'orientation' => 'portrait');
+            return;
         }
         //end pdf export
 

@@ -1,91 +1,157 @@
- <?php
-    App::uses('Hash', 'Utility');
-    ?>
- <div style="text-align: center;">
-     <h3 style="text-align: center;">
-         <?php
-            echo $this->Html->image('cake.power.png', array(
-                'fullBase' => true, 'alt' => 'Pharmacy and Poisons Board',
-                'style' => 'border: 0; float: center; margin-right: 10px; margin-bottom: 10px;'
-            ));
-            ?>
+<?php
+App::uses('Hash', 'Utility');
 
-     </h3>
-     <p style="text-align: center;">
-         <span style="font-family:bookman old style,serif;"><strong>MINISTRY</strong> <strong>OF</strong> <strong>HEALTH</strong></span>
-     </p>
-     <p style="text-align: center;">
-         <span style="font-family:bookman old style,serif;"><strong>PHARMACY</strong> <strong>AND</strong> <strong>POISONS</strong> <strong>BOARD</strong></span>
-     </p>
+$extractAmendmentNumber = function ($value) {
+    if (preg_match('/(\d+)/', (string)$value, $matches)) {
+        return (int)$matches[1];
+    }
+    return null;
+};
 
- </div>
+$buildAmendmentDates = function ($application) use ($extractAmendmentNumber) {
+    $datesByAmendment = array();
 
- <div class="row-fluid">
-     <div class="span12">
-         <table>
-             <thead>
-                 <tr>
-                     <th style="width:3%">#</th>
-                     <th style="width: 27%"><?php echo $this->Paginator->sort('protocol_no', 'ECCT Reference No'); ?></th>
-                     <th style="width: 35%">Date </th>
-                     <th style="width: 35%">Amendments </th>
-                 </tr>
-             </thead>
-             <tbody>
+    $checklists = Hash::get($application, 'AmendmentChecklist', array());
+    foreach ($checklists as $checklist) {
+        $amendmentKey = trim((string)Hash::get($checklist, 'year', ''));
+        if ($amendmentKey === '') {
+            continue;
+        }
 
-                 <?php
+        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
+            $datesByAmendment[$amendmentKey] = '';
+        }
+
+        $fileDate = trim((string)Hash::get($checklist, 'file_date', ''));
+        if ($fileDate !== '' && $datesByAmendment[$amendmentKey] === '') {
+            $datesByAmendment[$amendmentKey] = $fileDate;
+        }
+    }
+
+    $approvals = Hash::get($application, 'AmendmentApproval', array());
+    foreach ($approvals as $approval) {
+        $amendmentKey = trim((string)Hash::get($approval, 'amendment', ''));
+        if ($amendmentKey === '') {
+            continue;
+        }
+
+        if (!array_key_exists($amendmentKey, $datesByAmendment)) {
+            $datesByAmendment[$amendmentKey] = '';
+        }
+
+        $approvalDate = trim((string)Hash::get($approval, 'approval_date', ''));
+        if ($approvalDate !== '') {
+            $datesByAmendment[$amendmentKey] = $approvalDate;
+        }
+    }
+
+    if (empty($datesByAmendment)) {
+        return array();
+    }
+
+    $amendmentKeys = array_keys($datesByAmendment);
+    usort($amendmentKeys, function ($left, $right) use ($extractAmendmentNumber) {
+        $leftNumber = $extractAmendmentNumber($left);
+        $rightNumber = $extractAmendmentNumber($right);
+
+        if ($leftNumber === $rightNumber) {
+            return strnatcasecmp((string)$left, (string)$right);
+        }
+        if ($leftNumber === null) {
+            return 1;
+        }
+        if ($rightNumber === null) {
+            return -1;
+        }
+        return ($leftNumber < $rightNumber) ? -1 : 1;
+    });
+
+    $dates = array();
+    foreach ($amendmentKeys as $amendmentKey) {
+        $dates[] = $datesByAmendment[$amendmentKey];
+    }
+
+    return $dates;
+};
+
+$rows = array();
+$maxAmendments = 0;
+
+foreach ($applications as $application) {
+    $dates = $buildAmendmentDates($application);
+    if (empty($dates)) {
+        continue;
+    }
+
+    $rows[] = array('application' => $application, 'dates' => $dates);
+    $maxAmendments = max($maxAmendments, count($dates));
+}
+?>
+<div style="text-align: center;">
+    <h3 style="text-align: center;">
+        <?php
+        echo $this->Html->image('cake.power.png', array(
+            'fullBase' => true, 'alt' => 'Pharmacy and Poisons Board',
+            'style' => 'border: 0; float: center; margin-right: 10px; margin-bottom: 10px;'
+        ));
+        ?>
+    </h3>
+    <p style="text-align: center;">
+        <span style="font-family:bookman old style,serif;"><strong>MINISTRY</strong> <strong>OF</strong> <strong>HEALTH</strong></span>
+    </p>
+    <p style="text-align: center;">
+        <span style="font-family:bookman old style,serif;"><strong>PHARMACY</strong> <strong>AND</strong> <strong>POISONS</strong> <strong>BOARD</strong></span>
+    </p>
+</div>
+
+<div class="row-fluid">
+    <div class="span12">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 4%;">#</th>
+                    <th style="width: 20%;">ECCT Reference No.</th>
+                    <?php for ($column = 1; $column <= $maxAmendments; $column++) { ?>
+                        <th>AMD-<?php echo $column; ?></th>
+                    <?php } ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($rows)) { ?>
+                    <tr>
+                        <td colspan="<?php echo 2 + $maxAmendments; ?>">No amendments found.</td>
+                    </tr>
+                <?php } else { ?>
+                    <?php
                     $count = 0;
-                    foreach ($applications as $application) {
-                        if (!empty($application['AmendmentApproval'])) {
-                        $years = array_unique(Hash::extract($application['AmendmentChecklist'], '{n}.year'));
-                        rsort($years);
+                    foreach ($rows as $rowData) {
+                        $count++;
                     ?>
-                     <tr>
-                         <td><?php $count++;
-                                echo $count; ?></td>
-                         <td> <?php echo $application['Application']['protocol_no']; ?></td>
-                        
-                         <td>
-                             <?php
+                        <tr>
+                            <td><?php echo $count; ?></td>
+                            <td><?php echo h(Hash::get($rowData, 'application.Application.protocol_no', '')); ?></td>
+                            <?php for ($column = 0; $column < $maxAmendments; $column++) { ?>
+                                <td><?php echo h(isset($rowData['dates'][$column]) ? $rowData['dates'][$column] : ''); ?></td>
+                            <?php } ?>
+                        </tr>
+                    <?php } ?>
+                <?php } ?>
+            </tbody>
+        </table>
+    </div>
+</div>
 
-                                foreach ($years as $year) {
-                                    $approved = 0;
-                                    foreach ($application['AmendmentApproval'] as $apr) {
+<style>
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0 auto;
+    }
 
-                                        if ($apr['amendment'] == $year) { 
-                                            $approved++;
-                                            ?>
-                                            <p> <?=$apr['approval_date'];?></p>
-                                          
-                                      <?php  }
-                                    }
-                                }
-                                ?>
-
-                         </td>
-                         <td> <?php
-                                echo $approved;
-                                ?>
-                         </td>
-                     </tr>
-                 <?php } } ?>
-             </tbody>
-         </table>
-         <!-- In table end -->
-     </div>
- </div>
-
- <style>
-     table {
-         border-collapse: collapse;
-         width: 100%;
-         margin: 0px auto;
-     }
-
-     th,
-     td {
-         border: 1px solid gray;
-         padding: 8px;
-         text-align: left;
-     }
- </style>
+    th,
+    td {
+        border: 1px solid gray;
+        padding: 8px;
+        text-align: left;
+    }
+</style>

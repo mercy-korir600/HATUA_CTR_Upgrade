@@ -12,6 +12,41 @@ $namedParams = isset($this->request->params['named']) ? $this->request->params['
 $activeAmendmentLetterId = !empty($namedParams['aml']) ? (int)$namedParams['aml'] : 0;
 $activeEditAmendmentLetterId = ($redir === 'manager' && !empty($namedParams['ame'])) ? (int)$namedParams['ame'] : 0;
 
+$normalizeAmendmentYear = function ($value) {
+    $normalized = strtolower(trim((string) $value));
+    $normalized = preg_replace('/^\-+/', '', $normalized);
+    $normalized = preg_replace('/^amd[\s_-]*/', '', $normalized);
+    if ($normalized === '') {
+        return '';
+    }
+
+    if (is_numeric($normalized)) {
+        $numericValue = (float) $normalized;
+        if (floor($numericValue) == $numericValue) {
+            $normalized = (string) (int) $numericValue;
+        } else {
+            $normalized = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+        }
+    } else {
+        $normalized = preg_replace('/[^a-z0-9.-]/', '', $normalized);
+    }
+
+    if ($normalized === '') {
+        return '';
+    }
+
+    return 'amd-' . $normalized;
+};
+
+$formatAmendmentLabel = function ($value) use ($normalizeAmendmentYear) {
+    $normalized = $normalizeAmendmentYear($value);
+    if ($normalized === '') {
+        return trim((string) $value);
+    }
+
+    return 'AMD-' . preg_replace('/^amd-/', '', $normalized);
+};
+
 $discussionByYear = array();
 if ($redir === 'manager' || $redir === 'applicant') {
     $Comment = ClassRegistry::init('Comment');
@@ -97,7 +132,7 @@ if ($redir === 'manager' || $redir === 'applicant') {
     </thead>
     <tbody>
         <?php foreach ($years as $year) : ?>
-            <?php $yearLabel = preg_replace('/^amd-/', '', (string) $year); ?>
+            <?php $yearLabel = $formatAmendmentLabel($year); ?>
             <tr>
                 <td><b><?php echo h($yearLabel); ?></b></td>
                 <td>
@@ -828,6 +863,28 @@ if ($redir === 'manager' || $redir === 'applicant') {
 
 <script type="text/javascript">
   $(function () {
+    function normalizeAmendmentYear(value) {
+      var normalized = (value || '').toString().trim().toLowerCase();
+      normalized = normalized.replace(/^-+/, '');
+      normalized = normalized.replace(/^amd[\s_-]*/i, '');
+      if (!normalized) {
+        return '';
+      }
+
+      if (/^\d+(\.\d+)?$/.test(normalized)) {
+        var numericValue = parseFloat(normalized);
+        if (!isNaN(numericValue)) {
+          if (Math.floor(numericValue) === numericValue) {
+            normalized = String(parseInt(numericValue, 10));
+          } else {
+            normalized = String(numericValue).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
+          }
+        }
+      }
+
+      return normalized ? 'amd-' + normalized : '';
+    }
+
     $(document).off('click', '.delete_amendment_checklist_file').on('click', '.delete_amendment_checklist_file', function () {
       var trigger = $(this);
       if (!confirm('Are you sure you would like to delete this attachment?')) {
@@ -867,16 +924,21 @@ if ($redir === 'manager' || $redir === 'applicant') {
       event.preventDefault();
 
       var selectedElement = document.querySelector('.selected-year-name');
-      var selectedYear = selectedElement ? selectedElement.textContent.trim() : '';
+      var selectedYear = '';
+      if (selectedElement) {
+        selectedYear = (selectedElement.getAttribute('data-year-value') || '').trim();
+        if (!selectedYear) {
+          selectedYear = normalizeAmendmentYear(selectedElement.textContent);
+        }
+      }
       if (!selectedYear) {
         var selector = document.querySelector('.amendmentyear');
         if (selector && selector.value) {
-          selectedYear = selector.value.trim();
-          if (selectedYear && selectedYear.indexOf('amd-') !== 0) {
-            selectedYear = 'amd-' + selectedYear;
-          }
+          selectedYear = normalizeAmendmentYear(selector.value);
         }
       }
+
+      selectedYear = normalizeAmendmentYear(selectedYear);
 
       if (!selectedYear) {
         alert('Please select an amendment number before submitting.');

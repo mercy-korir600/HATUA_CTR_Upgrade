@@ -131,7 +131,20 @@ class CommentsController extends AppController
             $category = 'amendment-discussion-' . $safeAmendment;
         }
         if (empty($subject)) {
-            $amendmentLabel = preg_replace('/^amd-/', '', $amendment);
+            $amendmentLabel = strtolower(trim((string) $amendment));
+            $amendmentLabel = preg_replace('/^\-+/', '', $amendmentLabel);
+            $amendmentLabel = preg_replace('/^amd[\s_-]*/', '', $amendmentLabel);
+            if (is_numeric($amendmentLabel)) {
+                $numericValue = (float) $amendmentLabel;
+                if (floor($numericValue) == $numericValue) {
+                    $amendmentLabel = (string) (int) $numericValue;
+                } else {
+                    $amendmentLabel = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+                }
+            }
+            if ($amendmentLabel !== '') {
+                $amendmentLabel = 'AMD-' . $amendmentLabel;
+            }
             $subject = 'Amendment ' . $amendmentLabel . ' Discussion';
         }
 

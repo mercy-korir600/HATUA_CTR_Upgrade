@@ -29,11 +29,26 @@ class AttachmentsController extends AppController
         $this->Attachment->id = $id;
 
         $data = $this->request->data;
+        $amendmentId = isset($data['amendmentId']) ? strtolower(trim((string) $data['amendmentId'])) : '';
+        $amendmentId = preg_replace('/^\-+/', '', $amendmentId);
+        $amendmentId = preg_replace('/^amd[\s_-]*/', '', $amendmentId);
+        if (is_numeric($amendmentId)) {
+            $numericValue = (float) $amendmentId;
+            if (floor($numericValue) == $numericValue) {
+                $amendmentId = (string) (int) $numericValue;
+            } else {
+                $amendmentId = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+            }
+        }
+        $amendmentId = preg_replace('/[^a-z0-9.-]/', '', $amendmentId);
+        if ($amendmentId !== '') {
+            $amendmentId = 'amd-' . $amendmentId;
+        }
 
         $this->Attachment->saveField('description', $data['description']);
         $this->Attachment->saveField('file_date', $data['date']);
         $this->Attachment->saveField('version_no', $data['version']);
-        $this->Attachment->saveField('year', $data['amendmentId']);
+        $this->Attachment->saveField('year', $amendmentId);
         $this->set([
             'status' => 'success',
             'message' => 'File updated Successfully',
