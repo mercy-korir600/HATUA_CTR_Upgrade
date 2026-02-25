@@ -68,6 +68,10 @@ class AmendmentsController extends AppController {
 					(int) $this->Amendment->id,
 					(int) $application['Application']['id']
 				);
+				$this->_syncAmendmentAdditionalChecklistEntries(
+					(int) $this->Amendment->id,
+					(int) $application['Application']['id']
+				);
 				$data = array(
 					'id' => $this->Amendment->id,
 					'application_id' => $application['Application']['id'],
@@ -168,6 +172,10 @@ class AmendmentsController extends AppController {
 				} else {
 					if ($this->Amendment->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
 						$this->_syncAmendmentCoverLetterChecklistEntry(
+							(int) $this->Amendment->id,
+							(int) $amndt['Amendment']['application_id']
+						);
+						$this->_syncAmendmentAdditionalChecklistEntries(
 							(int) $this->Amendment->id,
 							(int) $amndt['Amendment']['application_id']
 						);
@@ -284,23 +292,7 @@ class AmendmentsController extends AppController {
 		}
 		$cover = $coverRow['CoverLetter'];
 
-		$sequence = (int) $this->Amendment->find('count', array(
-			'conditions' => array(
-				'Amendment.application_id' => $applicationId,
-				'Amendment.id <=' => $amendmentId
-			),
-			'recursive' => -1
-		));
-		if ($sequence < 1) {
-			$sequence = (int) $this->Amendment->find('count', array(
-				'conditions' => array('Amendment.application_id' => $applicationId),
-				'recursive' => -1
-			));
-		}
-		if ($sequence < 1) {
-			$sequence = 1;
-		}
-		$amendmentYear = 'amd-' . $sequence;
+		$amendmentYear = $this->_resolveAmendmentYearKey($amendmentId, $applicationId);
 
 		$pocketName = $this->_resolveAmendmentCoverPocketName();
 		$attachmentModel = $this->Amendment->Attachment;
@@ -354,6 +346,127 @@ class AmendmentsController extends AppController {
 
 		$attachmentModel->create();
 		return (bool) $attachmentModel->save($saveData, array('validate' => false));
+	}
+
+	protected function _syncAmendmentAdditionalChecklistEntries($amendmentId, $applicationId) {
+		$amendmentId = (int) $amendmentId;
+		$applicationId = (int) $applicationId;
+		if ($amendmentId < 1 || $applicationId < 1) {
+			return false;
+		}
+
+		$amendmentYear = $this->_resolveAmendmentYearKey($amendmentId, $applicationId);
+		$attachmentModel = $this->Amendment->Attachment;
+
+		$additionalRows = $attachmentModel->find('all', array(
+			'conditions' => array(
+				'Attachment.model' => 'Amendment',
+				'Attachment.group' => 'attachment',
+				'Attachment.foreign_key' => $amendmentId
+			),
+			'order' => array('Attachment.created' => 'ASC', 'Attachment.id' => 'ASC'),
+			'recursive' => -1
+		));
+		if (empty($additionalRows)) {
+			return false;
+		}
+
+		$hasChanges = false;
+		foreach ($additionalRows as $row) {
+			$attachment = isset($row['Attachment']) ? $row['Attachment'] : array();
+			$dirname = isset($attachment['dirname']) ? trim((string) $attachment['dirname']) : '';
+			$basename = isset($attachment['basename']) ? trim((string) $attachment['basename']) : '';
+			if ($dirname === '' || $basename === '') {
+				continue;
+			}
+
+			$checksum = isset($attachment['checksum']) ? trim((string) $attachment['checksum']) : '';
+			$conditions = array(
+				'Attachment.model' => 'AmendmentChecklist',
+				'Attachment.foreign_key' => $applicationId,
+				'Attachment.year' => $amendmentYear,
+				'Attachment.pocket_name' => '',
+				'Attachment.dirname' => $dirname,
+				'Attachment.basename' => $basename
+			);
+			if ($checksum !== '') {
+				$conditions['Attachment.checksum'] = $checksum;
+			}
+
+			$existing = $attachmentModel->find('first', array(
+				'conditions' => $conditions,
+				'fields' => array('Attachment.id'),
+				'order' => array('Attachment.id' => 'DESC'),
+				'recursive' => -1
+			));
+			if (!empty($existing['Attachment']['id'])) {
+				continue;
+			}
+
+			$fileDate = !empty($attachment['file_date']) ? $attachment['file_date'] : date('Y-m-d');
+			if (empty($attachment['file_date']) && !empty($attachment['created']) && strtotime($attachment['created']) !== false) {
+				$fileDate = date('Y-m-d', strtotime($attachment['created']));
+			}
+
+			$description = isset($attachment['description']) ? trim((string) $attachment['description']) : '';
+			if ($description === '') {
+				$description = 'Additional file';
+			}
+
+			$saveData = array(
+				'Attachment' => array(
+					'model' => 'AmendmentChecklist',
+					'foreign_key' => $applicationId,
+					'group' => 'amendment',
+					'pocket_name' => '',
+					'year' => $amendmentYear,
+					'description' => $description,
+					'dirname' => $dirname,
+					'basename' => $basename,
+					'checksum' => $checksum,
+					'version_no' => !empty($attachment['version_no']) ? $attachment['version_no'] : '',
+					'file_date' => $fileDate
+				)
+			);
+
+			if (!empty($attachment['filesize'])) {
+				$saveData['Attachment']['filesize'] = $attachment['filesize'];
+			}
+			if (!empty($attachment['mimetype'])) {
+				$saveData['Attachment']['mimetype'] = $attachment['mimetype'];
+			}
+
+			$attachmentModel->create();
+			if ($attachmentModel->save($saveData, array('validate' => false))) {
+				$hasChanges = true;
+			}
+		}
+
+		return $hasChanges;
+	}
+
+	protected function _resolveAmendmentYearKey($amendmentId, $applicationId) {
+		$amendmentId = (int) $amendmentId;
+		$applicationId = (int) $applicationId;
+
+		$sequence = (int) $this->Amendment->find('count', array(
+			'conditions' => array(
+				'Amendment.application_id' => $applicationId,
+				'Amendment.id <=' => $amendmentId
+			),
+			'recursive' => -1
+		));
+		if ($sequence < 1) {
+			$sequence = (int) $this->Amendment->find('count', array(
+				'conditions' => array('Amendment.application_id' => $applicationId),
+				'recursive' => -1
+			));
+		}
+		if ($sequence < 1) {
+			$sequence = 1;
+		}
+
+		return 'amd-' . $sequence;
 	}
 
 	protected function _resolveAmendmentCoverPocketName() {

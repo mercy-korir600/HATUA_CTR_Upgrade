@@ -32,8 +32,12 @@ $formatProtocolReference = function ($protocolNo) use ($normalizeAmendmentDispla
         return '';
     }
 
+    $protocolNo = html_entity_decode($protocolNo, ENT_QUOTES, 'UTF-8');
+    $protocolNo = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $protocolNo);
+    $protocolNo = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $protocolNo);
+
     return preg_replace_callback(
-        '/\s*-?\s*AMD\s*([0-9]+(?:\.[0-9]+)?)\s*$/i',
+        '/\s*-?\s*AMD\s*([0-9]+(?:\.[0-9]+)?)\s*$/iu',
         function ($matches) use ($normalizeAmendmentDisplayNumber) {
             return ' AMD-' . $normalizeAmendmentDisplayNumber($matches[1]);
         },
