@@ -92,10 +92,6 @@ if (empty($priorInternalFeedbackLookup)) {
   }
 }
 
-$reviewList = (!empty($reviewList) && is_array($reviewList))
-  ? array_values($reviewList)
-  : array_values((!empty($application['Review']) && is_array($application['Review'])) ? $application['Review'] : array());
-
 $extractLinkedSourceReviewId = function ($title) {
   $title = trim((string)$title);
   if ($title !== '' && preg_match('/^internal_source_review:(\d+)$/', $title, $matches)) {
@@ -114,7 +110,69 @@ $buildComparisonKey = function ($questionType, $questionNumber, $questionText) {
   return $questionType . '|' . $questionNumber . '|' . $questionText;
 };
 
-$buildComparisonPayload = function ($sourceReviewId) use ($priorInternalFeedbackLookup, $buildComparisonKey) {
+$extractAnswerValue = function ($answer) {
+  foreach (array('answer', 'workspace', 'comment') as $field) {
+    if (!empty($answer[$field]) && trim((string)$answer[$field]) !== '') {
+      return trim((string)$answer[$field]);
+    }
+  }
+  return '';
+};
+
+$reviewList = (!empty($reviewList) && is_array($reviewList))
+  ? array_values($reviewList)
+  : array_values((!empty($application['Review']) && is_array($application['Review'])) ? $application['Review'] : array());
+
+$linkedComparisonBySource = array();
+$filteredReviewList = array();
+foreach ($reviewList as $reviewEntry) {
+  $reviewId = !empty($reviewEntry['id']) ? (int)$reviewEntry['id'] : 0;
+  $reviewType = !empty($reviewEntry['type']) ? trim((string)$reviewEntry['type']) : '';
+  $sourceReviewId = $extractLinkedSourceReviewId(!empty($reviewEntry['title']) ? $reviewEntry['title'] : '');
+
+  if ($reviewType === 'reviewer_comment' && $sourceReviewId > 0) {
+    $answerMap = array();
+    foreach ((array)$reviewEntry['ReviewAnswer'] as $answer) {
+      $answerValue = $extractAnswerValue($answer);
+      if ($answerValue === '') {
+        continue;
+      }
+      $comparisonKey = $buildComparisonKey(
+        !empty($answer['question_type']) ? $answer['question_type'] : '',
+        !empty($answer['question_number']) ? $answer['question_number'] : '',
+        !empty($answer['question']) ? $answer['question'] : ''
+      );
+      $answerMap[$comparisonKey] = $answerValue;
+    }
+
+    $linkedReviewerName = '2nd Reviewer';
+    if (!empty($reviewEntry['User']['name'])) {
+      $linkedReviewerName = $reviewEntry['User']['name'];
+    } elseif (!empty($reviewEntry['User']['username'])) {
+      $linkedReviewerName = $reviewEntry['User']['username'];
+    }
+
+    $existingReviewId = !empty($linkedComparisonBySource[$sourceReviewId]['id'])
+      ? (int)$linkedComparisonBySource[$sourceReviewId]['id']
+      : 0;
+    if ($reviewId > $existingReviewId) {
+      $linkedComparisonBySource[$sourceReviewId] = array(
+        'id' => $reviewId,
+        'reviewer_name' => $linkedReviewerName,
+        'answer_map' => $answerMap
+      );
+    }
+
+    if (isset($redir) && $redir === 'manager') {
+      continue;
+    }
+  }
+
+  $filteredReviewList[] = $reviewEntry;
+}
+$reviewList = $filteredReviewList;
+
+$buildComparisonPayloadFromSource = function ($sourceReviewId) use ($priorInternalFeedbackLookup, $buildComparisonKey) {
   $payload = array(
     'map' => array(),
     'reviewer_name' => 'Previous internal reviewer',
@@ -152,6 +210,33 @@ $buildComparisonPayload = function ($sourceReviewId) use ($priorInternalFeedback
   }
 
   return $payload;
+};
+
+$buildComparisonPayloadForReview = function ($reviewEntry) use (
+  $extractLinkedSourceReviewId,
+  $buildComparisonPayloadFromSource,
+  $linkedComparisonBySource
+) {
+  $sourceReviewId = $extractLinkedSourceReviewId(!empty($reviewEntry['title']) ? $reviewEntry['title'] : '');
+  if ($sourceReviewId > 0) {
+    return $buildComparisonPayloadFromSource($sourceReviewId);
+  }
+
+  $reviewId = !empty($reviewEntry['id']) ? (int)$reviewEntry['id'] : 0;
+  if ($reviewId > 0 && !empty($linkedComparisonBySource[$reviewId])) {
+    $linked = $linkedComparisonBySource[$reviewId];
+    return array(
+      'map' => !empty($linked['answer_map']) ? (array)$linked['answer_map'] : array(),
+      'reviewer_name' => !empty($linked['reviewer_name']) ? (string)$linked['reviewer_name'] : '2nd Reviewer',
+      'source_review_id' => $reviewId
+    );
+  }
+
+  return array(
+    'map' => array(),
+    'reviewer_name' => 'Previous internal reviewer',
+    'source_review_id' => 0
+  );
 };
 ?>
 <div class="marketing">
@@ -257,7 +342,15 @@ $buildComparisonPayload = function ($sourceReviewId) use ($priorInternalFeedback
               <?php } ?>
             </td>
             <td><?php echo $formatReviewComments($rreview['InternalComment']); ?></td>
-            <td><?php echo $rreview['status'] . "<br>" . $rreview['type'] ?></td>
+            <td>
+              <?php
+                echo h($rreview['status']) . "<br>" . h($rreview['type']);
+                $currentReviewId = !empty($rreview['id']) ? (int) $rreview['id'] : 0;
+                if ($currentReviewId > 0 && !empty($linkedComparisonBySource[$currentReviewId]['id'])) {
+                  echo '<br><small class="text-info">Linked response: #' . (int) $linkedComparisonBySource[$currentReviewId]['id'] . '</small>';
+                }
+              ?>
+            </td>
             <td>
               <?php
                 if (!empty($rreview['User']['name'])) {
@@ -329,8 +422,7 @@ if (isset($this->params['named']['rreview_view'])) {
           <div style="position: relative; border-top: 1px solid #ddd;">
             <?php
             if ($rreview['status'] == 'Unsubmitted') {
-              $sourceReviewId = $extractLinkedSourceReviewId(!empty($rreview['title']) ? $rreview['title'] : '');
-              $comparisonPayload = $buildComparisonPayload($sourceReviewId);
+              $comparisonPayload = $buildComparisonPayloadForReview($rreview);
 
               echo $this->element('/application/rreview_edit', array(
                 'rreview' => $rreview,
@@ -340,8 +432,7 @@ if (isset($this->params['named']['rreview_view'])) {
                 'comparisonSourceReviewId' => $comparisonPayload['source_review_id']
               ));
             } else {
-              $sourceReviewId = $extractLinkedSourceReviewId(!empty($rreview['title']) ? $rreview['title'] : '');
-              $comparisonPayload = $buildComparisonPayload($sourceReviewId);
+              $comparisonPayload = $buildComparisonPayloadForReview($rreview);
               echo $this->Html->link(
                 __('<i class="icon-download-alt"></i> Download PDF'),
                 array('controller' => 'reviews', 'ext' => 'pdf', 'action' => 'download_assessment', $rreview['id']),

@@ -374,6 +374,13 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
     $count_inspectors = 0;
     $count_comments = 0;
     $my_reviews = 0;
+    $isLinkedInternalReviewCopy = function ($review) {
+      if (empty($review['type']) || $review['type'] !== 'reviewer_comment') {
+        return false;
+      }
+      $title = !empty($review['title']) ? trim((string)$review['title']) : '';
+      return ($title !== '' && preg_match('/^internal_source_review:\d+$/', $title));
+    };
     foreach ($application['ActiveInspector'] as $review) {
       $count_inspectors++;
     }
@@ -381,7 +388,7 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
       if ($review['type'] == 'request' && $review['accepted'] != 'declined') {
         $count_reviews++;
       }
-      if ($review['type'] == 'reviewer_comment') {
+      if ($review['type'] == 'reviewer_comment' && !$isLinkedInternalReviewCopy($review)) {
         $count_comments++;
       }
       if ($review['type'] == 'ppb_comment') {
@@ -393,15 +400,16 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
       if ($review['type'] == 'request' && $review['accepted'] != 'declined') {
         $count_internal_reviews++;
       }
-      if ($review['type'] == 'reviewer_comment') {
+      if ($review['type'] == 'reviewer_comment' && !$isLinkedInternalReviewCopy($review)) {
         $count_comments++;
       }
       if ($review['type'] == 'ppb_comment') {
         $my_reviews++;
       }
     }
+    $count_assigned_reviewers = $count_reviews + $count_internal_reviews;
     ?>
-    <li><a href="#tab2" data-toggle="tab">Assigned Reviewers <small>(<?php echo $count_reviews; ?>)</small></a></li>
+    <li><a href="#tab2" data-toggle="tab">Assigned Reviewers <small>(<?php echo $count_assigned_reviewers; ?>)</small></a></li>
     <li><a href="#tab3" data-toggle="tab">Reviewer Comments <small>(<?php echo $count_comments; ?>)</small></a></li>
     <li><a href="#tab4" data-toggle="tab">My Reviews <small>(<?php echo $my_reviews; ?>)</small></a></li>
     <li><a href="#tab5" data-toggle="tab">Approve / Reject <small>(<?php
