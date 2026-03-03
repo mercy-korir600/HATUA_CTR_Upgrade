@@ -30,7 +30,11 @@
       	echo $this->Form->input('application_id', array('type' => 'hidden', 'value' => $application_id));
       	echo $this->Form->input('user_id', array('type' => 'hidden', 'value' => $this->session->read('Auth.User.id')));
         echo $this->Form->input('file',
-          array('type' => 'file', 'label' => array('class' => 'control-label required', 'text' => 'E2B File <span class="sterix">*</span>'),));
+          array(
+            'type' => 'file',
+            'accept' => '.xml,application/xml,text/xml',
+            'label' => array('class' => 'control-label required', 'text' => 'E2B File <span class="sterix">*</span>')
+          ));
         echo $this->Form->input('description',
           array('label' => array('class' => 'control-label required', 'text' => 'Description'),));
         echo $this->Form->input('reporter_email', array(

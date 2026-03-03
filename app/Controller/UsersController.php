@@ -35,6 +35,7 @@ class UsersController extends AppController
             $user = $this->User->find('first', array('conditions' => array('User.email' => $this->request->data['User']['email'])));
             if ($user) {
                 $this->User->id = $user['User']['id'];
+                $this->_setUserAuditContext('Forgot Password Requested');
                 $this->User->saveField('forgot_password', 1);
                 CakeResque::enqueue('default', 'UserShell', array('forgotPassword', $user));
                 $this->Session->setFlash(__('A new password has been sent to the requested email address.'), 'alerts/flash_success');
@@ -61,6 +62,7 @@ class UsersController extends AppController
                 $this->redirect('/');
             }
             $password = date('Ymdhis', strtotime($user['User']['created']));
+            $this->_setUserAuditContext('Password Reset via Link');
             if ($this->User->save(
                 array('User' => array('password' =>  $password, 'confirm_password' => $password, 'forgot_password' => 0)),
                 array('fieldList' =>  array('password', 'confirm_password', 'forgot_password'))
@@ -376,7 +378,7 @@ class UsersController extends AppController
         return (bool)$this->DeletionSetting->ensureTable();
     }
 
-     public function getUserIpAddress()
+    public function getUserIpAddress()
     {
         if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
             // IP from shared internet
@@ -397,13 +399,35 @@ class UsersController extends AppController
         // Default remote address
         return $_SERVER['REMOTE_ADDR'];
     }
-  public function create_audit_trail($type, $user, $message)
+
+    protected function _setUserAuditContext($action)
+    {
+        if (!method_exists($this->User, 'setAuditContext')) {
+            return;
+        }
+
+        $this->User->setAuditContext(array(
+            'action' => (string)$action,
+            'actor_id' => $this->Auth->User('id'),
+            'actor_name' => $this->Auth->User('name'),
+            'ip' => $this->getUserIpAddress(),
+            'uri' => $this->request->here(),
+            'refer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+            'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '',
+        ));
+    }
+
+    public function create_audit_trail($type, $user, $message)
     {
         $this->loadModel('AuditTrail');
+        $userId = 0;
+        if (is_array($user) && !empty($user['id'])) {
+            $userId = (int)$user['id'];
+        }
 
         $audit = array(
             'AuditTrail' => array(
-                'foreign_key' => $user['id'],
+                'foreign_key' => $userId,
                 'model' => $type,
                 'message' => $message,
                 'ip' => $this->getUserIpAddress(),
@@ -415,10 +439,10 @@ class UsersController extends AppController
         );
         $this->AuditTrail->Create();
         if ($this->AuditTrail->save($audit)) {
-            $this->log($this->request->data, 'audit_success');
+            $this->log($type . ' audit created for foreign key ' . $userId, 'audit_success');
         } else {
             $this->log('Error creating an audit trail', 'notifications_error');
-            $this->log($this->request->data, 'notifications_error');
+            $this->log($type . ' audit payload failed for foreign key ' . $userId, 'notifications_error');
         }
     }
     public function login()
@@ -428,8 +452,16 @@ class UsersController extends AppController
             $this->redirect('/', null, false);
         }
         if ($this->request->is('post')) {
+            $attemptedIdentity = '';
+            $usernameInput = '';
+            if (!empty($this->request->data['User']['username'])) {
+                $attemptedIdentity = trim($this->request->data['User']['username']);
+                $usernameInput = $this->request->data['User']['username'];
+            } elseif (!empty($this->request->data['User']['email'])) {
+                $attemptedIdentity = trim($this->request->data['User']['email']);
+            }
 
-            if (Validation::email($this->request->data['User']['username'])) {
+            if (Validation::email($usernameInput)) {
                 $this->Auth->authenticate = array(
                     'Form' => ['fields' => ['username' => 'email']]
                 );
@@ -441,17 +473,22 @@ class UsersController extends AppController
             if ($this->Auth->login()) {
 
                 if ($this->Auth->User('is_active') == 0) {
+                    $inactiveUser = $this->Auth->User();
+                    $inactiveMessage = "Blocked web login for inactive account with user ID " . $inactiveUser['id'] . " and name " . $inactiveUser['name'];
+                    $this->create_audit_trail("Web Login Blocked", $inactiveUser, $inactiveMessage);
                     $this->Session->setFlash('Your account is not activated! If you have just registered, please click the activation link
                         sent to your email. Remember to check you spam folder too!', 'alerts/flash_error');
                     $this->redirect($this->Auth->logout());
                 } elseif ($this->Auth->User('deactivated') == 1) {
+                    $deactivatedUser = $this->Auth->User();
+                    $deactivatedMessage = "Blocked web login for deactivated account with user ID " . $deactivatedUser['id'] . " and name " . $deactivatedUser['name'];
+                    $this->create_audit_trail("Web Login Blocked", $deactivatedUser, $deactivatedMessage);
                     $this->Session->setFlash('Your account has been deactivated! Please contact PPB.', 'alerts/flash_error');
                     $this->redirect($this->Auth->logout());
                 }
- $user = $this->Auth->User();
-
- $message = "A user with ID " . $user['id'] . " and name  " . $user['name'] . " logged in via Web";
-                    $this->create_audit_trail("Web Login", $user, $message);
+                $user = $this->Auth->User();
+                $message = "A user with ID " . $user['id'] . " and name " . $user['name'] . " logged in via Web";
+                $this->create_audit_trail("Web Login", $user, $message);
 
 
                 // $this->redirect($this->Auth->redirect());
@@ -469,6 +506,23 @@ class UsersController extends AppController
                 if ($this->Auth->User('group_id') == '9') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'internalreviewer' => 'internalreviewer'));
            
             } else {
+                $candidateUser = $this->User->find('first', array(
+                    'conditions' => array(
+                        'OR' => array(
+                            'User.username' => $attemptedIdentity,
+                            'User.email' => $attemptedIdentity
+                        )
+                    ),
+                    'fields' => array('User.id', 'User.name'),
+                    'contain' => array()
+                ));
+                $knownUser = !empty($candidateUser['User']) ? $candidateUser['User'] : array();
+                $identityLabel = ($attemptedIdentity === '') ? '[empty]' : $attemptedIdentity;
+                $failureMessage = 'Failed web login attempt using identifier "' . $identityLabel . '"';
+                if (!empty($knownUser['id'])) {
+                    $failureMessage .= ' (matched user ID ' . (int)$knownUser['id'] . ')';
+                }
+                $this->create_audit_trail("Web Login Failed", $knownUser, $failureMessage);
                 $this->Session->setFlash('Your username or password was incorrect.', 'alerts/flash_error');
             }
         }
@@ -635,6 +689,7 @@ class UsersController extends AppController
     {
         if ($this->request->is('post')) {
             $this->User->create();
+            $this->_setUserAuditContext('Admin Created User Account');
             if ($this->User->save($this->request->data)) {
                 if ($this->request->data['User']['group_id'] == 7) {
                     $this->Session->setFlash(__('The study monitor has been saved. Please assign studies to the user.'), 'alerts/flash_success');
@@ -672,6 +727,7 @@ class UsersController extends AppController
             $this->request->data['User']['emailed'] = 1;
             $this->request->data['User']['activation_key'] = $this->Auth->password($this->request->data['User']['email']);
             $this->User->Behaviors->attach('Tools.Captcha');
+            $this->_setUserAuditContext('User Registered Account');
             if (empty($this->data['User']['bot_stop']) && $this->User->save($this->request->data)) {
                 $id = $this->User->id;
                 $this->request->data['User'] = array_merge($this->request->data['User'], array('id' => $id));
@@ -706,6 +762,7 @@ class UsersController extends AppController
             if ($user) {
                 $this->User->create();
                 $data['User'] = array('id' => $user['User']['id'], 'is_active' => 1, 'activation_key' => '');
+                $this->_setUserAuditContext('Account Activated via Email Link');
                 if ($this->User->save($data, true, array('id', 'is_active', 'activation_key'))) {
                     $this->Session->setFlash(
                         __('You have successfully activated your account. Please login to continue.'),
@@ -738,6 +795,7 @@ class UsersController extends AppController
         if ($this->request->is('post')  || $this->request->is('put')) {
             $this->request->data['User']['id'] = $this->Session->read('Auth.User.id');
             $this->User->create();
+            $this->_setUserAuditContext('User Changed Own Password');
             if ($this->User->save($this->request->data, true, array('old_password', 'password', 'confirm_password'))) {
                 $this->Session->setFlash(__('The password has been changed'), 'alerts/flash_success');
                 $this->redirect(array('action' => 'profile'));
@@ -760,6 +818,7 @@ class UsersController extends AppController
                 'name', 'email', 'phone_no', 'name_of_institution', 'institution_physical', 'institution_address',
                 'institution_contact', 'county_id', 'country_id', 'sponsor_email', 'qualification'
             );
+            $this->_setUserAuditContext('User Updated Own Profile');
             if ($this->User->save($this->request->data, true, $fieldlist)) {
                 $this->Session->setFlash(__('Your registration details have been updated.'), 'alerts/flash_success');
                 $this->redirect(array('action' => 'profile'));
@@ -796,6 +855,7 @@ class UsersController extends AppController
             'institution_contact', 'county_id', 'country_id', 'group_id', 'is_active'
         );
         if ($this->request->is('post') || $this->request->is('put')) {
+            $this->_setUserAuditContext('Applicant Updated Linked User Profile');
             if ($this->User->save($this->request->data)) {
                 $this->Session->setFlash(__('Your registration details have been updated.'), 'alerts/flash_success');
                 $this->redirect($this->referer());
@@ -830,6 +890,7 @@ class UsersController extends AppController
             'institution_contact', 'county_id', 'country_id', 'group_id', 'is_active'
         );
         if ($this->request->is('post') || $this->request->is('put')) {
+            $this->_setUserAuditContext('Admin Updated User Profile');
             if ($this->User->save($this->request->data)) {
                 $this->Session->setFlash(__('Your registration details have been updated.'), 'alerts/flash_success');
                 $this->redirect($this->referer());
@@ -875,6 +936,7 @@ class UsersController extends AppController
             $this->redirect($this->referer());
         }
 
+        $this->_setUserAuditContext($activate ? 'Applicant Deactivated User Account' : 'Applicant Reactivated User Account');
         if ($this->User->saveField('deactivated', $activate)) {
             if ($activate) $this->Session->setFlash(__('The User has been successfully Deactivated.'), 'alerts/flash_success');
             if (!$activate) $this->Session->setFlash(__('The User has been successfully Activated.'), 'alerts/flash_success');
@@ -891,6 +953,7 @@ class UsersController extends AppController
             $this->redirect($this->referer());
         }
 
+        $this->_setUserAuditContext($activate ? 'Admin Deactivated User Account' : 'Admin Reactivated User Account');
         if ($this->User->saveField('deactivated', $activate)) {
             if ($activate) $this->Session->setFlash(__('The User has been successfully Deactivated.'), 'alerts/flash_success');
             if (!$activate) $this->Session->setFlash(__('The User has been successfully Activated.'), 'alerts/flash_success');
@@ -908,6 +971,7 @@ class UsersController extends AppController
         }
 
         $data['User'] = array('id' => $id, 'is_active' => 1, 'activation_key' => '');
+        $this->_setUserAuditContext('Admin Approved User Account');
         if ($this->User->save($data, true, array('id', 'is_active', 'activation_key'))) {
             $this->Session->setFlash(
                 __('You have successfully activated this account. The user can now login to continue.'),

@@ -26,8 +26,13 @@ class CiomsController extends AppController {
             else $this->paginate['limit'] = reset($page_options);
 
         $criteria = $this->Ciom->parseCriteria($this->passedArgs);
-        $sars = $this->Ciom->Application->StudyMonitor->find('list', array('fields' => array('application_id', 'application_id'), 'conditions' => array('StudyMonitor.user_id' => $this->Auth->User('id'))));
-        $criteria['Ciom.application_id'] = $sars;
+        // Applicants should see CIOMS attached to their own protocols.
+        $myProtocolIds = $this->Ciom->Application->find('list', array(
+            'fields' => array('Application.id', 'Application.id'),
+            'conditions' => array('Application.user_id' => $this->Auth->User('id')),
+            'contain' => array()
+        ));
+        $criteria['Ciom.application_id'] = array_values($myProtocolIds);
         $this->paginate['conditions'] = $criteria;
         $this->paginate['order'] = array('Ciom.created' => 'desc');
         $this->paginate['contain'] = array('Application');
@@ -207,6 +212,17 @@ class CiomsController extends AppController {
 
         $this->set(compact('ciom', 'e2b', 'isE2bR3', 'ciomExtractionFields'));
     }
+
+    private function _isXmlUpload($upload = array()) {
+        if (empty($upload) || !is_array($upload)) {
+            return false;
+        }
+
+        $filename = !empty($upload['name']) ? (string) $upload['name'] : '';
+        $extension = strtolower((string) pathinfo($filename, PATHINFO_EXTENSION));
+
+        return ($extension === 'xml');
+    }
 	
     public function applicant_view($id = null) {
         $this->Ciom->id = $id;
@@ -294,6 +310,14 @@ class CiomsController extends AppController {
     public function applicant_add($id = null) {
         if ($this->request->is('post')) {
             $this->Ciom->create();
+            $this->request->data['Ciom']['user_id'] = $this->Auth->User('id');
+
+            if (!$this->_isXmlUpload(isset($this->request->data['Ciom']['file']) ? $this->request->data['Ciom']['file'] : array())) {
+                $this->Session->setFlash(__('Only .xml files are allowed for CIOMS E2B upload.'), 'alerts/flash_error');
+                $application_id = $id;
+                $this->set(compact('application_id'));
+                return;
+            }
             
             // debug($this->request->data);
 
@@ -316,6 +340,14 @@ class CiomsController extends AppController {
 	public function monitor_add($id = null) {
 		if ($this->request->is('post')) {
 			$this->Ciom->create();
+            $this->request->data['Ciom']['user_id'] = $this->Auth->User('id');
+
+            if (!$this->_isXmlUpload(isset($this->request->data['Ciom']['file']) ? $this->request->data['Ciom']['file'] : array())) {
+                $this->Session->setFlash(__('Only .xml files are allowed for CIOMS E2B upload.'), 'alerts/flash_error');
+                $application_id = $id;
+                $this->set(compact('application_id'));
+                return;
+            }
 			
 			// debug($this->request->data);
 
@@ -338,6 +370,14 @@ class CiomsController extends AppController {
     public function outsource_add($id = null) {
 		if ($this->request->is('post')) {
 			$this->Ciom->create();
+            $this->request->data['Ciom']['user_id'] = $this->Auth->User('id');
+
+            if (!$this->_isXmlUpload(isset($this->request->data['Ciom']['file']) ? $this->request->data['Ciom']['file'] : array())) {
+                $this->Session->setFlash(__('Only .xml files are allowed for CIOMS E2B upload.'), 'alerts/flash_error');
+                $application_id = $id;
+                $this->set(compact('application_id'));
+                return;
+            }
 			
 			// debug($this->request->data);
 
@@ -401,11 +441,31 @@ class CiomsController extends AppController {
 		if (!$this->Ciom->exists()) {
 			throw new NotFoundException(__('Invalid ciom'));
 		}
-		if ($this->Ciom->delete()) {
+		if ($this->Ciom->deleteSoft($id)) {
 			$this->Session->setFlash(__('Ciom deleted'));
 			$this->redirect(array('action' => 'index'));
 		}
 		$this->Session->setFlash(__('Ciom was not deleted'));
 		$this->redirect(array('action' => 'index'));
 	}
+
+    public function applicant_delete($id = null) {
+        $this->delete($id);
+    }
+
+    public function monitor_delete($id = null) {
+        $this->delete($id);
+    }
+
+    public function outsource_delete($id = null) {
+        $this->delete($id);
+    }
+
+    public function manager_delete($id = null) {
+        $this->delete($id);
+    }
+
+    public function inspector_delete($id = null) {
+        $this->delete($id);
+    }
 }

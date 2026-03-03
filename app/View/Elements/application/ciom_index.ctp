@@ -23,15 +23,10 @@
       <table class="table table-condensed table-bordered" style="margin-bottom: 2px;">
         <thead>
           <tr>
-            <th style="width: 15%;">
-              <?php
-                echo $this->Form->input('reference_no',
-                    array('div' => false, 'class' => 'span12 unauthorized_index', 'label' => array('class' => 'required', 'text' => 'Reference No.')));
-              ?>
-              </th>
+            
               <th>
               <?php
-                echo $this->Form->input('protocol_no', array('div' => false, 'class' => 'span12 unauthorized_index',
+                echo $this->Form->input('reference_no', array('div' => false, 'class' => 'span12 unauthorized_index',
                   'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'),
                   'type' => 'text',
                   ));
@@ -41,7 +36,7 @@
               <?php
                 echo $this->Form->input('start_date',
                   array('div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index', 'after' => '-to-',
-                      'label' => array('class' => 'required', 'text' => 'SAE/SUSAR Create Dates'), 'placeHolder' => 'Start Date'));
+                      'label' => array('class' => 'required', 'text' => 'CIOMs Create Dates'), 'placeHolder' => 'Start Date'));
                 echo $this->Form->input('end_date',
                   array('div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index',
                        'after' => '<a style="font-weight:normal" onclick="$(\'.unauthorized_index\').val(\'\');" >
@@ -98,7 +93,8 @@
     <table  class="table  table-bordered table-striped">
      <thead>
             <tr>
-        <th><?php echo $this->Paginator->sort('id'); ?></th>
+        <th>#</th>
+        <th>ECCT Reference No.</th>
         <th><?php echo $this->Paginator->sort('basename', 'Filename'); ?></th>
         <th><?php echo $this->Paginator->sort('created'); ?></th>
         <th class="actions"><?php echo __('Actions'); ?></th>
@@ -106,9 +102,16 @@
        </thead>
       <tbody>
     <?php
+    $startNo = 1;
+    if (!empty($this->request->params['paging']['Ciom'])) {
+      $paging = $this->request->params['paging']['Ciom'];
+      $startNo = ((int) $paging['page'] - 1) * (int) $paging['limit'] + 1;
+    }
+    $rowNo = $startNo;
     foreach ($cioms as $ciom): ?>
     <tr class="">
-        <td><?php echo h($ciom['Ciom']['id']); ?>&nbsp;</td>
+        <td><?php echo $rowNo++; ?>&nbsp;</td>
+        <td><?php echo !empty($ciom['Application']['protocol_no']) ? h($ciom['Application']['protocol_no']) : '<span class="muted">N/A</span>'; ?>&nbsp;</td>
         <td>
           <?php 
             // echo h($ciom['Ciom']['basename']); 
@@ -127,12 +130,12 @@
         <td><?php echo h($ciom['Ciom']['created']); ?>&nbsp;</td>
         <td class="actions">
             <?php echo $this->Html->link(__('<label class="label label-info">View</label>'), array('action' => 'view', $ciom['Ciom']['id']), array('escape' => false)); ?>
-            <?php
-              // if($ciom['Ciom']['approved'] < 1) {
-                // echo $this->Form->postLink(__('<label class="label label-important">Delete</label>'), array('action' => 'delete', $ciom['Ciom']['id'], 1), array('escape' => false), __('Are you sure you want to delete # %s?', $ciom['Ciom']['id']));
-              // } 
-              
-            ?>            
+            <?php echo $this->Form->postLink(
+              __('<label class="label label-important">Delete</label>'),
+              array('action' => 'delete', $ciom['Ciom']['id']),
+              array('escape' => false),
+              __('Are you sure you want to delete this CIOM file?')
+            ); ?>
         </td>
     </tr>
 <?php endforeach; ?>

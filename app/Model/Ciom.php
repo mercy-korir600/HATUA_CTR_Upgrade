@@ -6,30 +6,39 @@ App::uses('AppModel', 'Model');
  * @property Application $Application
  * @property User $User
  */
-class Ciom extends AppModel {
+class Ciom extends AppModel
+{
 
 
-    var $name = 'Ciom';
-	var $actsAs = array('Containable', 'Media.Transfer', 'Media.Coupler', 'Media.Meta', 'Search.Searchable');
+	var $name = 'Ciom';
+	var $actsAs = array('Containable', 'SoftDelete' => array('deleted'), 'Media.Transfer', 'Media.Coupler', 'Media.Meta', 'Search.Searchable');
 	public $filterArgs = array(
-            'reference_no' => array('type' => 'like', 'encode' => true),
-            'protocol_no' => array('type' => 'like', 'encode' => true),
-            'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Sae.created BETWEEN ? AND ?'),
-        );
-    public function makeRangeCondition($data = array()) {
-            if(!empty($data['start_date'])) $start_date = date('Y-m-d', strtotime($data['start_date']));
-            else $start_date = date('Y-m-d', strtotime('2012-05-01'));
+		'reference_no' => array('type' => 'like', 'encode' => true),
+		'protocol_no' => array('type' => 'like', 'encode' => true),
+		'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Ciom.created BETWEEN ? AND ?'),
+		'start_date' => array('type' => 'query', 'method' => 'dummy'),
+		'end_date' => array('type' => 'query', 'method' => 'dummy'),
+	);
 
-            if(!empty($data['end_date'])) $end_date = date('Y-m-d', strtotime($data['end_date']));
-            else $end_date = date('Y-m-d');
+	public function dummy($data = array())
+	{
+		return array('1' => '1');
+	}
+	public function makeRangeCondition($data = array())
+	{
+		if (!empty($data['start_date'])) $start_date = date('Y-m-d', strtotime($data['start_date']));
+		else $start_date = date('Y-m-d', strtotime('2012-05-01'));
 
-            return array($start_date, $end_date);
-        }
-/**
- * Validation rules
- *
- * @var array
- */
+		if (!empty($data['end_date'])) $end_date = date('Y-m-d', strtotime($data['end_date']));
+		else $end_date = date('Y-m-d');
+
+		return array($start_date, $end_date);
+	}
+	/**
+	 * Validation rules
+	 *
+	 * @var array
+	 */
 	public $validate = array(
 		'file' => array(
 			// 'resource'   => array('rule' => 'checkResource'),
@@ -40,24 +49,25 @@ class Ciom extends AppModel {
 			),
 			'access'     => array('rule' => 'checkAccess'),
 			// 'location'   => array('rule' => array('checkLocation', array(
-				// MEDIA_TRANSFER, '/tmp/'
+			// MEDIA_TRANSFER, '/tmp/'
 			// ))),
 			'permission' => array('rule' => array('checkPermission', '*')),
 			'size'       => array('rule' => array('checkSize', '25M')),
 			// 'pixels'     => array('rule' => array('checkPixels', '1600x1600')),  // removed image restriction
 			'extension'  => array(
-				'rule' => array('checkExtension', false, array('xml', 'tmp', 'Xml','XML')),
-				'message' => 'Please attach a valid E2B file'),
+				'rule' => array('checkExtension', false, array('xml', 'XML', 'tmp')),
+				'message' => 'Please attach a valid E2B file'
+			),
 			// 'mimeType'   => array('rule' => array('checkMimeType', false, array(
 			// 	'image/jpeg', 'image/png', 'image/tiff', 'image/gif', 'application/pdf'	)))
 		),
 		'reporter_email' => array(
-            'notEmpty' => array(
-                'rule'     => 'notEmpty',
-                'required' => true,
-                'message'  => 'Please enter a valid email address'
-            ),
-        ),
+			'notEmpty' => array(
+				'rule'     => 'notEmpty',
+				'required' => true,
+				'message'  => 'Please enter a valid email address'
+			),
+		),
 		'basename' => array(
 			'notempty' => array(
 				'rule' => array('notempty'),
@@ -82,11 +92,11 @@ class Ciom extends AppModel {
 
 	//The Associations below have been created with all possible keys, those that are not needed can be removed
 
-/**
- * belongsTo associations
- *
- * @var array
- */
+	/**
+	 * belongsTo associations
+	 *
+	 * @var array
+	 */
 	public $belongsTo = array(
 		'Application' => array(
 			'className' => 'Application',
@@ -112,7 +122,29 @@ class Ciom extends AppModel {
 		)
 	);
 
-	public function rebuildE2bExtraction($ciomId, $xmlContent) {
+	public function deleteSoft($id = null)
+	{
+		$id = (int) $id;
+		if ($id <= 0) {
+			return false;
+		}
+
+		$this->id = $id;
+
+		if (!$this->hasField('deleted')) {
+			return false;
+		}
+
+		$data = array('deleted' => true);
+		if ($this->hasField('deleted_date')) {
+			$data['deleted_date'] = date('Y-m-d H:i:s');
+		}
+
+		return (bool) $this->save(array($this->alias => $data), false, array_keys($data));
+	}
+
+	public function rebuildE2bExtraction($ciomId, $xmlContent)
+	{
 		$result = array(
 			'saved' => 0,
 			'is_r3' => false,
@@ -173,7 +205,8 @@ class Ciom extends AppModel {
 		return $result;
 	}
 
-	public function getExtractionRows($ciomId, $limit = 3000) {
+	public function getExtractionRows($ciomId, $limit = 3000)
+	{
 		$ciomId = (int) $ciomId;
 		if ($ciomId <= 0) {
 			return array();
@@ -197,7 +230,8 @@ class Ciom extends AppModel {
 		));
 	}
 
-	public function isE2bR3($xmlContent = '') {
+	public function isE2bR3($xmlContent = '')
+	{
 		if (trim((string) $xmlContent) === '') {
 			return false;
 		}
@@ -212,7 +246,8 @@ class Ciom extends AppModel {
 		return $this->_detectR3FromRoot($dom->documentElement);
 	}
 
-	private function _detectR3FromRoot($root) {
+	private function _detectR3FromRoot($root)
+	{
 		$rootName = strtoupper((string) (!empty($root->localName) ? $root->localName : $root->nodeName));
 		$namespace = strtolower((string) $root->namespaceURI);
 		if ($rootName === 'MCCI_IN200100UV01') {
@@ -224,7 +259,8 @@ class Ciom extends AppModel {
 		return false;
 	}
 
-	private function _flattenDomElement($ciomId, $element, $path, &$rows, &$sequence, $version) {
+	private function _flattenDomElement($ciomId, $element, $path, &$rows, &$sequence, $version)
+	{
 		$elementName = !empty($element->localName) ? $element->localName : $element->nodeName;
 		$parentPath = preg_replace('/\/[^\/]+$/', '', $path);
 		$now = date('Y-m-d H:i:s');
@@ -292,7 +328,8 @@ class Ciom extends AppModel {
 		}
 	}
 
-	private function _hasElementChildren($element) {
+	private function _hasElementChildren($element)
+	{
 		foreach ($element->childNodes as $childNode) {
 			if ($childNode->nodeType === XML_ELEMENT_NODE) {
 				return true;
@@ -301,7 +338,8 @@ class Ciom extends AppModel {
 		return false;
 	}
 
-	private function _humanizeField($fieldName) {
+	private function _humanizeField($fieldName)
+	{
 		$label = preg_replace('/([a-z0-9])([A-Z])/', '$1 $2', (string) $fieldName);
 		$label = str_replace(array('_', '-'), ' ', $label);
 		$label = trim(preg_replace('/\s+/', ' ', $label));
