@@ -848,7 +848,7 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
       //Reviews limited to ppb_comment already
       $var = Hash::extract($application, 'Review.{n}[type=ppb_comment]');
       $rid = null;
-      if (!empty($var)) $rid = min($var);
+      if (!empty($var)) $rid = min($var); 
       ?>
       <ul id="reviewer_tab" class="nav nav-tabs">
         <li class="active"><a href="#external_rev_comments">PI Comments (<?php echo count($rid['ExternalComment']); ?>)</a></li>

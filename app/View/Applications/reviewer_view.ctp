@@ -26,7 +26,7 @@
         usort($managerReviewComments, function ($a, $b) {
           return strtotime($b['created']) - strtotime($a['created']);
         });
-      }
+      } 
 
       $latestManagerReview = !empty($managerReviewComments) ? $managerReviewComments[0] : array();
       $latestManagerReviewExternal = !empty($latestManagerReview['ExternalComment']) ? $latestManagerReview['ExternalComment'] : array();
@@ -195,7 +195,14 @@
 
 
         <ul id="reviewer_tab" class="nav nav-tabs">
-          <li class="active"><a href="#external_rev_comments" data-toggle="tab">PI Comments (<?php echo count($latestManagerReviewExternal); ?>)</a></li>
+       <?php
+      //Reviews limited to ppb_comment already
+      $var = Hash::extract($application, 'ManagerReview.{n}[type=ppb_comment]');
+      $rid = null;
+      if (!empty($var)) $rid = min($var);
+      ?>
+          
+          <li class="active"><a href="#external_rev_comments" data-toggle="tab">PI Comments (<?php echo count($rid['ExternalComment']); ?>)</a></li>
           <?php if($redir !== 'applicant') { ?><li><a href="#internal_rev_comments" data-toggle="tab">Internal Comments (<?php echo count($latestManagerReviewInternal); ?>)</a></li> <?php } ?>
         </ul>
 
@@ -209,8 +216,8 @@
                       <div class="row-fluid">
                         <div class="span8">    
                           <?php                       
-                            if(!empty($latestManagerReviewExternal)) echo $this->element('comments/list', ['comments' => $latestManagerReviewExternal,'show'=>false]);
-                            else echo '<p class="muted">No PI comments available for manager reviews yet.</p>';
+                            if (!empty($rid)) echo $this->element('comments/list_expandable', ['comments' => $rid['ExternalComment'], 'show' => false, 'category' => true]);
+                   
                           ?> 
                         </div>
                         <div class="span4 lefty">
@@ -235,29 +242,34 @@
                       <h5 class="text-center text-info"><u>FEEDBACK</u></h5>
                       <div class="row-fluid">
                         <div class="span8">    
-                          <?php                       
-                            if(!empty($latestManagerReviewInternal)) echo $this->element('comments/list', ['comments' => $latestManagerReviewInternal,'show'=>false]);
-                            else echo '<p class="muted">No internal comments available for manager reviews yet.</p>';
-
-                            //NEW*** Bring in all the assessment comments
-                            $rcas = Hash::extract($application, 'Review.{n}[type=reviewer_comment]');
-                            if(!empty($rcas)) {
-                              echo "<hr>";
-                              echo "<h4 class='text-success' style='text-align: center; text-decoration: underline'>Assessment comments</h4>";
-                              foreach ($rcas as $rca) {
-                                echo $this->element('comments/list', ['comments' => $rca['InternalComment'],'show'=>false]);
-                              }
-                            }
-                            //end
-                          ?> 
+                          <?php 
+                    if (!empty($rid)) echo $this->element('comments/list', ['comments' => $rid['InternalComment'], 'show' => false]);
+ 
+                    $rcas = Hash::extract($application, 'Review.{n}[type=reviewer_comment]');
+                    if (!empty($rcas)) {
+                      echo "<hr>";
+                      echo "<h4 class='text-success' style='text-align: center; text-decoration: underline'>Assessment comments</h4>";
+                      foreach ($rcas as $rca) {
+                        echo $this->element('comments/list', ['comments' => $rca['InternalComment'], 'show' => false]);
+                      }
+                    }
+                    //end
+                    ?>
                         </div>
                         <div class="span4 lefty">
-                        <?php  
-                            if(!empty($latestManagerReview['id']))  echo $this->element('comments/add', [
-                                         'model' => ['model_id' => $application['Application']['id'], 'foreign_key' => $latestManagerReview['id'],   
-                                                     'model' => 'Review', 'category' => 'internal', 'url' => 'add_internal_review_response']]) 
-                            ; else echo '<p class="muted">A manager review must exist before adding an internal response.</p>';
-                        ?>
+                        <?php
+                    if (!empty($rid))  echo $this->element('comments/add_plain', [
+                      'model' => [
+                        'model_id' => $application['Application']['id'],
+                        'foreign_key' => $rid['id'],
+                        'model' => 'Review',
+                        'category' => 'internal',
+                        'message_type' => 'review_response',
+                        'type' => 50,
+                        'url' => 'add_internal_review_response'
+                      ]
+                    ])
+                    ?>
                         </div>
                       </div>
                     </div>
