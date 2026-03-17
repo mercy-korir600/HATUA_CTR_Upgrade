@@ -145,10 +145,9 @@ class CiomsController extends AppController {
         // else if($this->Session->read('Auth.User.group_id') == '5' && $this->Ciom->isOwnedBy($id, $this->Auth->user('id'))) {
         else {
             $attachment = $this->Ciom->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Ciom']['basename'],
-                'download'  => true,
-                'path'      => 'media'. DS .'transfer'. DS .$attachment['Ciom']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Ciom']['dirname'],
+                $attachment['Ciom']['basename']
             );
             $this->set($params);
         } 

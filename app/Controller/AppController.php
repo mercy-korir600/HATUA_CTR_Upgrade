@@ -152,4 +152,113 @@ class AppController extends Controller
   // }
   // return false;
   // }
+
+  protected function buildMediaDownloadParams($dirname, $basename, $fallbackName = null)
+  {
+    $path = 'media' . DS . 'transfer' . DS;
+    if (!empty($dirname)) {
+      $path .= trim($dirname, DS) . DS;
+    }
+
+    $params = array(
+      'id' => $basename,
+      'download' => true,
+      'path' => $path
+    );
+
+    $extension = $this->_preferredDownloadExtension($dirname, $basename);
+    $name = $this->_downloadNameWithoutExtension($basename, $fallbackName, $extension);
+
+    if (!empty($name)) {
+      $params['name'] = $name;
+    }
+
+    if (!empty($extension)) {
+      $params['extension'] = $extension;
+    }
+
+    return $params;
+  }
+
+  protected function _preferredDownloadExtension($dirname, $basename)
+  {
+    $extension = strtolower(pathinfo($basename, PATHINFO_EXTENSION));
+    $mimeType = $this->_detectTransferredFileMimeType($dirname, $basename);
+    $mappedExtension = $mimeType ? strtolower((string) $this->response->mapType($mimeType)) : null;
+
+    // Generated reports are sometimes stored without an extension even
+    // though the binary is already a PDF. Prefer the detected PDF type.
+    if ($mappedExtension === 'pdf') {
+      return 'pdf';
+    }
+
+    return $extension;
+  }
+
+  protected function _downloadNameWithoutExtension($basename, $fallbackName = null, $extension = null)
+  {
+    $name = $fallbackName;
+
+    if (empty($name)) {
+      $name = $basename;
+    }
+
+    if (!empty($extension)) {
+      $suffix = '.' . $extension;
+      if (strlen($name) > strlen($suffix) && strcasecmp(substr($name, -strlen($suffix)), $suffix) === 0) {
+        $name = substr($name, 0, -strlen($suffix));
+      }
+    }
+
+    return $name;
+  }
+
+  protected function _detectTransferredFileMimeType($dirname, $basename)
+  {
+    foreach ($this->_mediaDownloadPathCandidates($dirname, $basename) as $filePath) {
+      if (!is_file($filePath) || !is_readable($filePath)) {
+        continue;
+      }
+
+      if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo !== false) {
+          $mimeType = finfo_file($finfo, $filePath);
+          finfo_close($finfo);
+          if (!empty($mimeType)) {
+            return $mimeType;
+          }
+        }
+      }
+
+      if (function_exists('mime_content_type')) {
+        $mimeType = @mime_content_type($filePath);
+        if (!empty($mimeType)) {
+          return $mimeType;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  protected function _mediaDownloadPathCandidates($dirname, $basename)
+  {
+    $relativePath = trim((string) $dirname, DS);
+    if ($relativePath !== '') {
+      $relativePath .= DS;
+    }
+    $relativePath .= $basename;
+
+    $candidates = array();
+
+    if (defined('MEDIA_TRANSFER')) {
+      $candidates[] = MEDIA_TRANSFER . $relativePath;
+    }
+
+    $candidates[] = WWW_ROOT . 'media' . DS . 'transfer' . DS . $relativePath;
+    $candidates[] = APP . 'media' . DS . 'transfer' . DS . $relativePath;
+
+    return array_unique($candidates);
+  }
 }

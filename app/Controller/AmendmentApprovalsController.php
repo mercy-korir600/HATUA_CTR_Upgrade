@@ -294,10 +294,9 @@ class AmendmentApprovalsController extends AppController
             $this->redirect($this->referer());
         } 
         $attachment = $this->AmendmentApproval->Attachment->find('first', array('conditions' => array('Attachment.id' => $id, 'model' => 'AmendmentApproval')));
-        $params = array(
-            'id'        => $attachment['Attachment']['basename'],
-            'download'  => true,
-            'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+        $params = $this->buildMediaDownloadParams(
+            $attachment['Attachment']['dirname'],
+            $attachment['Attachment']['basename']
         );
         $this->set($params);
 	}

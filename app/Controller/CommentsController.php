@@ -192,10 +192,9 @@ class CommentsController extends AppController
 
         // $attachment = $this->Comment->Attachment->read(null, $id);
         $attachment = $this->Comment->Attachment->find('first', array('conditions' => array('Attachment.id' => $id, 'model' => 'Comments')));
-        $params = array(
-            'id'        => $attachment['Attachment']['basename'],
-            'download'  => true,
-            'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+        $params = $this->buildMediaDownloadParams(
+            $attachment['Attachment']['dirname'],
+            $attachment['Attachment']['basename']
         );
         $this->set($params);
     }

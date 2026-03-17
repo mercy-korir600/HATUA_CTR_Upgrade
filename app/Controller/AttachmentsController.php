@@ -294,18 +294,16 @@ class AttachmentsController extends AppController
             $this->redirect($this->referer());
         } else if ($this->Session->read('Auth.User.group_id') == '5' && $this->Attachment->isOwnedBy($id, $this->Auth->user('id'))) {
             $attachment = $this->Attachment->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Attachment']['basename'],
-                'download'  => true,
-                'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
             );
             $this->set($params);
         } else if ($this->Session->read('Auth.User.group_id') == 1 || $this->Session->read('Auth.User.group_id') == 2 || $this->Session->read('Auth.User.group_id') == 3) {
             $attachment = $this->Attachment->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Attachment']['basename'],
-                'download'  => true,
-                'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
             );
             $this->set($params);
         }
@@ -324,10 +322,9 @@ class AttachmentsController extends AppController
             $this->redirect($this->referer());
         } else {
             $attachment = $this->Attachment->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Attachment']['basename'],
-                'download'  => true,
-                'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
             );
             $this->set($params);
         }
@@ -346,10 +343,9 @@ class AttachmentsController extends AppController
             $this->redirect($this->referer());
         } else {
             $attachment = $this->Attachment->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Attachment']['basename'],
-                'download'  => true,
-                'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
             );
             $this->set($params);
         }
@@ -364,10 +360,9 @@ class AttachmentsController extends AppController
             $this->redirect($this->referer());
         } else {
             $attachment = $this->Attachment->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Attachment']['basename'],
-                'download'  => true,
-                'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
             );
             $this->set($params);
         }
@@ -382,10 +377,9 @@ class AttachmentsController extends AppController
             $this->redirect($this->referer());
         } else {
             $attachment = $this->Attachment->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Attachment']['basename'],
-                'download'  => true,
-                'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
             );
             $this->set($params);
         }
@@ -400,10 +394,9 @@ class AttachmentsController extends AppController
             $this->redirect($this->referer());
         } else {
             $attachment = $this->Attachment->read(null, $id);
-            $params = array(
-                'id'        => $attachment['Attachment']['basename'],
-                'download'  => true,
-                'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
             );
             $this->set($params);
         }
@@ -419,10 +412,9 @@ class AttachmentsController extends AppController
         } else {
             try {
                 $attachment = $this->Attachment->read(null, $id);
-                $params = array(
-                    'id'        => $attachment['Attachment']['basename'],
-                    'download'  => true,
-                    'path'      => 'media' . DS . 'transfer' . DS . $attachment['Attachment']['dirname'] . DS
+                $params = $this->buildMediaDownloadParams(
+                    $attachment['Attachment']['dirname'],
+                    $attachment['Attachment']['basename']
                 );
                 $this->set($params);
             } catch (Exception $e) {
