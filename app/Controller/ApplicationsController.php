@@ -967,7 +967,7 @@ class ApplicationsController extends AppController
             }
             $amendmentTimelineSummary = $this->_buildAmendmentTimelineSummary($applications);
             $this->set(compact('applications', 'amendmentTimelineSummary'));
-            $this->pdfConfig = array('filename' => 'Applications',  'orientation' => 'landscape');
+            $this->pdfConfig = array('filename' => 'Applications_Amendment_Summary',  'orientation' => 'landscape');
             return;
         }
         //end pdf export

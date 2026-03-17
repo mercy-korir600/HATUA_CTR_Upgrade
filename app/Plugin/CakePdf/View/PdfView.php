@@ -104,7 +104,11 @@ class PdfView extends View {
  */
 	public function getFilename() {
 		if (isset($this->pdfConfig['filename'])) {
-			return $this->pdfConfig['filename'];
+			$filename = $this->pdfConfig['filename'];
+			if (strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'pdf') {
+				$filename .= '.pdf';
+			}
+			return $filename;
 		}
 		$id = current($this->request->params['pass']);
 		return strtolower($this->viewPath) . $id . '.pdf';
