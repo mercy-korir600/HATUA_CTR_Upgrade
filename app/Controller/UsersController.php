@@ -914,14 +914,17 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Applications/manager_approve');
         $this->Acl->allow($group, 'controllers/Applications/manager_delete');
         $this->Acl->allow($group, 'controllers/Applications/manager_deactivate');
+        $this->Acl->allow($group, 'controllers/Applications/manager_amendment_summary');
+        $this->Acl->allow($group, 'controllers/Applications/manager_stages_summary');        
         $this->Acl->allow($group, 'controllers/Applications/stages');
         $this->Acl->allow($group, 'controllers/Attachments/manager_download');
         $this->Acl->allow($group, 'controllers/Attachments/manager_delete');
         $this->Acl->allow($group, 'controllers/Attachments/download');
         $this->Acl->allow($group, 'controllers/Notifications');
         $this->Acl->allow($group, 'controllers/Notifications/manager_resend');
-        $this->Acl->allow($group, 'controllers/Reviews/manager_add');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_add'); 
         $this->Acl->allow($group, 'controllers/Reviews/manager_comment');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_assign_internal');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assign');
         $this->Acl->allow($group, 'controllers/Reviews/manager_revoke');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assess');
@@ -933,7 +936,9 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Users/edit');
         $this->Acl->allow($group, 'controllers/SiteInspections');
         $this->Acl->allow($group, 'controllers/ParticipantFlows');
-        $this->Acl->allow($group, 'controllers/Comments');
+        $this->Acl->allow($group, 'controllers/Comments');        
+        $this->Acl->allow($group, 'controllers/Comments/manager_add_annual_letter');
+        $this->Acl->allow($group, 'controllers/Comments/manager_add_amendment_discussion');
         $this->Acl->allow($group, 'controllers/Saes');
         $this->Acl->allow($group, 'controllers/Cioms');
         $this->Acl->allow($group, 'controllers/Reports');
@@ -1054,6 +1059,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Comments/applicant_add_si_external');
         $this->Acl->allow($group, 'controllers/Comments/applicant_add_dev_external');
         $this->Acl->allow($group, 'controllers/Comments/applicant_add_sae_external');
+        $this->Acl->allow($group, 'controllers/Comments/applicant_add_amendment_discussion');
         $this->Acl->allow($group, 'controllers/Saes/applicant_add');
         $this->Acl->allow($group, 'controllers/Saes/applicant_edit');
         $this->Acl->allow($group, 'controllers/Saes/applicant_index');
@@ -1142,7 +1148,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Deviations/outsource_edit'); //
         $this->Acl->allow($group, 'controllers/Deviations/outsource_delete'); //
         $this->Acl->allow($group, 'controllers/Comments'); //
-
+        //we add an exit to avoid an ugly "missing views" error message
 
         $group->id = 9; 
         $this->Acl->deny($group, 'controllers');
@@ -1163,7 +1169,6 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Users/edit');
         $this->Acl->allow($group, 'controllers/Comments');
         $this->Acl->allow($group, 'controllers/MeetingDates');
-        //we add an exit to avoid an ugly "missing views" error message
         echo "all done";
         exit;
     }
