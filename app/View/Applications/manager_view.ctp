@@ -13,6 +13,351 @@ $this->Html->script('invoice', array('inline' => false));
 
 <?php
 echo $this->Session->flash();
+
+$normalizeAmendmentKey = function ($value) {
+  $normalized = strtolower(trim((string)$value));
+  $normalized = preg_replace('/^\-+/', '', $normalized);
+  $normalized = preg_replace('/^amd[\s_-]*/', '', $normalized);
+  if ($normalized === '') {
+    return '';
+  }
+  return $normalized;
+};
+
+$formatAmendmentLabel = function ($value) use ($normalizeAmendmentKey) {
+  $normalized = $normalizeAmendmentKey($value);
+  if ($normalized === '') {
+    return 'Unknown Amendment';
+  }
+  return 'AMD-' . strtoupper($normalized);
+};
+
+$amendmentTimelineMap = array();
+
+$ensureTimelineRecord = function ($yearRaw) use (&$amendmentTimelineMap, $normalizeAmendmentKey, $formatAmendmentLabel) {
+  $yearKey = $normalizeAmendmentKey($yearRaw);
+  if ($yearKey === '') {
+    return '';
+  }
+  if (empty($amendmentTimelineMap[$yearKey])) {
+    $amendmentTimelineMap[$yearKey] = array(
+      'year_raw' => (string)$yearRaw,
+      'label' => $formatAmendmentLabel($yearRaw),
+      'sort_ts' => 0,
+      'stages' => array(
+        'created' => array('ts' => 0, 'date' => '', 'status' => 'Pending'),
+        'submitted' => array('ts' => 0, 'date' => '', 'status' => 'Pending'),
+        'review' => array('ts' => 0, 'date' => '', 'status' => 'Pending'),
+        'approved' => array('ts' => 0, 'date' => '', 'status' => 'Pending')
+      )
+    );
+  }
+  return $yearKey;
+};
+
+foreach ((array)$application['AmendmentChecklist'] as $checkItem) {
+  $yearKey = $ensureTimelineRecord(!empty($checkItem['year']) ? $checkItem['year'] : '');
+  if ($yearKey === '') {
+    continue;
+  }
+  $createdTs = !empty($checkItem['created']) ? strtotime($checkItem['created']) : false;
+  if ($createdTs) {
+    if (empty($amendmentTimelineMap[$yearKey]['stages']['created']['ts']) || $createdTs < $amendmentTimelineMap[$yearKey]['stages']['created']['ts']) {
+      $amendmentTimelineMap[$yearKey]['stages']['created'] = array(
+        'ts' => $createdTs,
+        'date' => date('d-M-Y H:i', $createdTs),
+        'status' => 'Created'
+      );
+    }
+    if (empty($amendmentTimelineMap[$yearKey]['stages']['submitted']['ts']) || $createdTs > $amendmentTimelineMap[$yearKey]['stages']['submitted']['ts']) {
+      $amendmentTimelineMap[$yearKey]['stages']['submitted'] = array(
+        'ts' => $createdTs,
+        'date' => date('d-M-Y H:i', $createdTs),
+        'status' => 'Submitted'
+      );
+    }
+    if ($createdTs > $amendmentTimelineMap[$yearKey]['sort_ts']) {
+      $amendmentTimelineMap[$yearKey]['sort_ts'] = $createdTs;
+    }
+  }
+}
+
+foreach ((array)$application['AmendmentApprovalSummary'] as $summaryItem) {
+  $yearKey = $ensureTimelineRecord(!empty($summaryItem['amendment']) ? $summaryItem['amendment'] : '');
+  if ($yearKey === '') {
+    continue;
+  }
+  $reviewDate = !empty($summaryItem['created']) ? $summaryItem['created'] : (!empty($summaryItem['approval_date']) ? $summaryItem['approval_date'] : '');
+  $reviewTs = $reviewDate !== '' ? strtotime($reviewDate) : false;
+  if ($reviewTs) {
+    if (empty($amendmentTimelineMap[$yearKey]['stages']['review']['ts']) || $reviewTs < $amendmentTimelineMap[$yearKey]['stages']['review']['ts']) {
+      $amendmentTimelineMap[$yearKey]['stages']['review'] = array(
+        'ts' => $reviewTs,
+        'date' => date('d-M-Y H:i', $reviewTs),
+        'status' => 'Review Started'
+      );
+    }
+    if ($reviewTs > $amendmentTimelineMap[$yearKey]['sort_ts']) {
+      $amendmentTimelineMap[$yearKey]['sort_ts'] = $reviewTs;
+    }
+  }
+}
+
+foreach ((array)$application['AmendmentApproval'] as $decisionItem) {
+  $yearKey = $ensureTimelineRecord(!empty($decisionItem['amendment']) ? $decisionItem['amendment'] : '');
+  if ($yearKey === '') {
+    continue;
+  }
+  $decisionStatus = strtolower(trim((string)$decisionItem['status']));
+  $decisionDate = !empty($decisionItem['created']) ? $decisionItem['created'] : (!empty($decisionItem['approval_date']) ? $decisionItem['approval_date'] : '');
+  $decisionTs = $decisionDate !== '' ? strtotime($decisionDate) : false;
+  if (!$decisionTs) {
+    continue;
+  }
+
+  if ($decisionStatus !== 'summary') {
+    if (empty($amendmentTimelineMap[$yearKey]['stages']['review']['ts']) || $decisionTs < $amendmentTimelineMap[$yearKey]['stages']['review']['ts']) {
+      $amendmentTimelineMap[$yearKey]['stages']['review'] = array(
+        'ts' => $decisionTs,
+        'date' => date('d-M-Y H:i', $decisionTs),
+        'status' => 'Reviewed'
+      );
+    }
+  }
+
+  if ($decisionStatus === 'approved' || $decisionStatus === 'rejected') {
+    if (empty($amendmentTimelineMap[$yearKey]['stages']['approved']['ts']) || $decisionTs > $amendmentTimelineMap[$yearKey]['stages']['approved']['ts']) {
+      $amendmentTimelineMap[$yearKey]['stages']['approved'] = array(
+        'ts' => $decisionTs,
+        'date' => date('d-M-Y H:i', $decisionTs),
+        'status' => ucfirst($decisionStatus)
+      );
+    }
+  }
+
+  if ($decisionTs > $amendmentTimelineMap[$yearKey]['sort_ts']) {
+    $amendmentTimelineMap[$yearKey]['sort_ts'] = $decisionTs;
+  }
+}
+
+foreach ((array)$application['AmendmentLetter'] as $letterItem) {
+  $yearKey = $ensureTimelineRecord(!empty($letterItem['status']) ? $letterItem['status'] : '');
+  if ($yearKey === '') {
+    continue;
+  }
+  $isSubmittedLetter = ((string)$letterItem['submitted'] === '1' || (int)$letterItem['submitted'] === 1);
+  if (!$isSubmittedLetter) {
+    continue;
+  }
+  $letterTs = !empty($letterItem['created']) ? strtotime($letterItem['created']) : false;
+  if (!$letterTs) {
+    continue;
+  }
+  if (empty($amendmentTimelineMap[$yearKey]['stages']['approved']['ts']) || $letterTs > $amendmentTimelineMap[$yearKey]['stages']['approved']['ts']) {
+    $amendmentTimelineMap[$yearKey]['stages']['approved'] = array(
+      'ts' => $letterTs,
+      'date' => date('d-M-Y H:i', $letterTs),
+      'status' => 'Approved Letter Issued'
+    );
+  }
+  if ($letterTs > $amendmentTimelineMap[$yearKey]['sort_ts']) {
+    $amendmentTimelineMap[$yearKey]['sort_ts'] = $letterTs;
+  }
+}
+
+foreach ($amendmentTimelineMap as $yearKey => $timelineEntry) {
+  if (!empty($timelineEntry['stages']['submitted']['ts'])) {
+    continue;
+  }
+  if (!empty($timelineEntry['stages']['review']['ts'])) {
+    $submittedTs = $timelineEntry['stages']['review']['ts'];
+    $amendmentTimelineMap[$yearKey]['stages']['submitted'] = array(
+      'ts' => $submittedTs,
+      'date' => date('d-M-Y H:i', $submittedTs),
+      'status' => 'Submitted'
+    );
+  } elseif (!empty($timelineEntry['stages']['approved']['ts'])) {
+    $submittedTs = $timelineEntry['stages']['approved']['ts'];
+    $amendmentTimelineMap[$yearKey]['stages']['submitted'] = array(
+      'ts' => $submittedTs,
+      'date' => date('d-M-Y H:i', $submittedTs),
+      'status' => 'Submitted'
+    );
+  }
+}
+
+if (!empty($amendmentTimelineMap)) {
+  uasort($amendmentTimelineMap, function ($left, $right) {
+    $leftTs = !empty($left['sort_ts']) ? (int)$left['sort_ts'] : 0;
+    $rightTs = !empty($right['sort_ts']) ? (int)$right['sort_ts'] : 0;
+    if ($leftTs === $rightTs) {
+      return strcmp((string)$right['label'], (string)$left['label']);
+    }
+    return ($leftTs < $rightTs) ? 1 : -1;
+  });
+}
+
+$amendmentSectionOneMap = array();
+if (!empty($application['Amendment']) && is_array($application['Amendment'])) {
+  $amendmentRows = array_values($application['Amendment']);
+  usort($amendmentRows, function ($left, $right) {
+    $leftId = !empty($left['id']) ? (int)$left['id'] : 0;
+    $rightId = !empty($right['id']) ? (int)$right['id'] : 0;
+    if ($leftId === $rightId) {
+      $leftCreated = !empty($left['created']) ? strtotime($left['created']) : 0;
+      $rightCreated = !empty($right['created']) ? strtotime($right['created']) : 0;
+      if ($leftCreated === $rightCreated) {
+        return 0;
+      }
+      return ($leftCreated < $rightCreated) ? -1 : 1;
+    }
+    return ($leftId < $rightId) ? -1 : 1;
+  });
+
+  foreach ($amendmentRows as $index => $amendmentRow) {
+    $sequence = $index + 1;
+    $sequenceKey = $normalizeAmendmentKey('amd-' . $sequence);
+    if ($sequenceKey === '') {
+      continue;
+    }
+
+    $sectionOne = !empty($amendmentRow['Amend']) ? (array)$amendmentRow['Amend'] : array();
+    $coverLetters = !empty($amendmentRow['CoverLetter']) && is_array($amendmentRow['CoverLetter']) ? $amendmentRow['CoverLetter'] : array();
+    $coverFileName = '';
+    if (!empty($coverLetters)) {
+      $latestCover = end($coverLetters);
+      $coverFileName = !empty($latestCover['basename']) ? trim((string)$latestCover['basename']) : '';
+      reset($coverLetters);
+    }
+
+    $snapshot = array(
+      'cover_letter' => !empty($sectionOne['cover_letter']) ? trim((string)$sectionOne['cover_letter']) : '',
+      'summary' => !empty($sectionOne['summary']) ? trim((string)$sectionOne['summary']) : '',
+      'reason' => !empty($sectionOne['reason']) ? trim((string)$sectionOne['reason']) : '',
+      'objectives_impacts' => !empty($sectionOne['objectives_impacts']) ? trim((string)$sectionOne['objectives_impacts']) : '',
+      'endpoints_impacts' => !empty($sectionOne['endpoints_impacts']) ? trim((string)$sectionOne['endpoints_impacts']) : '',
+      'safety_impacts' => !empty($sectionOne['safety_impacts']) ? trim((string)$sectionOne['safety_impacts']) : '',
+      'cover_file' => $coverFileName,
+      'created' => !empty($amendmentRow['created']) ? date('d-M-Y H:i', strtotime($amendmentRow['created'])) : ''
+    );
+    $amendmentSectionOneMap[$sequenceKey] = $snapshot;
+
+    $ecctRefKey = $normalizeAmendmentKey(!empty($amendmentRow['ecct_ref_number']) ? $amendmentRow['ecct_ref_number'] : '');
+    if ($ecctRefKey !== '' && empty($amendmentSectionOneMap[$ecctRefKey])) {
+      $amendmentSectionOneMap[$ecctRefKey] = $snapshot;
+    }
+  }
+}
+
+foreach ($amendmentTimelineMap as $yearKey => $timelineEntry) {
+  $amendmentTimelineMap[$yearKey]['section_one'] = !empty($amendmentSectionOneMap[$yearKey]) ? $amendmentSectionOneMap[$yearKey] : array();
+}
+
+$amendmentStageOrder = array('created', 'submitted', 'review', 'approved');
+$amendmentStageGapLabels = array(
+  'created' => 'to Submitted',
+  'submitted' => 'to Review',
+  'review' => 'to Approval'
+);
+$amendmentCurrentStageDangerThresholds = array(
+  'created' => 5,
+  'submitted' => 10,
+  'review' => 30
+);
+$timelineNowTs = time();
+foreach ($amendmentTimelineMap as $yearKey => $timelineEntry) {
+  foreach ($amendmentStageOrder as $stageIndex => $stageKey) {
+    $stageTs = !empty($timelineEntry['stages'][$stageKey]['ts']) ? (int)$timelineEntry['stages'][$stageKey]['ts'] : 0;
+    $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['color'] = 'default';
+    $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_days'] = 0;
+    $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_text'] = '';
+    $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_color'] = 'default';
+
+    if ($stageTs <= 0) {
+      continue;
+    }
+
+    $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['color'] = 'success';
+    if (empty($amendmentStageGapLabels[$stageKey])) {
+      continue;
+    }
+
+    $nextStageKey = !empty($amendmentStageOrder[$stageIndex + 1]) ? $amendmentStageOrder[$stageIndex + 1] : '';
+    $nextStageTs = ($nextStageKey !== '' && !empty($timelineEntry['stages'][$nextStageKey]['ts'])) ? (int)$timelineEntry['stages'][$nextStageKey]['ts'] : 0;
+
+    if ($nextStageTs > 0 && $nextStageTs >= $stageTs) {
+      $gapDays = (int) floor(($nextStageTs - $stageTs) / 86400);
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_days'] = $gapDays;
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_text'] = $amendmentStageGapLabels[$stageKey];
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_color'] = 'info';
+      continue;
+    }
+
+    $gapDays = (int) floor(max(0, $timelineNowTs - $stageTs) / 86400);
+    $dangerThreshold = !empty($amendmentCurrentStageDangerThresholds[$stageKey]) ? (int)$amendmentCurrentStageDangerThresholds[$stageKey] : 10;
+    $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_days'] = $gapDays;
+    $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_text'] = 'current stage';
+
+    if ($gapDays > $dangerThreshold) {
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['color'] = 'danger';
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_color'] = 'danger';
+    } elseif ($gapDays > 0) {
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['color'] = 'warning';
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_color'] = 'warning';
+    } else {
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['color'] = 'success';
+      $amendmentTimelineMap[$yearKey]['stages'][$stageKey]['gap_color'] = 'success';
+    }
+  }
+}
+
+$normalizeTimelineColor = function ($color) {
+  $normalized = strtolower(trim((string)$color));
+  if ($normalized === 'danger') {
+    $normalized = 'important';
+  }
+  $allowed = array('default', 'success', 'warning', 'info', 'inverse', 'important');
+  if (!in_array($normalized, $allowed, true)) {
+    return 'default';
+  }
+  return $normalized;
+};
+
+$resolveLabelClass = function ($prefix, $color) use ($normalizeTimelineColor) {
+  $normalized = $normalizeTimelineColor($color);
+  if ($normalized === 'default') {
+    return $prefix;
+  }
+  return $prefix . ' ' . $prefix . '-' . $normalized;
+};
+
+$hasAmendmentTimeline = !empty($amendmentTimelineMap);
+
+$renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $resolveLabelClass) {
+  $stageDisplayLabels = array(
+    'created' => 'Amendment Creation',
+    'submitted' => 'Submitted',
+    'review' => 'Review',
+    'approved' => 'Approval'
+  );
+
+  $output = '<div style="white-space:normal;">';
+  foreach ($amendmentStageOrder as $stageKey) {
+    $stage = !empty($timelineEntry['stages'][$stageKey]) ? (array)$timelineEntry['stages'][$stageKey] : array();
+    $label = !empty($stageDisplayLabels[$stageKey]) ? $stageDisplayLabels[$stageKey] : ucfirst($stageKey);
+    $color = !empty($stage['color']) ? $stage['color'] : 'default';
+    $dateText = !empty($stage['date']) ? $stage['date'] : '-';
+    $gapDays = !empty($stage['gap_days']) ? (int)$stage['gap_days'] : 0;
+
+    $output .= '<span style="display:inline-block;margin:0 8px 8px 0;vertical-align:top;white-space:nowrap;">';
+    $output .= '<span class="' . h($resolveLabelClass('label', $color)) . '">' . h($label) . '<br><small style="color:#f9ef9c;">' . h($dateText) . '</small></span>';
+    $output .= '<span class="badge" style="margin-left:4px;">' . h($gapDays) . '</span>';
+    $output .= '</span>';
+  }
+  $output .= '</div>';
+
+  return $output;
+};
 ?>
 
 <div class="tabbable tabs-left"> <!-- Only required for left/right tabs -->
@@ -20,11 +365,22 @@ echo $this->Session->flash();
     <li class="active"><a href="#tab1" data-toggle="tab">Application</a></li>
     <li><a href="#tab17" data-toggle="tab">Screening</a></li>
     <li><a href="#amendments" data-toggle="tab">Amendments</a></li>
+    <?php if ($hasAmendmentTimeline) { ?>
+      <li><a href="#amendment_timelines" data-toggle="tab">Amendment Timelines <small>(<?php echo count($amendmentTimelineMap); ?>)</small></a></li>
+    <?php } ?>
     <?php
     $count_reviews = 0;
+    $count_internal_reviews = 0;
     $count_inspectors = 0;
     $count_comments = 0;
     $my_reviews = 0;
+    $isLinkedInternalReviewCopy = function ($review) {
+      if (empty($review['type']) || $review['type'] !== 'reviewer_comment') {
+        return false;
+      }
+      $title = !empty($review['title']) ? trim((string)$review['title']) : '';
+      return ($title !== '' && preg_match('/^internal_source_review:\d+$/', $title));
+    };
     foreach ($application['ActiveInspector'] as $review) {
       $count_inspectors++;
     }
@@ -32,15 +388,28 @@ echo $this->Session->flash();
       if ($review['type'] == 'request' && $review['accepted'] != 'declined') {
         $count_reviews++;
       }
-      if ($review['type'] == 'reviewer_comment') {
+      if ($review['type'] == 'reviewer_comment' && !$isLinkedInternalReviewCopy($review)) {
         $count_comments++;
       }
       if ($review['type'] == 'ppb_comment') {
         $my_reviews++;
       }
     }
+
+    // foreach ($application['InternalReview'] as $review) {
+    //   if ($review['type'] == 'request' && $review['accepted'] != 'declined') {
+    //     $count_internal_reviews++;
+    //   }
+    //   if ($review['type'] == 'reviewer_comment' && !$isLinkedInternalReviewCopy($review)) {
+    //     $count_comments++;
+    //   }
+    //   if ($review['type'] == 'ppb_comment') {
+    //     $my_reviews++;
+    //   }
+    // }
+    $count_assigned_reviewers = $count_reviews + $count_internal_reviews;
     ?>
-    <li><a href="#tab2" data-toggle="tab">Assigned Reviewers <small>(<?php echo $count_reviews; ?>)</small></a></li>
+    <li><a href="#tab2" data-toggle="tab">Assigned Reviewers <small>(<?php echo $count_assigned_reviewers; ?>)</small></a></li>
     <li><a href="#tab3" data-toggle="tab">Reviewer Comments <small>(<?php echo $count_comments; ?>)</small></a></li>
     <li><a href="#tab4" data-toggle="tab">My Reviews <small>(<?php echo $my_reviews; ?>)</small></a></li>
     <li><a href="#tab5" data-toggle="tab">Approve / Reject <small>(<?php
@@ -209,9 +578,9 @@ echo $this->Session->flash();
           <br>
 
           <div class="amend-form">
-            <ul id="rreview_tab" class="nav nav-tabs">
-              <li class="active"><a href="#feedback_list">FEEDBACK/QUERIES</a></li>
-              <li><a href="#comment_query">Add Comment</a></li>
+            <ul class="nav nav-tabs">
+              <li class="active"><a href="#list">FEEDBACK/QUERIES</a></li>
+              <li><a href="#comm">Add Comment</a></li>
             </ul>
             <div class="tab-content">
               <div class="tab-pane active" id="feedback_list">
@@ -222,7 +591,7 @@ echo $this->Session->flash();
                 </div>
               </div>
 
-              <div class="tab-pane" id="comment_query">
+              <div class="tab-pane active" id="comm">
                 <div class="row-fluid">
                   <div class="span12">
                     <?php
@@ -247,12 +616,13 @@ echo $this->Session->flash();
     </div>
 
     <div class="tab-pane" id="tab2">
-      <p style="text-align: center;"><strong>Protocol Code: </strong><?php echo $application['Application']['protocol_no']; ?></p>
+      <p style="text-align: center;"><strong>ECCT Reference Number: </strong><?php echo $application['Application']['protocol_no']; ?></p>
       <hr class="soften" style="margin: 10px 0px;">
       <div class="row-fluid">
-        <h4 class="text-success">Assigned Reviewers (<?php echo $count_reviews; ?>)</h4>
+       
+        <div class="span6">
+        <h4 class="text-success">Assigned ECCT Reviewers (<?php echo $count_reviews; ?>)</h4>
         <hr>
-        <div class="span12">
           <?php
           echo $this->Form->create(
             'Review',
@@ -279,7 +649,9 @@ echo $this->Session->flash();
                   echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
-                  echo '<p><i class="icon-time"> </i> Notified on: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
+                  echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
                   // ask if the user has showned conflict of interest with an link to revoke access with a confirmation dialog
                   echo $this->Html->link(
                     __('<small class="muted"> Shown Interest? Revoke Access</small>'),
@@ -316,6 +688,89 @@ echo $this->Session->flash();
           ));
           ?>
         </div>
+
+        <!-- INTERNAL REVIEWERS -->
+
+
+        <div class="span6">
+        <h4 class="text-success">Assigned Internal Reviewers (<?php echo $count_internal_reviews; ?>)</h4>
+        <p><small class="muted">Assign one internal reviewer at a time. If the current reviewer cannot proceed, use Revoke Access before response and assign the next reviewer.</small></p>
+        <hr>
+          <?php
+          echo $this->Form->create(
+            'Review',
+            array('url' => array('controller' => 'reviews', 'action' => 'manager_assign_internal', $application['Application']['id']))
+          );
+          $counter = 0;
+          echo "<ol>";
+          foreach ($external as $user_id => $user) {
+            echo "<li>";
+            $responded = false;
+            foreach ($application['InternalReview'] as $response) {
+
+              if ($response['user_id'] == $user_id) {
+                if ($response['type'] == 'request' && $response['accepted'] == '') {
+                  $responded = true;
+                  echo '<p class="text-info"><i class="icon-check-empty"> </i> ' . $user . '.
+                               <small class="muted">(Notified but no response yet. 
+                                <a class="ResendReview tiptip" href="#" id="' . $response['id'] . '" title="Resend Notification?">Resend?</a>)</small> </p>';
+                  if ($response['conflict'] != '') {
+                    echo '<p>Has Conflict of interest? <b>' . $response['conflict'] . '</b> </p>';
+                  }
+                  echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
+                  echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
+                  echo $this->Html->link(
+                    __('<small class="muted"> No response yet? Revoke Access</small>'),
+                    array('controller' => 'reviews', 'action' => 'revoke', $response['id'], $application['Application']['id']),
+                    array('escape' => false),
+                    __('Are you sure you want to revoke access for %s?', $user)
+                  );
+                  echo '<hr>';
+                } elseif ($response['type'] == 'request' && $response['accepted'] == 'accepted') {
+                  $responded = true;
+                  echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
+                  // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
+                  echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
+                  echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
+                  $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
+                  echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
+                  // ask if the user has showned conflict of interest with an link to revoke access with a confirmation dialog
+                  echo $this->Html->link(
+                    __('<small class="muted"> Shown Interest? Revoke Access</small>'),
+                    array('controller' => 'reviews', 'action' => 'revoke', $response['id'], $application['Application']['id']),
+                    array('escape' => false),
+                    __('Are you sure you want to revoke access for %s?', $user)
+                  );
+                  echo '<hr>';
+                
+                } elseif ($response['type'] == 'request' && $response['accepted'] == 'declined') {
+                  $responded = true;
+                  echo '<p class="text-error"><i class="icon-remove"> </i> ' . $user . ' <small class="muted">(Declines)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
+                  echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
+                }
+              }
+            }
+
+            if (!$responded) {
+              echo '<label class="radio" style="color: #333333">';
+              echo '<input type="radio" name="data[Review][user_id]" value="' . (int) $user_id . '"> ';
+              echo h($user);
+              echo '</label>';
+              // echo $this->Form->input('Reviewer.'.$counter.'.application_id', array('type' => 'hidden', 'value' => $application['Application']['id']));
+            }
+            $counter++;
+            echo "</li>";
+          }
+          echo "</ol>"; 
+          echo $this->Form->input('Message.text', array('type' => 'textarea', 'rows' => 3, 'label' => 'Message'));
+          echo $this->Form->end(array(
+            'label' => 'Assign',
+            'value' => 'Assign',
+            'class' => 'btn btn-success',
+          ));
+          ?>
+        </div>
       </div>
     </div>
 
@@ -325,43 +780,7 @@ echo $this->Session->flash();
           <?php echo $this->element('application/review'); ?>
         </div>
       </div>
-      <?php /*?>
-        <p style="text-align: center;"><strong>1. Protocol Code: </strong><?php echo $application['Application']['protocol_no'];?></p>
-        <hr class="soften" style="margin: 10px 0px;">
-        <div class="row-fluid">
-          <h4 class="text-success">Reviewer Comments (<?php echo $count_comments; ?>)</h4>
-            <hr>
-            <div class="span12">
-            <?php
-                  $counter = 0;
-                  foreach ($users as $user_id => $user) {
-                       $responded = false;
-
-                       foreach ($application['Review'] as $response) {
-                        // pr($response);
-                         if($response['user_id'] == $user_id) {
-                            if($response['type'] == 'request' && $response['accepted'] == 'accepted') {
-                              $responded = true;
-                              echo '<h4 style="text-decoration: underline"><i class="icon-check"> </i> '.$user.'</h4>';
-                              echo '<p style="padding-left: 29px;"><i class="icon-minus"> </i> '.$response['recommendation'].'</p>';
-                            }
-
-                            if ($response['type'] == 'reviewer_comment') {
-                              echo "<small  style='padding-left: 29px;' class='muted'>created on: ".date('d-m-Y H:i:s', strtotime($response['created']))."</small>";
-                              echo "<div style='padding-left: 29px;' class='morecontent'> <i class='icon-comment-alt'></i>
-                                          <strong>Comment</strong><br>".$response['text']."</div>";
-                              echo "<div style='padding-left: 29px;' class='morecontent'> <i class=\"icon-comment-alt\"></i>
-                                          <strong>Recommendation</strong><br>".$response['recommendation']."</div><hr>";
-
-                            }
-                         }
-                       }
-                      $counter++;
-                  }
-            ?>
-       </div>
-       </div>
-      <?php */ ?>
+     
     </div>
 
     <div class="tab-pane" id="tab4">
@@ -429,7 +848,7 @@ echo $this->Session->flash();
       //Reviews limited to ppb_comment already
       $var = Hash::extract($application, 'Review.{n}[type=ppb_comment]');
       $rid = null;
-      if (!empty($var)) $rid = min($var);
+      if (!empty($var)) $rid = min($var); 
       ?>
       <ul id="reviewer_tab" class="nav nav-tabs">
         <li class="active"><a href="#external_rev_comments">PI Comments (<?php echo count($rid['ExternalComment']); ?>)</a></li>
@@ -700,11 +1119,58 @@ echo $this->Session->flash();
       </div>
     </div>
 
+    <?php if ($hasAmendmentTimeline) { ?>
+      <div class="tab-pane" id="amendment_timelines">
+        <div class="row-fluid">
+          <div class="span12">
+            <h4 class="text-info">Amendment Timelines</h4> 
+            <div style="overflow-x:auto;">
+              <table class="table table-bordered table-striped table-condensed">
+                <thead>
+                  <tr>
+                    <th style="min-width: 110px;">Amendment</th>
+                    <?php
+                    echo $this->element('amendments/section_one_snapshot', array(
+                      'format' => 'column_headers'
+                    ));
+                    ?>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($amendmentTimelineMap as $timelineEntry) { ?>
+                    <tr>
+                      <td><strong><?php echo h($timelineEntry['label']); ?></strong></td>
+                      <?php
+                      echo $this->element('amendments/section_one_snapshot', array(
+                        'sectionOne' => !empty($timelineEntry['section_one']) ? $timelineEntry['section_one'] : array(),
+                        'format' => 'column_values',
+                        'emptyText' => ''
+                      ));
+                      ?>
+                    </tr>
+                    <tr>
+                      <td colspan="7" style="background-color: azure;">
+                        <?php echo $renderTimelineStrip($timelineEntry); ?>
+                      </td>
+                    </tr>
+                  <?php } ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    <?php } ?>
+
   </div>
 </div>
 
 <script text="type/javascript">
-  $.expander.defaults.slicePoint = 170;
+  if ($.expander && $.expander.defaults) {
+    $.expander.defaults.slicePoint = 170;
+    $.expander.defaults.expandText = 'show more';
+    $.expander.defaults.userCollapseText = 'show less';
+  }
   $(function() {
     $(document).ajaxStop($.unblockUI);
     $("#tabs").tabs({
@@ -735,7 +1201,9 @@ echo $this->Session->flash();
     var hashaTab = $('#reviewer_tab a[href="' + location.hash + '"]');
     hashaTab && hashaTab.tab('show');
 
-    $(".morecontent").expander();
+    if ($.fn.expander) {
+      $(".morecontent").expander();
+    }
     $('#ReviewText').ckeditor();
     $('#ReviewRecommendation').ckeditor();
 
