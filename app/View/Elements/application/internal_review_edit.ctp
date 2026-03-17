@@ -61,8 +61,8 @@ $renderComparisonBlock = function ($comparisonText) {
     }
     .internal-review-previous {
       border-left: 4px solid #1d5fbf;
-      background: #eef5ff;
-      color: #1d5fbf;
+      background: #eef5ff !important;
+      color: #1d5fbf !important;
     }
     .internal-review-row-updated {
       background: #fff4f4;
@@ -78,10 +78,18 @@ $renderComparisonBlock = function ($comparisonText) {
     .internal-review-current-preview {
       margin-top: 6px;
       border-left: 4px solid #b30000;
-      background: #fff1f1;
-      color: #b30000;
+      background: #fff1f1 !important;
+      color: #b30000 !important;
       font-weight: 600;
       padding: 8px;
+    }
+    .internal-review-previous *,
+    .internal-review-previous a {
+      color: #1d5fbf !important;
+    }
+    .internal-review-current-preview *,
+    .internal-review-current-preview a {
+      color: #b30000 !important;
     }
   </style>
   <div class="alert alert-info" style="margin-bottom: 10px;">

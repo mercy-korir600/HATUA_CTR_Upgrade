@@ -263,21 +263,29 @@
               }
               .internal-modal-reviewer1 {
                 border-left: 4px solid #1d5fbf;
-                background: #eef5ff;
-                color: #1d5fbf;
+                background: #eef5ff !important;
+                color: #1d5fbf !important;
                 padding: 8px;
                 margin-bottom: 8px;
               }
               .internal-modal-reviewer2 {
                 border-left: 4px solid #b30000;
-                background: #fff1f1;
-                color: #b30000;
+                background: #fff1f1 !important;
+                color: #b30000 !important;
                 padding: 8px;
                 margin-top: 8px;
               }
               .internal-modal-reviewer1 p,
               .internal-modal-reviewer2 p {
                 margin: 0;
+              }
+              .internal-modal-reviewer1 *,
+              .internal-modal-reviewer1 a {
+                color: #1d5fbf !important;
+              }
+              .internal-modal-reviewer2 *,
+              .internal-modal-reviewer2 a {
+                color: #b30000 !important;
               }
             </style>
             <table class="table table-bordered table-striped table-condensed">

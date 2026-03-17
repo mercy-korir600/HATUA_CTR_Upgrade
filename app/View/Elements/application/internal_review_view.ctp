@@ -92,20 +92,28 @@ $formatAnswerText = function ($value) {
     }
     .internal-reviewer1-block {
       border-left: 4px solid #1d5fbf;
-      background: #eef5ff;
-      color: #1d5fbf;
+      background: #eef5ff !important;
+      color: #1d5fbf !important;
       padding: 8px;
       margin-bottom: 8px;
     }
     .internal-reviewer2-block {
       border-left: 4px solid #b30000;
-      background: #fff1f1;
-      color: #b30000;
+      background: #fff1f1 !important;
+      color: #b30000 !important;
       padding: 8px;
     }
     .internal-reviewer1-block p,
     .internal-reviewer2-block p {
       margin: 0;
+    }
+    .internal-reviewer1-block *,
+    .internal-reviewer1-block a {
+      color: #1d5fbf !important;
+    }
+    .internal-reviewer2-block *,
+    .internal-reviewer2-block a {
+      color: #b30000 !important;
     }
   </style>
   <div class="alert alert-info" style="margin-bottom: 10px;">
