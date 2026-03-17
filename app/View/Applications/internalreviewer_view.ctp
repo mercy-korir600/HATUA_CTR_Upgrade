@@ -239,6 +239,28 @@
               Previous internal reviewer feedback is shown below.
             </div>
             <style type="text/css">
+              .internal-modal-legend {
+                margin-top: 8px;
+              }
+              .internal-modal-legend-item {
+                display: inline-block;
+                margin-right: 16px;
+                font-weight: 600;
+              }
+              .internal-modal-legend-swatch {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                margin-right: 6px;
+                vertical-align: middle;
+                border-radius: 2px;
+              }
+              .internal-modal-legend-swatch-reviewer1 {
+                background: #1d5fbf;
+              }
+              .internal-modal-legend-swatch-reviewer2 {
+                background: #b30000;
+              }
               .internal-modal-reviewer1 {
                 border-left: 4px solid #1d5fbf;
                 background: #eef5ff;
@@ -433,15 +455,22 @@
                             );
                           ?>
                           <span class="muted" style="margin-left: 8px;">
-                            This opens your own response form linked to review #<?php echo (int) $selectedReviewId; ?>.
                           </span>
                         </div>
                       <?php } ?>
                       <?php if ($linkedReviewId > 0) { ?>
-                        <div class="alert alert-success" style="margin-bottom: 10px;">
-                          Linked response found: #<?php echo (int) $linkedReviewId; ?>.
-                          Only changed sections show <strong><?php echo h($sourceReviewerName); ?> in blue</strong> and <strong><?php echo h($linkedReviewerName); ?> in red</strong>.
-                          Matching sections are shown once in default color.
+                        <div class="alert alert-success" style="margin-bottom: 10px;"> 
+                          <div class="internal-modal-legend">
+                            <span class="internal-modal-legend-item">
+                              <span class="internal-modal-legend-swatch internal-modal-legend-swatch-reviewer1"></span>
+                              <?php echo h($sourceReviewerName); ?>
+                            </span>
+                            <span class="internal-modal-legend-item">
+                              <span class="internal-modal-legend-swatch internal-modal-legend-swatch-reviewer2"></span>
+                              <?php echo h($linkedReviewerName); ?>
+                            </span>
+                          </div>
+                          <small class="muted"></small>
                         </div>
                       <?php } ?>
                       <h3 style="text-align: center;"><?php echo h($selectedAssessmentType); ?> Assessment Form</h3>
@@ -510,19 +539,24 @@
                                 <td>
                                   <?php if ($hasReviewerOneAnswer && $hasReviewerTwoAnswer && !$sameAnswer) { ?>
                                     <div class="internal-modal-reviewer1">
-                                      <strong><?php echo h($sourceReviewerName); ?>:</strong>
                                       <?php echo $formatFeedbackContent($reviewerOneAnswer); ?>
                                     </div>
                                     <div class="internal-modal-reviewer2">
-                                      <strong><?php echo h($linkedReviewerName); ?>:</strong>
                                       <?php echo $formatFeedbackContent($reviewerTwoAnswer); ?>
                                     </div>
                                   <?php } elseif ($hasReviewerOneAnswer && $hasReviewerTwoAnswer && $sameAnswer) { ?>
                                     <?php echo $formatFeedbackContent($reviewerOneAnswer); ?>
+                                  <?php } elseif ($hasReviewerOneAnswer && $linkedReviewId > 0) { ?>
+                                    <div class="internal-modal-reviewer1">
+                                      <?php echo $formatFeedbackContent($reviewerOneAnswer); ?>
+                                    </div>
+                                  <?php } elseif ($hasReviewerTwoAnswer && $linkedReviewId > 0) { ?>
+                                    <div class="internal-modal-reviewer2">
+                                      <?php echo $formatFeedbackContent($reviewerTwoAnswer); ?>
+                                    </div>
                                   <?php } elseif ($hasReviewerOneAnswer) { ?>
                                     <?php echo $formatFeedbackContent($reviewerOneAnswer); ?>
                                   <?php } elseif ($hasReviewerTwoAnswer) { ?>
-                                    <strong><?php echo h($linkedReviewerName); ?>:</strong>
                                     <?php echo $formatFeedbackContent($reviewerTwoAnswer); ?>
                                   <?php } else { ?>
                                     <span class="muted">No response provided.</span>
@@ -578,9 +612,10 @@
                 }
               }
             }
-            echo $this->element('application/review', array(
+            echo $this->element('application/internal_review', array(
               'priorInternalFeedbackLookup' => $priorInternalFeedbackLookup,
-              'reviewList' => $nonLinkedMyReviews
+              'reviewList' => $nonLinkedMyReviews,
+              'allReviewList' => $allMyReviews
             ));
           ?>
         </div>
@@ -713,6 +748,36 @@ $(function() {
         expires: 1
       }
   });
+
+  var $mainTabs = $('.tabbable.tabs-left > .nav.nav-tabs a[data-toggle="tab"]');
+  $mainTabs.off('.internalMainTabs');
+  $mainTabs.on('click.internalMainTabs', function (e) {
+      e.preventDefault();
+      $(this).tab('show');
+  });
+
+  $mainTabs.on("shown.internalMainTabs shown.bs.tab.internalMainTabs", function (e) {
+      var id = $(e.target).attr("href");
+      localStorage.setItem('internalReviewerMainTab', id);
+  });
+
+  var defaultMainTab = null;
+  <?php if (isset($this->params['named']['rreview_view'])) { ?>
+    defaultMainTab = '#tab2';
+  <?php } ?>
+
+  if (location.hash && /^#rreview_/.test(location.hash)) {
+      defaultMainTab = '#tab2';
+  }
+
+  if (defaultMainTab && $mainTabs.filter('[href="' + defaultMainTab + '"]').length) {
+      $mainTabs.filter('[href="' + defaultMainTab + '"]').tab('show');
+  } else {
+      var savedMainTab = localStorage.getItem('internalReviewerMainTab');
+      if (savedMainTab && $mainTabs.filter('[href="' + savedMainTab + '"]').length) {
+          $mainTabs.filter('[href="' + savedMainTab + '"]').tab('show');
+      }
+  }
 
   var $reviewerTabs = $('#reviewer_tab a[data-toggle="tab"]');
   $reviewerTabs.off('.assessmentTabs');

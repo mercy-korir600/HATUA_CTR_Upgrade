@@ -263,9 +263,141 @@ class ReviewsController extends AppController
         $this->set(compact('users', 'applications'));
     }
 
-    public function add($application_id = null, $review_type = null)
+    private function _buildApplicationViewRedirect($applicationId, $reviewId = null)
+    {
+        $redirect = array(
+            'controller' => 'applications',
+            'action' => 'view',
+            $applicationId
+        );
+
+        if (!empty($this->request->params['prefix'])) {
+            $redirect[$this->request->params['prefix']] = true;
+        }
+
+        if ($reviewId !== null) {
+            $redirect['rreview_view'] = $reviewId;
+        }
+
+        return $redirect;
+    }
+
+    public function add($application_id = null, $review_type = null, $source_review_id = null)
     {
         $this->Review->create();
+        $sourceReviewId = null;
+        if (!empty($source_review_id)) {
+            $sourceReviewId = (int) $source_review_id;
+        } elseif (!empty($this->request->params['named']['source_review'])) {
+            $sourceReviewId = (int) $this->request->params['named']['source_review'];
+        } elseif (!empty($this->request->query['source_review'])) {
+            $sourceReviewId = (int) $this->request->query['source_review'];
+        }
+
+        if ($sourceReviewId > 0) {
+            $sourceReview = $this->Review->find('first', array(
+                'conditions' => array(
+                    'Review.id' => $sourceReviewId,
+                    'Review.application_id' => $application_id,
+                    'Review.type' => 'reviewer_comment'
+                ),
+                'fields' => array('Review.id', 'Review.user_id', 'Review.application_id', 'Review.assessment_type'),
+                'contain' => array(
+                    'ReviewAnswer' => array(
+                        'fields' => array(
+                            'ReviewAnswer.id',
+                            'ReviewAnswer.question_type',
+                            'ReviewAnswer.review_type',
+                            'ReviewAnswer.question_number',
+                            'ReviewAnswer.question',
+                            'ReviewAnswer.answer',
+                            'ReviewAnswer.workspace',
+                            'ReviewAnswer.comment'
+                        ),
+                        'order' => array('ReviewAnswer.question_number' => 'asc', 'ReviewAnswer.id' => 'asc')
+                    )
+                )
+            ));
+
+            if (empty($sourceReview)) {
+                $this->Session->setFlash(__('The selected internal reviewer assessment could not be found.'), 'alerts/flash_error');
+                $this->redirect($this->_buildApplicationViewRedirect($application_id));
+            }
+
+            if (!empty($sourceReview['Review']['assessment_type'])) {
+                $review_type = $sourceReview['Review']['assessment_type'];
+            }
+
+            if (empty($review_type)) {
+                $this->Session->setFlash(__('Assessment type is missing for the selected source review.'), 'alerts/flash_error');
+                $this->redirect($this->_buildApplicationViewRedirect($application_id));
+            }
+
+            $linkToken = 'internal_source_review:' . (int) $sourceReview['Review']['id'];
+            $existingLinkedReview = $this->Review->find('first', array(
+                'conditions' => array(
+                    'Review.application_id' => $application_id,
+                    'Review.user_id' => $this->Auth->User('id'),
+                    'Review.type' => 'reviewer_comment',
+                    'Review.assessment_type' => $review_type,
+                    'Review.title' => $linkToken
+                ),
+                'fields' => array('Review.id', 'Review.status'),
+                'order' => array('Review.modified' => 'desc', 'Review.id' => 'desc'),
+                'contain' => array()
+            ));
+
+            if (!empty($existingLinkedReview['Review']['id'])) {
+                $this->Session->setFlash(__('Opened your existing linked response form for this internal review.'), 'alerts/flash_info');
+                $this->redirect($this->_buildApplicationViewRedirect($application_id, $existingLinkedReview['Review']['id']));
+            }
+
+            $answers = array();
+            foreach ((array) $sourceReview['ReviewAnswer'] as $answer) {
+                $answers[] = array(
+                    'question_type' => $answer['question_type'],
+                    'review_type' => !empty($answer['review_type']) ? $answer['review_type'] : $review_type,
+                    'question_number' => $answer['question_number'],
+                    'question' => $answer['question'],
+                    'answer' => '',
+                    'workspace' => '',
+                    'comment' => ''
+                );
+            }
+
+            if (empty($answers)) {
+                $this->loadModel('ReviewQuestion');
+                $all_questions = $this->ReviewQuestion->find('all', array(
+                    'conditions' => array('ReviewQuestion.review_type' => $review_type),
+                    'order' => array('ReviewQuestion.question_number' => 'asc')
+                ));
+
+                foreach ($all_questions as $question) {
+                    $answers[] = array(
+                        'question_type' => $question['ReviewQuestion']['question_type'],
+                        'question_number' => $question['ReviewQuestion']['question_number'],
+                        'review_type' => $question['ReviewQuestion']['review_type'],
+                        'question' => $question['ReviewQuestion']['question']
+                    );
+                }
+            }
+
+            $data = array(
+                'application_id' => $application_id,
+                'user_id' => $this->Auth->User('id'),
+                'type' => 'reviewer_comment',
+                'assessment_type' => $review_type,
+                'title' => $linkToken
+            );
+            if ($this->Review->saveAssociated(array('Review' => $data, 'ReviewAnswer' => $answers))) {
+                $this->Session->setFlash(__('A linked copy has been created. You can now update each section for your own response.'), 'alerts/flash_success');
+                $this->redirect($this->_buildApplicationViewRedirect($application_id, $this->Review->id));
+            } else {
+                $this->Session->setFlash(__('The linked internal review copy could not be created. Please contact the administrator.'), 'alerts/flash_error');
+                $this->redirect($this->_buildApplicationViewRedirect($application_id));
+            }
+        }
+
         $application = $this->Application->find('first', array(
             'conditions' => array('Application.id' => $application_id),
         ));
@@ -287,7 +419,7 @@ class ReviewsController extends AppController
         );
         if ($this->Review->saveAssociated(array('Review' => $data, 'ReviewAnswer' => $answers))) {
             $this->Session->setFlash(__('The review assessment form has been created. Kindly complete review'), 'alerts/flash_success');
-            $this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id, 'rreview_view' => $this->Review->id));
+            $this->redirect($this->_buildApplicationViewRedirect($application_id, $this->Review->id));
         } else {
             $this->Session->setFlash(__('The review assessment could not be created. Please contact the administrator.'), 'alerts/flash_error');
         }
@@ -485,12 +617,12 @@ class ReviewsController extends AppController
                 } else {
                     $this->Session->setFlash(__('The review has been saved'), 'alerts/flash_success');
                 }
-                $this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id, 'rreview_view' => $id));
+                $this->redirect($this->_buildApplicationViewRedirect($application_id, $id));
             } else {
                 $this->Session->setFlash(__('The review could not be saved. Please, try again.'), 'alerts/flash_error');
             }
         } else {
-            $this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id, 'rreview_view' => $id));
+            $this->redirect($this->_buildApplicationViewRedirect($application_id, $id));
         }
     }
     public function manager_assess($id = null, $application_id = null)
@@ -498,6 +630,10 @@ class ReviewsController extends AppController
         $this->assess($id, $application_id);
     }
     public function reviewer_assess($id = null, $application_id = null)
+    {
+        $this->assess($id, $application_id);
+    }
+    public function internalreviewer_assess($id = null, $application_id = null)
     {
         $this->assess($id, $application_id);
     }
@@ -515,12 +651,12 @@ class ReviewsController extends AppController
                     $this->Review->saveField('status', 'Summary');
                 }
                 $this->Session->setFlash(__('The review has been saved'), 'alerts/flash_success');
-                $this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id, 'rreview_view' => $id));
+                $this->redirect($this->_buildApplicationViewRedirect($application_id, $id));
             } else {
                 $this->Session->setFlash(__('The review could not be saved. Please, try again.'), 'alerts/flash_error');
             }
         } else {
-            $this->redirect(array('controller' => 'applications', 'action' => 'view', $application_id, 'rreview_view' => $id));
+            $this->redirect($this->_buildApplicationViewRedirect($application_id, $id));
         }
     }
     public function manager_summary($id = null, $application_id = null)
@@ -528,6 +664,10 @@ class ReviewsController extends AppController
         $this->summary($id, $application_id);
     }
     public function reviewer_summary($id = null, $application_id = null)
+    {
+        $this->summary($id, $application_id);
+    }
+    public function internalreviewer_summary($id = null, $application_id = null)
     {
         $this->summary($id, $application_id);
     }
@@ -746,6 +886,10 @@ class ReviewsController extends AppController
     {
         $this->download_assessment($id);
     }
+    public function internalreviewer_download_assessment($id = null)
+    {
+        $this->download_assessment($id);
+    }
 
     private function download_summary($id = null)
     {
@@ -781,6 +925,10 @@ class ReviewsController extends AppController
         $this->download_summary($id);
     }
     public function reviewer_download_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+    public function internalreviewer_download_summary($id = null)
     {
         $this->download_summary($id);
     }
@@ -1157,9 +1305,5 @@ class ReviewsController extends AppController
     public function internalreviewer_add($application_id = null, $review_type = null, $source_review_id = null)
     {
         $this->add($application_id, $review_type, $source_review_id);
-    }
-    public function internalreviewer_assess($id = null, $application_id = null)
-    {
-        $this->assess($id, $application_id);
     }
 }
