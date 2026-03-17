@@ -1961,6 +1961,34 @@ class ApplicationsController extends AppController
         $this->set(compact('trial_statuses'));
     }
 
+    public function internalreviewer_index()
+    {
+        $this->Prg->commonProcess();
+        $page_options = array('5' => '5', '10' => '10');
+        if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) $this->passedArgs['range'] = true;
+        if (!empty($this->passedArgs['month_year'])) $this->passedArgs['mode'] = true;
+        if (isset($this->passedArgs['pages']) && !empty($this->passedArgs['pages'])) $this->paginate['limit'] = $this->passedArgs['pages'];
+        else $this->paginate['limit'] = reset($page_options);
+
+        $my_applications = $this->Application->Review->find('list', array(
+            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request', 'Review.accepted' => 'accepted'),
+            'fields' => array('Review.application_id')
+        ));
+
+        $criteria = $this->Application->parseCriteria($this->passedArgs);
+        $criteria['Application.submitted'] = 1;
+        $criteria['Application.id'] = $my_applications;
+        $this->paginate['conditions'] = $criteria;
+        $this->paginate['order'] = array('Application.created' => 'desc');
+        $this->paginate['contain'] = array('InvestigatorContact', 'Sponsor', 'SiteDetail' => array('County'));
+
+        $this->set('page_options', $page_options);
+        $this->set('applications', Sanitize::clean($this->paginate(), array('encode' => false)));
+
+        $trial_statuses = $this->Application->TrialStatus->find('list');
+        $this->set(compact('trial_statuses'));
+    }
+
     public function reviewer_index()
     {
         $this->Prg->commonProcess();
@@ -2322,7 +2350,8 @@ class ApplicationsController extends AppController
         $this->set('counties', $this->Application->SiteDetail->County->find('list'));
         $this->set('users', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(3, 2, 6), 'User.is_active' => 1))));
         $this->set('inspectors', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(2, 6), 'User.is_active' => 1))));
-
+        $this->set('external', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(9), 'User.is_active' => 1))));
+       
 
         $this->request->data = $application;
 
@@ -3908,5 +3937,224 @@ class ApplicationsController extends AppController
             $this->Session->setFlash(__('Failed to update the application status: '), 'alerts/flash_error'); // Displaying application save errors
             $this->redirect($this->referer());
         }
+    }
+
+
+    public function internalreviewer_view($id = null)
+    {
+        $this->Application->id = $id;
+        if (!$this->Application->exists()) {
+            throw new NotFoundException(__('Invalid application'));
+        }
+        $this->set('priorInternalFeedback', array());
+ 
+        $my_applications = $this->Application->Review->find('list', array(
+            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request',  'Review.application_id' => $id),
+            'fields' => array('Review.id', 'Review.accepted')
+        ));
+        
+        $accept = array_search('accepted', $my_applications);
+        $declined = array_search('declined', $my_applications);
+      
+        if ($accept) {
+            $contains = $this->a_contain;
+            $contains['Review']['conditions'] = array('Review.user_id' => $this->Auth->User('id'),  'Review.type' => 'reviewer_comment');
+            $contains['ManagerReview'] = array('conditions' => array('ManagerReview.type' => 'ppb_comment'), 'InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User');
+            $application = $this->Application->find('first', array(
+                'conditions' => array('Application.id' => $id),
+                'contain' => $contains
+            ));
+            $priorInternalFeedback = $this->_buildPriorInternalFeedback($id, (int) $this->Auth->User('id'));
+            $this->set('counties', $this->Application->SiteDetail->County->find('list'));
+            $this->set('application', $application);
+            $this->set('priorInternalFeedback', $priorInternalFeedback);
+            if ($application['Application']['deactivated']) {
+                $this->render('reviewer_minimal_view');
+            }
+        } elseif ($declined) {
+            $this->Session->setFlash(__('You have declined to review this protocol.'), 'alerts/flash_info');
+            $this->redirect(array('action' => 'index'));
+        } else {
+            $application = $this->Application->find('first', array(
+                'conditions' => array('Application.id' => $id),
+                'contain' => array('Review' => array('conditions' => array('Review.user_id' => $this->Auth->User('id')))),
+            ));
+            $this->set('application', $application);
+            $this->render('reviewer_minimal_view');
+        }
+
+        if ($application['Application']['deactivated'] || $application['Application']['approved'] == 1) {
+            $this->render('applicant_minimal_view');
+        }
+
+        $this->request->data = $application;
+
+        if (strpos($this->request->url, 'pdf') !== false) {
+            $this->pdfConfig = array('filename' => 'Application_' . $id,  'orientation' => 'portrait');
+        }
+    }
+
+    private function _buildPriorInternalFeedback($applicationId, $currentUserId)
+    {
+        $this->loadModel('Review');
+        $priorFeedback = array();
+
+        $currentInternalRequest = $this->Review->find('first', array(
+            'conditions' => array(
+                'Review.application_id' => $applicationId,
+                'Review.type' => 'request',
+                'Review.category' => 1,
+                'Review.user_id' => $currentUserId
+            ),
+            'fields' => array('Review.id'),
+            'order' => array('Review.created' => 'ASC', 'Review.id' => 'ASC'),
+            'contain' => array()
+        ));
+        if (empty($currentInternalRequest['Review']['id'])) {
+            return $priorFeedback;
+        }
+
+        $previousInternalUsers = $this->Review->find('list', array(
+            'conditions' => array(
+                'Review.application_id' => $applicationId,
+                'Review.type' => 'request',
+                'Review.category' => 1,
+                'Review.id <' => $currentInternalRequest['Review']['id']
+            ),
+            'fields' => array('Review.user_id', 'Review.user_id'),
+            'contain' => array()
+        ));
+        if (empty($previousInternalUsers)) {
+            return $priorFeedback;
+        }
+
+        $reviewResponses = $this->Review->find('all', array(
+            'conditions' => array(
+                'Review.application_id' => $applicationId,
+                'Review.user_id' => array_values(array_unique($previousInternalUsers)),
+                'Review.type' => 'reviewer_comment'
+            ),
+            'fields' => array('Review.id', 'Review.user_id', 'Review.assessment_type', 'Review.recommendation', 'Review.status', 'Review.summary', 'Review.created'),
+            'contain' => array(
+                'User' => array('fields' => array('User.id', 'User.name', 'User.username')),
+                'ReviewAnswer' => array(
+                    'fields' => array(
+                        'ReviewAnswer.id',
+                        'ReviewAnswer.question_type',
+                        'ReviewAnswer.review_type',
+                        'ReviewAnswer.question_number',
+                        'ReviewAnswer.question',
+                        'ReviewAnswer.answer',
+                        'ReviewAnswer.workspace',
+                        'ReviewAnswer.comment'
+                    ),
+                    'order' => array('ReviewAnswer.question_number' => 'ASC', 'ReviewAnswer.id' => 'ASC')
+                ),
+                'InternalComment' => array('Attachment')
+            ),
+            'order' => array('Review.created' => 'ASC', 'Review.id' => 'ASC')
+        ));
+
+        // Ensure comment attachments are always hydrated for modal rendering.
+        // Some environments return InternalComment without nested Attachment.
+        $internalCommentIds = array();
+        foreach ($reviewResponses as $reviewResponse) {
+            if (!empty($reviewResponse['InternalComment'])) {
+                foreach ((array) $reviewResponse['InternalComment'] as $internalComment) {
+                    if (!empty($internalComment['id'])) {
+                        $internalCommentIds[] = (int) $internalComment['id'];
+                    }
+                }
+            }
+        }
+
+        $attachmentsByCommentId = array();
+        if (!empty($internalCommentIds)) {
+            $internalCommentIds = array_values(array_unique($internalCommentIds));
+            $attachmentRows = $this->Review->InternalComment->Attachment->find('all', array(
+                'conditions' => array(
+                    'Attachment.model' => 'Comments',
+                    'Attachment.foreign_key' => $internalCommentIds
+                ),
+                'fields' => array('Attachment.id', 'Attachment.foreign_key', 'Attachment.basename', 'Attachment.dirname', 'Attachment.model', 'Attachment.group', 'Attachment.created'),
+                'order' => array('Attachment.id' => 'ASC'),
+                'contain' => array()
+            ));
+
+            foreach ($attachmentRows as $attachmentRow) {
+                $commentId = !empty($attachmentRow['Attachment']['foreign_key']) ? (int) $attachmentRow['Attachment']['foreign_key'] : 0;
+                if ($commentId > 0) {
+                    if (empty($attachmentsByCommentId[$commentId])) {
+                        $attachmentsByCommentId[$commentId] = array();
+                    }
+                    $attachmentsByCommentId[$commentId][] = $attachmentRow['Attachment'];
+                }
+            }
+        }
+
+        if (!empty($attachmentsByCommentId)) {
+            foreach ($reviewResponses as $reviewIndex => $reviewResponse) {
+                if (empty($reviewResponse['InternalComment']) || !is_array($reviewResponse['InternalComment'])) {
+                    continue;
+                }
+
+                foreach ($reviewResponse['InternalComment'] as $commentIndex => $internalComment) {
+                    $commentId = !empty($internalComment['id']) ? (int) $internalComment['id'] : 0;
+                    if ($commentId > 0 && !empty($attachmentsByCommentId[$commentId])) {
+                        $reviewResponses[$reviewIndex]['InternalComment'][$commentIndex]['Attachment'] = $attachmentsByCommentId[$commentId];
+                    }
+                }
+            }
+        }
+
+        $missingUserIds = array();
+        foreach ($reviewResponses as $reviewResponse) {
+            if (empty($reviewResponse['User']['name']) && !empty($reviewResponse['Review']['user_id'])) {
+                $missingUserIds[] = (int) $reviewResponse['Review']['user_id'];
+            }
+        }
+
+        $reviewerNameLookup = array();
+        if (!empty($missingUserIds)) {
+            $missingUserIds = array_values(array_unique($missingUserIds));
+            $userRows = $this->Review->User->find('all', array(
+                'conditions' => array('User.id' => $missingUserIds),
+                'fields' => array('User.id', 'User.name', 'User.username'),
+                'contain' => array()
+            ));
+            foreach ($userRows as $userRow) {
+                $displayName = trim((string) $userRow['User']['name']);
+                if ($displayName === '') {
+                    $displayName = trim((string) $userRow['User']['username']);
+                }
+                if ($displayName !== '') {
+                    $reviewerNameLookup[(int) $userRow['User']['id']] = $displayName;
+                }
+            }
+        }
+
+        foreach ($reviewResponses as $reviewResponse) {
+            $reviewUserId = !empty($reviewResponse['Review']['user_id']) ? (int) $reviewResponse['Review']['user_id'] : 0;
+            if ($reviewUserId > 0 && empty($reviewResponse['User']['name']) && !empty($reviewerNameLookup[$reviewUserId])) {
+                $reviewResponse['User']['name'] = $reviewerNameLookup[$reviewUserId];
+            }
+
+            $feedbackAnswers = array();
+            foreach ($reviewResponse['ReviewAnswer'] as $answer) {
+                $hasAnswer = trim((string) $answer['answer']) !== '';
+                $hasWorkspace = trim((string) $answer['workspace']) !== '';
+                $hasComment = trim((string) $answer['comment']) !== '';
+                if ($hasAnswer || $hasWorkspace || $hasComment) {
+                    $feedbackAnswers[] = $answer;
+                }
+            }
+
+            if (!empty($feedbackAnswers) || trim((string) $reviewResponse['Review']['summary']) !== '') {
+                $reviewResponse['FeedbackAnswer'] = $feedbackAnswers;
+                $priorFeedback[] = $reviewResponse;
+            }
+        }
+
+        return $priorFeedback;
     }
 }

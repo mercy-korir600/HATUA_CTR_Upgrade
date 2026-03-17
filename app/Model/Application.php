@@ -212,6 +212,13 @@ class Application extends AppModel
             'className' => 'Review',
             'foreignKey' => 'application_id',
             'dependent' => false,
+            'conditions' => array('Review.category' => '0'),
+        ),
+        'InternalReview' => array(
+            'className' => 'Review',
+            'foreignKey' => 'application_id',
+            'dependent' => false,
+            'conditions' => array('InternalReview.category' => '1'),
         ),
         'ActiveInspector' => array(
             'className' => 'ActiveInspector',

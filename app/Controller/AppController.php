@@ -71,6 +71,8 @@ class AppController extends Controller
     'Document',
     'ActiveInspector',
     'Review'  => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User'),
+    'InternalReview'  => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment'), 'ReviewAnswer', 'User'),
+    
     'Sae',
     'AmendmentLetter',
     'AnnualLetter' => array('InternalComment' => array('Attachment'), 'ExternalComment' => array('Attachment')),
@@ -116,6 +118,7 @@ class AppController extends Controller
     if ($this->Auth->User('group_id') == '6')  $redir = 'inspector';
     if ($this->Auth->User('group_id') == '7')  $redir = 'monitor';
     if ($this->Auth->User('group_id') == '8')  $redir = 'outsource';
+    if ($this->Auth->User('group_id') == '9')  $redir = 'internalreviewer';
 
     $this->Auth->loginAction = array('controller' => 'users', 'action' => 'login', 'admin' => false);
     $this->Auth->logoutRedirect = array('controller' => 'users', 'action' => 'login', 'admin' => false);
@@ -137,7 +140,23 @@ class AppController extends Controller
     //     'Form'
     // );
   }
+  public function beforeRender()
+  {
+    parent::beforeRender();
 
+    $requestExt = !empty($this->request->params['ext']) ? strtolower($this->request->params['ext']) : '';
+    $requestUrl = !empty($this->request->url) ? strtolower($this->request->url) : '';
+    $isPdfRequest = ($requestExt === 'pdf') || (strpos($requestUrl, '.pdf') !== false);
+    if (
+      $isPdfRequest &&
+      isset($this->pdfConfig) &&
+      is_array($this->pdfConfig) &&
+      !empty($this->pdfConfig['filename']) &&
+      !preg_match('/\.pdf$/i', $this->pdfConfig['filename'])
+    ) {
+      $this->pdfConfig['filename'] .= '.pdf';
+    }
+  }
   // public function isAuthorized($user) {
   // if (empty($this->request->prefix)) {
   // return true;

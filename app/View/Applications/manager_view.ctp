@@ -396,17 +396,17 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
       }
     }
 
-    // foreach ($application['InternalReview'] as $review) {
-    //   if ($review['type'] == 'request' && $review['accepted'] != 'declined') {
-    //     $count_internal_reviews++;
-    //   }
-    //   if ($review['type'] == 'reviewer_comment' && !$isLinkedInternalReviewCopy($review)) {
-    //     $count_comments++;
-    //   }
-    //   if ($review['type'] == 'ppb_comment') {
-    //     $my_reviews++;
-    //   }
-    // }
+    foreach ($application['InternalReview'] as $review) {
+      if ($review['type'] == 'request' && $review['accepted'] != 'declined') {
+        $count_internal_reviews++;
+      }
+      if ($review['type'] == 'reviewer_comment' && !$isLinkedInternalReviewCopy($review)) {
+        $count_comments++;
+      }
+      if ($review['type'] == 'ppb_comment') {
+        $my_reviews++;
+      }
+    }
     $count_assigned_reviewers = $count_reviews + $count_internal_reviews;
     ?>
     <li><a href="#tab2" data-toggle="tab">Assigned Reviewers <small>(<?php echo $count_assigned_reviewers; ?>)</small></a></li>
