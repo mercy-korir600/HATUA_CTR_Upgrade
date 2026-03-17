@@ -908,12 +908,15 @@ class ApplicationsController extends AppController
             'TrialStatus',
             'InvestigatorContact',
             'Sponsor',
+            'Amendment',
             'AmendmentChecklist',
             'AmendmentApproval',
+            'AmendmentApprovalSummary',
+            'AmendmentLetter',
             'SiteDetail' => array('County')
         );
 
-        $limit = isset($this->paginate['limit']) ? $this->paginate['limit'] : 1000;
+        $exportLimit = 10000;
 
         //in case of csv export
         if (isset($this->request->params['ext']) && $this->request->params['ext'] == 'csv') {
@@ -924,54 +927,433 @@ class ApplicationsController extends AppController
                 array(
                     'conditions' => $this->paginate['conditions'],
                     'order' => $this->paginate['order'],
-                    'contain' => $this->a_contain,
-                    'limit' => 10000
+                    'contain' => $this->paginate['contain'],
+                    'limit' => $exportLimit
                 )
             );
 
             foreach ($apps as $app) {
-                if (!empty($app['AmendmentApproval'])) {
+                if ($this->_applicationHasAmendmentData($app)) {
                     $applications[] = $app;
                 }
             }
+            $amendmentTimelineSummary = $this->_buildAmendmentTimelineSummary($applications);
 
             $this->response->download('applications_' . date('Ymd_Hi') . '.csv'); // <= setting the file name
-            $this->set(compact('applications'));
+            $this->set(compact('applications', 'amendmentTimelineSummary'));
             $this->layout = false;
             $this->render('amendment_csv_export');
+            return;
         }
         //end csv exports
 
 
         //in case of pdf export
         if (isset($this->request->params['ext']) && $this->request->params['ext'] == 'pdf') {
-
-
-            $contain = $this->a_contain;
             $apps = $this->Application->find(
                 'all',
                 array(
                     'conditions' => $this->paginate['conditions'],
                     'order' => $this->paginate['order'],
-                    'contain' => $contain,
-                    'limit' => $limit
+                    'contain' => $this->paginate['contain'],
+                    'limit' => $exportLimit
                 )
             );
-
-
-            $this->set(compact('applications'));
-            $this->pdfConfig = array('filename' => 'Applications',  'orientation' => 'portrait');
+            $applications = array();
+            foreach ($apps as $app) {
+                if ($this->_applicationHasAmendmentData($app)) {
+                    $applications[] = $app;
+                }
+            }
+            $amendmentTimelineSummary = $this->_buildAmendmentTimelineSummary($applications);
+            $this->set(compact('applications', 'amendmentTimelineSummary'));
+            $this->pdfConfig = array('filename' => 'Applications',  'orientation' => 'landscape');
+            return;
         }
         //end pdf export
 
         $this->set('page_options', $page_options);
         $this->set('applications', Sanitize::clean($this->paginate(), array('encode' => false)));
-        $this->set('users', $this->Application->User->find('list', array('conditions' => array('User.group_id' => 3, 'User.is_active' => 1))));
+        $this->set('users', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(3, 9), 'User.is_active' => 1))));
         $this->loadModel('Erc');
         $this->set('ercs', $this->Erc->find('list', array('fields' => array('Erc.name', 'Erc.name'),)));
 
         $trial_statuses = $this->Application->TrialStatus->find('list');
         $this->set(compact('trial_statuses'));
+    }
+
+    private function _applicationHasAmendmentData($application)
+    {
+        return !empty($application['Amendment'])
+            || !empty($application['AmendmentChecklist'])
+            || !empty($application['AmendmentApproval'])
+            || !empty($application['AmendmentApprovalSummary'])
+            || !empty($application['AmendmentLetter']);
+    }
+
+    private function _normalizeAmendmentTimelineKey($value)
+    {
+        $normalized = html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
+        $normalized = str_replace(array("\xC2\xA0", "\xA0"), ' ', $normalized);
+        $normalized = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $normalized);
+        $normalized = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $normalized);
+        $normalized = strtolower(trim((string)$normalized));
+        $normalized = preg_replace('/^[\-\s_]+/', '', $normalized);
+        $normalized = preg_replace('/^\-+/', '', $normalized);
+        $normalized = preg_replace('/^amd[\s_-]*/u', '', $normalized);
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (is_numeric($normalized)) {
+            $numericValue = (float)$normalized;
+            if (floor($numericValue) == $numericValue) {
+                $normalized = (string)(int)$numericValue;
+            } else {
+                $normalized = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+            }
+        } else {
+            $normalized = preg_replace('/[^a-z0-9.-]/', '', $normalized);
+        }
+
+        return trim((string)$normalized);
+    }
+
+    private function _formatAmendmentTimelineLabel($value)
+    {
+        $raw = html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
+        $raw = str_replace(array("\xC2\xA0", "\xA0"), ' ', $raw);
+        $raw = preg_replace('/[\x{00A0}\x{202F}]/u', ' ', $raw);
+        $raw = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2212}]/u', '-', $raw);
+
+        if (preg_match('/([0-9]+(?:\.[0-9]+)?)/', (string)$raw, $matches)) {
+            $number = trim((string)$matches[1]);
+            if (is_numeric($number)) {
+                $numericValue = (float)$number;
+                if (floor($numericValue) == $numericValue) {
+                    $number = (string)(int)$numericValue;
+                } else {
+                    $number = rtrim(rtrim(number_format($numericValue, 6, '.', ''), '0'), '.');
+                }
+            }
+            return 'AMD-' . strtoupper((string)$number);
+        }
+
+        $key = $this->_normalizeAmendmentTimelineKey($raw);
+        if ($key === '') {
+            return 'AMD';
+        }
+
+        return 'AMD-' . strtoupper((string)$key);
+    }
+
+    private function _extractAmendmentTimelineNumber($value)
+    {
+        if (preg_match('/([0-9]+(?:\.[0-9]+)?)/', (string)$value, $matches)) {
+            return (float)$matches[1];
+        }
+        return null;
+    }
+
+    private function _compareAmendmentTimelineKeys($left, $right)
+    {
+        $leftNumber = $this->_extractAmendmentTimelineNumber($left);
+        $rightNumber = $this->_extractAmendmentTimelineNumber($right);
+
+        if ($leftNumber === $rightNumber) {
+            return strnatcasecmp((string)$left, (string)$right);
+        }
+        if ($leftNumber === null) {
+            return 1;
+        }
+        if ($rightNumber === null) {
+            return -1;
+        }
+
+        return ($leftNumber < $rightNumber) ? -1 : 1;
+    }
+
+    private function _compareAmendmentRowsById($left, $right)
+    {
+        $leftId = !empty($left['id']) ? (int)$left['id'] : 0;
+        $rightId = !empty($right['id']) ? (int)$right['id'] : 0;
+
+        if ($leftId === $rightId) {
+            $leftCreated = !empty($left['created']) ? strtotime($left['created']) : 0;
+            $rightCreated = !empty($right['created']) ? strtotime($right['created']) : 0;
+            if ($leftCreated === $rightCreated) {
+                return 0;
+            }
+            return ($leftCreated < $rightCreated) ? -1 : 1;
+        }
+
+        return ($leftId < $rightId) ? -1 : 1;
+    }
+
+    private function _timestampFromDateValue($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return 0;
+        }
+
+        $timestamp = strtotime($value);
+        if ($timestamp !== false) {
+            return (int)$timestamp;
+        }
+
+        $formats = array('d-m-Y', 'd/m/Y', 'Y-m-d', 'd-m-Y H:i:s', 'Y-m-d H:i:s');
+        foreach ($formats as $format) {
+            $date = DateTime::createFromFormat($format, $value);
+            if ($date instanceof DateTime) {
+                return (int)$date->getTimestamp();
+            }
+        }
+
+        return 0;
+    }
+
+    private function _newAmendmentTimelineEntry($key)
+    {
+        return array(
+            'key' => (string)$key,
+            'label' => $this->_formatAmendmentTimelineLabel($key),
+            'sort_ts' => 0,
+            'stages' => array(
+                'created' => array('ts' => 0, 'date' => '-'),
+                'submitted' => array('ts' => 0, 'date' => '-'),
+                'review' => array('ts' => 0, 'date' => '-'),
+                'approved' => array('ts' => 0, 'date' => '-'),
+            )
+        );
+    }
+
+    private function _setAmendmentTimelineStage(&$timelineMap, $key, $stage, $timestamp, $mode = 'earliest')
+    {
+        if (empty($timelineMap[$key]) || $timestamp <= 0) {
+            return;
+        }
+
+        $currentTs = !empty($timelineMap[$key]['stages'][$stage]['ts']) ? (int)$timelineMap[$key]['stages'][$stage]['ts'] : 0;
+        $shouldUpdate = false;
+
+        if ($currentTs <= 0) {
+            $shouldUpdate = true;
+        } elseif ($mode === 'latest' && $timestamp > $currentTs) {
+            $shouldUpdate = true;
+        } elseif ($mode !== 'latest' && $timestamp < $currentTs) {
+            $shouldUpdate = true;
+        }
+
+        if ($shouldUpdate) {
+            $timelineMap[$key]['stages'][$stage]['ts'] = (int)$timestamp;
+            $timelineMap[$key]['stages'][$stage]['date'] = date('d-M-Y', (int)$timestamp);
+        }
+
+        if ((int)$timestamp > (int)$timelineMap[$key]['sort_ts']) {
+            $timelineMap[$key]['sort_ts'] = (int)$timestamp;
+        }
+    }
+
+    private function _buildAmendmentTimelineEntries($application)
+    {
+        $timelineMap = array();
+        $aliases = array();
+
+        $amendments = !empty($application['Amendment']) && is_array($application['Amendment']) ? array_values($application['Amendment']) : array();
+        if (!empty($amendments)) {
+            usort($amendments, array($this, '_compareAmendmentRowsById'));
+        }
+
+        $sequence = 0;
+        foreach ($amendments as $amendmentRow) {
+            $sequence++;
+            $sequenceKey = $this->_normalizeAmendmentTimelineKey('amd-' . $sequence);
+            if ($sequenceKey === '') {
+                continue;
+            }
+
+            if (empty($timelineMap[$sequenceKey])) {
+                $timelineMap[$sequenceKey] = $this->_newAmendmentTimelineEntry($sequenceKey);
+            }
+            $aliases[$sequenceKey] = $sequenceKey;
+
+            $ecctRefKey = $this->_normalizeAmendmentTimelineKey(!empty($amendmentRow['ecct_ref_number']) ? $amendmentRow['ecct_ref_number'] : '');
+            if ($ecctRefKey !== '') {
+                $aliases[$ecctRefKey] = $sequenceKey;
+            }
+
+            $createdTs = $this->_timestampFromDateValue(!empty($amendmentRow['created']) ? $amendmentRow['created'] : '');
+            $this->_setAmendmentTimelineStage($timelineMap, $sequenceKey, 'created', $createdTs, 'earliest');
+        }
+
+        $checklists = !empty($application['AmendmentChecklist']) && is_array($application['AmendmentChecklist']) ? $application['AmendmentChecklist'] : array();
+        foreach ($checklists as $checklist) {
+            $yearKey = $this->_normalizeAmendmentTimelineKey(!empty($checklist['year']) ? $checklist['year'] : '');
+            if ($yearKey === '') {
+                continue;
+            }
+            if (!empty($aliases[$yearKey])) {
+                $yearKey = $aliases[$yearKey];
+            }
+            if (empty($timelineMap[$yearKey])) {
+                $timelineMap[$yearKey] = $this->_newAmendmentTimelineEntry($yearKey);
+            }
+
+            $checklistTs = $this->_timestampFromDateValue(!empty($checklist['created']) ? $checklist['created'] : '');
+            if ($checklistTs <= 0) {
+                $checklistTs = $this->_timestampFromDateValue(!empty($checklist['file_date']) ? $checklist['file_date'] : '');
+            }
+
+            $this->_setAmendmentTimelineStage($timelineMap, $yearKey, 'created', $checklistTs, 'earliest');
+            $this->_setAmendmentTimelineStage($timelineMap, $yearKey, 'submitted', $checklistTs, 'latest');
+        }
+
+        $summaries = !empty($application['AmendmentApprovalSummary']) && is_array($application['AmendmentApprovalSummary']) ? $application['AmendmentApprovalSummary'] : array();
+        foreach ($summaries as $summary) {
+            $yearKey = $this->_normalizeAmendmentTimelineKey(!empty($summary['amendment']) ? $summary['amendment'] : '');
+            if ($yearKey === '') {
+                continue;
+            }
+            if (!empty($aliases[$yearKey])) {
+                $yearKey = $aliases[$yearKey];
+            }
+            if (empty($timelineMap[$yearKey])) {
+                $timelineMap[$yearKey] = $this->_newAmendmentTimelineEntry($yearKey);
+            }
+
+            $reviewTs = $this->_timestampFromDateValue(!empty($summary['created']) ? $summary['created'] : '');
+            if ($reviewTs <= 0) {
+                $reviewTs = $this->_timestampFromDateValue(!empty($summary['approval_date']) ? $summary['approval_date'] : '');
+            }
+            $this->_setAmendmentTimelineStage($timelineMap, $yearKey, 'review', $reviewTs, 'earliest');
+        }
+
+        $approvals = !empty($application['AmendmentApproval']) && is_array($application['AmendmentApproval']) ? $application['AmendmentApproval'] : array();
+        foreach ($approvals as $approval) {
+            $yearKey = $this->_normalizeAmendmentTimelineKey(!empty($approval['amendment']) ? $approval['amendment'] : '');
+            if ($yearKey === '') {
+                continue;
+            }
+            if (!empty($aliases[$yearKey])) {
+                $yearKey = $aliases[$yearKey];
+            }
+            if (empty($timelineMap[$yearKey])) {
+                $timelineMap[$yearKey] = $this->_newAmendmentTimelineEntry($yearKey);
+            }
+
+            $decisionTs = $this->_timestampFromDateValue(!empty($approval['created']) ? $approval['created'] : '');
+            if ($decisionTs <= 0) {
+                $decisionTs = $this->_timestampFromDateValue(!empty($approval['approval_date']) ? $approval['approval_date'] : '');
+            }
+            $decisionStatus = strtolower(trim((string) (!empty($approval['status']) ? $approval['status'] : '')));
+
+            if ($decisionStatus !== 'summary') {
+                $this->_setAmendmentTimelineStage($timelineMap, $yearKey, 'review', $decisionTs, 'earliest');
+            }
+            if ($decisionStatus === 'approved' || $decisionStatus === 'rejected') {
+                $this->_setAmendmentTimelineStage($timelineMap, $yearKey, 'approved', $decisionTs, 'latest');
+            }
+        }
+
+        $letters = !empty($application['AmendmentLetter']) && is_array($application['AmendmentLetter']) ? $application['AmendmentLetter'] : array();
+        foreach ($letters as $letter) {
+            $isSubmittedLetter = ((string) (!empty($letter['submitted']) ? $letter['submitted'] : '') === '1' || (int) (!empty($letter['submitted']) ? $letter['submitted'] : 0) === 1);
+            if (!$isSubmittedLetter) {
+                continue;
+            }
+
+            $yearKey = $this->_normalizeAmendmentTimelineKey(!empty($letter['status']) ? $letter['status'] : '');
+            if ($yearKey === '') {
+                continue;
+            }
+            if (!empty($aliases[$yearKey])) {
+                $yearKey = $aliases[$yearKey];
+            }
+            if (empty($timelineMap[$yearKey])) {
+                $timelineMap[$yearKey] = $this->_newAmendmentTimelineEntry($yearKey);
+            }
+
+            $letterTs = $this->_timestampFromDateValue(!empty($letter['created']) ? $letter['created'] : '');
+            if ($letterTs <= 0) {
+                $letterTs = $this->_timestampFromDateValue(!empty($letter['approval_date']) ? $letter['approval_date'] : '');
+            }
+            $this->_setAmendmentTimelineStage($timelineMap, $yearKey, 'approved', $letterTs, 'latest');
+        }
+
+        foreach ($timelineMap as $yearKey => $entry) {
+            $submittedTs = !empty($entry['stages']['submitted']['ts']) ? (int)$entry['stages']['submitted']['ts'] : 0;
+            if ($submittedTs > 0) {
+                continue;
+            }
+
+            $fallbackTs = !empty($entry['stages']['review']['ts']) ? (int)$entry['stages']['review']['ts'] : 0;
+            if ($fallbackTs <= 0) {
+                $fallbackTs = !empty($entry['stages']['approved']['ts']) ? (int)$entry['stages']['approved']['ts'] : 0;
+            }
+            if ($fallbackTs > 0) {
+                $timelineMap[$yearKey]['stages']['submitted']['ts'] = $fallbackTs;
+                $timelineMap[$yearKey]['stages']['submitted']['date'] = date('d-M-Y', $fallbackTs);
+            }
+        }
+
+        $orderedKeys = array_keys($timelineMap);
+        if (!empty($orderedKeys)) {
+            usort($orderedKeys, array($this, '_compareAmendmentTimelineKeys'));
+        }
+
+        $entries = array();
+        foreach ($orderedKeys as $orderedKey) {
+            $entry = $timelineMap[$orderedKey];
+            $createdDate = !empty($entry['stages']['created']['date']) ? $entry['stages']['created']['date'] : '-';
+            $submittedDate = !empty($entry['stages']['submitted']['date']) ? $entry['stages']['submitted']['date'] : '-';
+            $reviewDate = !empty($entry['stages']['review']['date']) ? $entry['stages']['review']['date'] : '-';
+            $approvedDate = !empty($entry['stages']['approved']['date']) ? $entry['stages']['approved']['date'] : '-';
+
+            $entry['timeline_text'] = 'Created: ' . $createdDate
+                . ' | Submitted: ' . $submittedDate
+                . ' | Review: ' . $reviewDate
+                . ' | Approval: ' . $approvedDate;
+
+            $entries[] = $entry;
+        }
+
+        return $entries;
+    }
+
+    private function _buildAmendmentTimelineSummary($applications)
+    {
+        $summary = array(
+            'rows' => array(),
+            'max_amendments' => 0
+        );
+
+        if (empty($applications) || !is_array($applications)) {
+            return $summary;
+        }
+
+        foreach ($applications as $application) {
+            if (!$this->_applicationHasAmendmentData($application)) {
+                continue;
+            }
+
+            $timelines = $this->_buildAmendmentTimelineEntries($application);
+            if (empty($timelines)) {
+                continue;
+            }
+
+            $summary['rows'][] = array(
+                'application' => $application,
+                'timelines' => $timelines
+            );
+
+            $timelineCount = count($timelines);
+            if ($timelineCount > $summary['max_amendments']) {
+                $summary['max_amendments'] = $timelineCount;
+            }
+        }
+
+        return $summary;
     }
 
     /**
