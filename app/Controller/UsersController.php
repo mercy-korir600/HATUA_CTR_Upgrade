@@ -1142,6 +1142,27 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Deviations/outsource_edit'); //
         $this->Acl->allow($group, 'controllers/Deviations/outsource_delete'); //
         $this->Acl->allow($group, 'controllers/Comments'); //
+
+
+        $group->id = 9; 
+        $this->Acl->deny($group, 'controllers');
+        $this->Acl->allow($group, 'controllers/Applications/internalreviewer_index');
+        $this->Acl->allow($group, 'controllers/Applications/internalreviewer_view');
+        $this->Acl->allow($group, 'controllers/Applications/stages');
+        $this->Acl->allow($group, 'controllers/Attachments/internalreviewer_download');
+        $this->Acl->allow($group, 'controllers/Attachments/download');
+        $this->Acl->allow($group, 'controllers/Notifications');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_add');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_respond');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_assess');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_summary');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_download_assessment');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_download_summary');
+        $this->Acl->allow($group, 'controllers/Users/internalreviewer_dashboard');
+        $this->Acl->allow($group, 'controllers/Users/profile');
+        $this->Acl->allow($group, 'controllers/Users/edit');
+        $this->Acl->allow($group, 'controllers/Comments');
+        $this->Acl->allow($group, 'controllers/MeetingDates');
         //we add an exit to avoid an ugly "missing views" error message
         echo "all done";
         exit;
