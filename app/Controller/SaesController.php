@@ -643,6 +643,7 @@ class SaesController extends AppController
             if ($this->Sae->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
                 if (isset($this->request->data['submitReport'])) {
                     $this->Sae->saveField('approved', 1);
+                    $this->Sae->saveField('date_submitted', date('Y-m-d H:i:s'));
                     $sae = $this->Sae->read(null, $id);
 
                     //******************       Send Email and Notifications to Applicant and Managers          *****************************
@@ -754,6 +755,7 @@ class SaesController extends AppController
             if ($this->Sae->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
                 if (isset($this->request->data['submitReport'])) {
                     $this->Sae->saveField('approved', 1);
+                    $this->Sae->saveField('date_submitted', date('Y-m-d H:i:s'));
                     $sae = $this->Sae->read(null, $id);
 
                     //******************       Send Email and Notifications to Applicant and Managers          *****************************
@@ -864,6 +866,7 @@ class SaesController extends AppController
             if ($this->Sae->saveAssociated($this->request->data, array('validate' => $validate, 'deep' => true))) {
                 if (isset($this->request->data['submitReport'])) {
                     $this->Sae->saveField('approved', 1);
+                    $this->Sae->saveField('date_submitted', date('Y-m-d H:i:s'));
                     $sae = $this->Sae->read(null, $id);
 
                     //******************       Send Email and Notifications to Applicant and Managers          *****************************
