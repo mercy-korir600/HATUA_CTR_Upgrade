@@ -287,6 +287,7 @@
 $daysDifference = 0;
 $bgColor = '';
 // Ensure values exist
+if ($sae['Sae']['report_type'] != 'Followup') {
 if (!empty($sae['Sae']['date_submitted']) && !empty($sae['Sae']['reaction_onset'])) {
   $submittedDateStr = date('Y-m-d', strtotime($sae['Sae']['date_submitted']));
     $onsetDateStr     = date('Y-m-d', strtotime($sae['Sae']['reaction_onset'])); // normalize too
@@ -303,11 +304,11 @@ if (!empty($sae['Sae']['date_submitted']) && !empty($sae['Sae']['reaction_onset'
     } else {
         $bgColor = '#FDECEA';
     }
- 
+}
 }
 $cellStyle = $bgColor ? 'background-color:' . $bgColor . ' !important;' : '';
 ?>
-              <tr>
+                <tr>
                     <td style="<?= h($cellStyle) ?>"><?php echo   h($sae['Sae']['id']); ?>&nbsp;</td>
                     <td style="<?= h($cellStyle) ?>">
 
