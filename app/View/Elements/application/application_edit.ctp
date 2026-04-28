@@ -74,10 +74,10 @@ $this->Html->script('save', array('inline' => false));
           'placeholder' => '',
           'class' => 'input-xxlarge',
         ));
-        // echo $this->Form->input('protocol_no', array(
-        // 'label' => array('class' => 'control-label required', 'text' => 'Protocol No:<span class="sterix">*</span>'),
-        // 'placeholder' => ' ' , 'class' => 'input-xxlarge',
-        // ));
+        echo $this->Form->input('reference_no', array(
+        'label' => array('class' => 'control-label required', 'text' => 'Protocol No:<span class="sterix"></span>'),
+        'placeholder' => ' ' , 'class' => 'input-xxlarge',
+        ));
         echo $this->Form->input('version_no', array(
           'label' => array('class' => 'control-label required', 'text' => 'Version No: <span class="sterix">*</span>'),
           'placeholder' => ' ',

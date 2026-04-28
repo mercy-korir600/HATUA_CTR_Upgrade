@@ -31,6 +31,7 @@
  * ...and connect the rest of 'Pages' controller's urls.
  */
 	Router::connect('/pages/*', array('controller' => 'pages', 'action' => 'display'));
+	Router::connect('/api/sae/submit', array('controller' => 'saes', 'action' => 'submit'));
 
 	//APPLICANT ROUTING: DASHBOARD PAGE
 	Router::connect('/applicant', array('controller' => 'users', 'action' => 'dashboard', 'applicant' => true));	

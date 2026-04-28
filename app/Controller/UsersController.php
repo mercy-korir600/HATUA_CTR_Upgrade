@@ -1,5 +1,6 @@
 <?php
 App::uses('AppController', 'Controller');
+App::uses('AuthComponent', 'Controller/Component');
 App::uses('Validation', 'Utility');
 /**
  * Users Controller
@@ -20,7 +21,10 @@ class UsersController extends AppController
     {
         parent::beforeFilter();
         // $this->Auth->allow();
-        $this->Auth->allow('register', 'login', 'activate_account', 'forgotPassword', 'resetPassword', 'logout', 'initDB');
+        $this->Auth->allow('register', 'login', 'api_login', 'activate_account', 'forgotPassword', 'resetPassword', 'logout', 'initDB');
+        if (!empty($this->request->params['prefix']) && $this->request->params['prefix'] === 'api') {
+            $this->response->type('json');
+        }
     }
 
     public function forgotPassword()
@@ -426,6 +430,139 @@ class UsersController extends AppController
         }
     }
 
+    public function api_login()
+    {
+        if (!$this->request->is('post')) {
+            return $this->_apiJsonResponse(405, array(
+                'status' => 'error',
+                'message' => 'Only POST requests are allowed.'
+            ));
+        }
+
+        $requestPayload = $this->_readApiLoginPayload();
+        if (!empty($requestPayload['error'])) {
+            return $this->_apiJsonResponse(
+                $requestPayload['error']['status_code'],
+                array(
+                    'status' => 'error',
+                    'message' => $requestPayload['error']['message'],
+                    'errors' => $requestPayload['error']['errors']
+                )
+            );
+        }
+
+        $payload = $requestPayload['data'];
+        $identifier = '';
+        $password = '';
+
+        if (!empty($payload['User']) && is_array($payload['User'])) {
+            $payload = $payload['User'];
+        }
+
+        if (!empty($payload['username'])) {
+            $identifier = trim((string) $payload['username']);
+        } elseif (!empty($payload['email'])) {
+            $identifier = trim((string) $payload['email']);
+        } elseif (!empty($payload['identifier'])) {
+            $identifier = trim((string) $payload['identifier']);
+        }
+
+        if (isset($payload['password'])) {
+            $password = (string) $payload['password'];
+        }
+
+        $errors = array();
+        if ($identifier === '') {
+            $errors['username'] = array('Username or email is required.');
+        }
+        if ($password === '') {
+            $errors['password'] = array('Password is required.');
+        }
+
+        if (!empty($errors)) {
+            return $this->_apiJsonResponse(422, array(
+                'status' => 'error',
+                'message' => 'Please provide your username or email and password.',
+                'errors' => $errors
+            ));
+        }
+
+        $user = $this->User->find('first', array(
+            'contain' => array('Group'),
+            'conditions' => array(
+                'OR' => array(
+                    'User.username' => $identifier,
+                    'User.email' => $identifier
+                ),
+                'User.password' => AuthComponent::password($password)
+            ),
+            'fields' => array(
+                'User.id',
+                'User.group_id',
+                'User.name',
+                'User.username',
+                'User.email',
+                'User.phone_no',
+                'User.password',
+                'User.is_active',
+                'User.deactivated',
+                'User.created',
+                'User.modified'
+            )
+        ));
+
+        if (empty($user['User'])) {
+            $this->log(array('identifier' => $identifier, 'message' => 'Invalid API login credentials.'), 'sae_api_error');
+            return $this->_apiJsonResponse(401, array(
+                'status' => 'error',
+                'message' => 'Invalid username/email or password.'
+            ));
+        }
+
+        if (isset($user['User']['is_active']) && (int) $user['User']['is_active'] === 0) {
+            return $this->_apiJsonResponse(403, array(
+                'status' => 'error',
+                'message' => 'Your account is not activated.'
+            ));
+        }
+
+        if (isset($user['User']['deactivated']) && (int) $user['User']['deactivated'] === 1) {
+            return $this->_apiJsonResponse(403, array(
+                'status' => 'error',
+                'message' => 'Your account has been deactivated. Please contact PPB.'
+            ));
+        }
+
+        $tokenData = $this->_issueApiAccessToken($user['User']);
+        $auditUser = array(
+            'id' => $user['User']['id'],
+            'name' => !empty($user['User']['name']) ? $user['User']['name'] : $user['User']['username']
+        );
+        $message = 'A user with ID ' . $auditUser['id'] . ' and name ' . $auditUser['name'] . ' logged in via API';
+        $this->create_audit_trail('API Login', $auditUser, $message);
+
+        unset($user['User']['password']);
+
+        return $this->_apiJsonResponse(200, array(
+            'status' => 'success',
+            'message' => 'Login successful.',
+            'data' => array(
+                'access_token' => $tokenData['token'],
+                'token_type' => 'Bearer',
+                'expires_at' => date('Y-m-d H:i:s', $tokenData['expires_at']),
+                'user' => array(
+                    'id' => $user['User']['id'],
+                    'name' => !empty($user['User']['name']) ? $user['User']['name'] : null,
+                    'username' => !empty($user['User']['username']) ? $user['User']['username'] : null,
+                    'email' => !empty($user['User']['email']) ? $user['User']['email'] : null,
+                    'phone_no' => !empty($user['User']['phone_no']) ? $user['User']['phone_no'] : null,
+                    'group_id' => $user['User']['group_id'],
+                    'group_name' => !empty($user['Group']['name']) ? $user['Group']['name'] : null
+                )
+            )
+        ));
+    }
+
     public function logout()
     {
         $this->Session->setFlash('Good-Bye', 'alerts/flash_success');
@@ -433,6 +570,57 @@ class UsersController extends AppController
         $message = "A user with ID " . $user['id'] . " and name  " . $user['name'] . " logged out via Web";
         $this->create_audit_trail("Web Log Out", $user, $message);
         $this->redirect($this->Auth->logout());
+    }
+
+    private function _readApiLoginPayload()
+    {
+        $payload = $this->request->data;
+        if (is_array($payload) && !empty($payload)) {
+            return array('data' => $payload);
+        }
+
+        $rawBody = trim((string) $this->request->input());
+        if ($rawBody === '') {
+            return array(
+                'data' => array(),
+                'error' => array(
+                    'status_code' => 400,
+                    'message' => 'The request body is required.',
+                    'errors' => array(
+                        'body' => array('Please provide a JSON request body.')
+                    )
+                )
+            );
+        }
+
+        $decoded = json_decode($rawBody, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+            return array(
+                'data' => array(),
+                'error' => array(
+                    'status_code' => 400,
+                    'message' => 'The JSON request body is invalid.',
+                    'errors' => array(
+                        'body' => array(
+                            'Please provide a valid JSON object.',
+                            'JSON parser message: ' . json_last_error_msg()
+                        )
+                    )
+                )
+            );
+        }
+
+        return array('data' => $decoded);
+    }
+
+    private function _apiJsonResponse($statusCode, $payload = array())
+    {
+        $this->autoRender = false;
+        $this->_setApiResponseStatusCode($statusCode);
+        $this->response->type('json');
+        $this->response->body(json_encode($payload));
+
+        return $this->response;
     }
 
     /**

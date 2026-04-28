@@ -20,7 +20,7 @@ class SaesController extends AppController
     public function beforeFilter()
     {
         parent::beforeFilter();
-        $this->Auth->allow('fetch');
+        $this->Auth->allow('fetch', 'submit');
     }
     /**
      * index method
@@ -227,6 +227,680 @@ class SaesController extends AppController
         // $this->response->body(json_encode($response));
         // $this->autoRender = false ;
         // return $this->response->send();
+    }
+
+    public function submit()
+    {
+        if (!$this->request->is('post')) {
+            return $this->_jsonErrorResponse(405, 'Only POST requests are allowed for SAE submission.');
+        }
+
+        $user = $this->_getAuthenticatedApiUser();
+        if (empty($user['id'])) {
+            $this->_logSaeApiAttempt('failed', 'Unauthenticated SAE submission attempt.', array(
+                'status_code' => 401
+            ));
+
+            return $this->_jsonErrorResponse(401, 'Authentication required. Provide a valid Bearer token in the Authorization header or an access_token in the request.');
+        }
+
+        $rawBody = trim((string)$this->request->input());
+        if ($rawBody === '') {
+            $this->_logSaeApiAttempt('failed', 'Empty SAE submission payload.', array(
+                'status_code' => 400,
+                'user_id' => $user['id']
+            ));
+
+            return $this->_jsonErrorResponse(400, 'The JSON request body is required.');
+        }
+
+        $payload = json_decode($rawBody, true);
+        if (!is_array($payload)) {
+            $this->_logSaeApiAttempt('failed', 'Invalid SAE submission payload.', array(
+                'status_code' => 400,
+                'user_id' => $user['id']
+            ));
+
+            return $this->_jsonErrorResponse(400, 'The JSON request body is invalid.');
+        }
+
+        $data = $this->_normalizeSubmissionPayload($payload, $user);
+        $applicationResolution = $this->_resolveSubmissionApplication($data, $user);
+        if (empty($applicationResolution['application'])) {
+            $statusCode = !empty($applicationResolution['status_code']) ? (int)$applicationResolution['status_code'] : 422;
+            $message = !empty($applicationResolution['message']) ? $applicationResolution['message'] : 'Please correct the highlighted errors.';
+            $errors = !empty($applicationResolution['errors']) ? $applicationResolution['errors'] : array(
+                'reference_no' => array('Please provide a valid application reference number.')
+            );
+
+            $this->_logSaeApiAttempt('failed', 'SAE submission application resolution failed.', array(
+                'status_code' => $statusCode,
+                'user_id' => $user['id'],
+                'application_id' => isset($data['Sae']['application_id']) ? $data['Sae']['application_id'] : null,
+                'application_reference_no' => $this->_extractApplicationReference($data),
+                'errors' => array_keys($errors)
+            ));
+
+            return $this->_jsonErrorResponse($statusCode, $message, $errors);
+        }
+
+        $application = $applicationResolution['application'];
+        $data = $this->_applyApplicationContext($data, $application);
+        $validationErrors = $this->_validateSubmissionPayload($data);
+
+        if (!empty($validationErrors)) {
+            $this->_logSaeApiAttempt('failed', 'SAE submission validation failed.', array(
+                'status_code' => 422,
+                'user_id' => $user['id'],
+                'application_id' => isset($data['Sae']['application_id']) ? $data['Sae']['application_id'] : null,
+                'application_reference_no' => $this->_extractApplicationReference($data),
+                'errors' => array_keys($validationErrors)
+            ));
+
+            return $this->_jsonErrorResponse(422, 'Please correct the highlighted errors.', $validationErrors);
+        }
+
+        $duplicate = $this->_findDuplicateSubmittedSae($data, $user);
+        if (!empty($duplicate)) {
+            $message = 'A matching SAE has already been submitted.';
+            $this->_logSaeApiAttempt('failed', 'Duplicate SAE submission detected.', array(
+                'status_code' => 409,
+                'user_id' => $user['id'],
+                'application_id' => $data['Sae']['application_id'],
+                'duplicate_sae_id' => $duplicate['Sae']['id'],
+                'duplicate_reference_no' => $duplicate['Sae']['reference_no']
+            ));
+
+            return $this->_jsonErrorResponse(409, $message, array(
+                'duplicate' => array($message . ' Existing reference: ' . $duplicate['Sae']['reference_no'])
+            ));
+        }
+
+        $submittedAt = date('Y-m-d H:i:s');
+        $data['Sae']['reference_no'] = $this->Sae->generateReferenceNumber($data['Sae']['form_type'], $submittedAt);
+        $data['Sae']['approved'] = 1;
+        $data['Sae']['date_submitted'] = $submittedAt;
+        unset($data['Sae']['application_reference_no'], $data['Sae']['protocol_no']);
+
+        $dataSource = $this->Sae->getDataSource();
+        $dataSource->begin();
+
+        try {
+            $this->Sae->create();
+            if (!$this->Sae->saveAssociated($data, array('validate' => false, 'deep' => true))) {
+                $dataSource->rollback();
+                $this->_logSaeApiAttempt('failed', 'SAE submission could not be persisted.', array(
+                    'status_code' => 500,
+                    'user_id' => $user['id'],
+                    'application_id' => $data['Sae']['application_id'],
+                    'reference_no' => $data['Sae']['reference_no']
+                ));
+
+                return $this->_jsonErrorResponse(500, 'The SAE could not be submitted. Please try again.');
+            }
+
+            $saeId = $this->Sae->id;
+            $dataSource->commit();
+        } catch (Exception $exception) {
+            $dataSource->rollback();
+            $this->_logSaeApiAttempt('failed', 'SAE submission raised an exception.', array(
+                'status_code' => 500,
+                'user_id' => $user['id'],
+                'application_id' => $data['Sae']['application_id'],
+                'reference_no' => $data['Sae']['reference_no'],
+                'exception' => $exception->getMessage()
+            ));
+
+            return $this->_jsonErrorResponse(500, 'The SAE could not be submitted. Please try again.');
+        }
+
+        $sae = $this->Sae->find('first', array(
+            'contain' => array('Application'),
+            'conditions' => array('Sae.id' => $saeId)
+        ));
+
+        $this->_queueSaeSubmissionNotifications($sae, $user);
+        $this->_logSaeApiAttempt('success', 'SAE submitted successfully.', array(
+            'status_code' => 200,
+            'user_id' => $user['id'],
+            'application_id' => $data['Sae']['application_id'],
+            'sae_id' => $saeId,
+            'reference_no' => $data['Sae']['reference_no']
+        ));
+
+        return $this->_jsonSuccessResponse('SAE submitted successfully', array(
+            'sae_id' => $saeId,
+            'submitted_at' => $submittedAt
+        ));
+    }
+
+    private function _normalizeSubmissionPayload($payload = array(), $user = array())
+    {
+        $data = array(
+            'Sae' => array(),
+            'SuspectedDrug' => array(),
+            'ConcomittantDrug' => array(),
+        );
+
+        if (isset($payload['Sae']) || isset($payload['SuspectedDrug']) || isset($payload['ConcomittantDrug'])) {
+            $data['Sae'] = (!empty($payload['Sae']) && is_array($payload['Sae'])) ? $payload['Sae'] : array();
+            $data['SuspectedDrug'] = (!empty($payload['SuspectedDrug']) && is_array($payload['SuspectedDrug'])) ? $payload['SuspectedDrug'] : array();
+            $data['ConcomittantDrug'] = (!empty($payload['ConcomittantDrug']) && is_array($payload['ConcomittantDrug'])) ? $payload['ConcomittantDrug'] : array();
+
+            foreach (array('reference_no', 'protocol_no', 'application_reference_no') as $referenceField) {
+                if (empty($data['Sae'][$referenceField]) && array_key_exists($referenceField, $payload)) {
+                    $data['Sae'][$referenceField] = $payload[$referenceField];
+                }
+            }
+        } else {
+            $saeFields = array(
+                'application_id',
+                'reference_no',
+                'protocol_no',
+                'application_reference_no',
+                'patient_initials',
+                'country_id',
+                'date_of_birth',
+                'age_years',
+                'enrollment_date',
+                'administration_date',
+                'latest_date',
+                'reaction_onset',
+                'reaction_end_date',
+                'patient_died',
+                'prolonged_hospitalization',
+                'incapacity',
+                'life_threatening',
+                'reaction_other',
+                'gender',
+                'causality',
+                'reaction_description',
+                'relevant_history',
+                'manufacturer_name',
+                'mfr_no',
+                'manufacturer_date',
+                'source_study',
+                'source_literature',
+                'source_health_professional',
+                'reporter_name',
+                'reporter_phone',
+                'reporter_email',
+                'email_address',
+                'form_type',
+            );
+
+            foreach ($saeFields as $field) {
+                if (array_key_exists($field, $payload)) {
+                    $data['Sae'][$field] = $payload[$field];
+                }
+            }
+
+            if (!empty($payload['suspected_drugs']) && is_array($payload['suspected_drugs'])) {
+                $data['SuspectedDrug'] = $payload['suspected_drugs'];
+            }
+
+            if (!empty($payload['concomittant_drugs']) && is_array($payload['concomittant_drugs'])) {
+                $data['ConcomittantDrug'] = $payload['concomittant_drugs'];
+            } elseif (!empty($payload['concomitant_drugs']) && is_array($payload['concomitant_drugs'])) {
+                $data['ConcomittantDrug'] = $payload['concomitant_drugs'];
+            }
+        }
+
+        foreach ($data['Sae'] as $field => $value) {
+            if (is_string($value)) {
+                $data['Sae'][$field] = trim($value);
+            }
+        }
+
+        if (empty($data['Sae']['application_reference_no']) && !empty($data['Sae']['reference_no'])) {
+            $data['Sae']['application_reference_no'] = $data['Sae']['reference_no'];
+        }
+
+        if (empty($data['Sae']['application_reference_no']) && !empty($data['Sae']['protocol_no'])) {
+            $data['Sae']['application_reference_no'] = $data['Sae']['protocol_no'];
+        }
+
+        if (isset($data['Sae']['application_id']) && trim((string)$data['Sae']['application_id']) === '') {
+            unset($data['Sae']['application_id']);
+        }
+
+        unset(
+            $data['Sae']['id'],
+            $data['Sae']['reference_no'],
+            $data['Sae']['approved'],
+            $data['Sae']['approved_by'],
+            $data['Sae']['date_submitted'],
+            $data['Sae']['user_id']
+        );
+
+        $data['Sae']['form_type'] = !empty($data['Sae']['form_type']) ? strtoupper($data['Sae']['form_type']) : 'SAE';
+        $data['Sae']['user_id'] = $user['id'];
+
+        if (empty($data['Sae']['reporter_email']) && !empty($user['email'])) {
+            $data['Sae']['reporter_email'] = $user['email'];
+        }
+
+        if (empty($data['Sae']['email_address']) && !empty($data['Sae']['reporter_email'])) {
+            $data['Sae']['email_address'] = $data['Sae']['reporter_email'];
+        }
+
+        foreach (array(
+            'patient_died',
+            'prolonged_hospitalization',
+            'incapacity',
+            'life_threatening',
+            'reaction_other',
+            'source_study',
+            'source_literature',
+            'source_health_professional',
+        ) as $booleanField) {
+            if (array_key_exists($booleanField, $data['Sae'])) {
+                $data['Sae'][$booleanField] = $this->_normalizeBooleanValue($data['Sae'][$booleanField]);
+            }
+        }
+
+        $data['SuspectedDrug'] = $this->_normalizeAssociatedRows($data['SuspectedDrug']);
+        $data['ConcomittantDrug'] = $this->_normalizeAssociatedRows($data['ConcomittantDrug']);
+
+        return $data;
+    }
+
+    private function _normalizeAssociatedRows($rows = array())
+    {
+        $normalized = array();
+
+        if (!is_array($rows)) {
+            return $normalized;
+        }
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            unset($row['id'], $row['sae_id'], $row['created'], $row['modified']);
+
+            foreach ($row as $field => $value) {
+                if (is_string($value)) {
+                    $row[$field] = trim($value);
+                }
+            }
+
+            if ($this->_associatedRowHasData($row)) {
+                $normalized[] = $row;
+            }
+        }
+
+        return array_values($normalized);
+    }
+
+    private function _associatedRowHasData($row = array())
+    {
+        foreach ($row as $field => $value) {
+            if (in_array($field, array('deleted', 'deleted_date'))) {
+                continue;
+            }
+
+            if ($value === null || $value === '' || $value === false) {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private function _normalizeBooleanValue($value)
+    {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        if (is_numeric($value)) {
+            return ((int)$value === 1) ? 1 : 0;
+        }
+
+        $normalized = strtolower(trim((string)$value));
+
+        if (in_array($normalized, array('1', 'true', 'yes', 'on'))) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    private function _validateSubmissionPayload($data = array())
+    {
+        $errors = array();
+
+        if (empty($data['SuspectedDrug'])) {
+            $errors['suspected_drugs'] = array('Please provide at least one suspected drug.');
+        }
+
+        $this->Sae->create();
+        $this->Sae->set($data);
+        if (!$this->Sae->validates()) {
+            $errors = array_merge($errors, $this->_formatValidationErrors($this->Sae->validationErrors));
+        }
+
+        foreach ($data['SuspectedDrug'] as $index => $suspectedDrug) {
+            $this->Sae->SuspectedDrug->create();
+            $this->Sae->SuspectedDrug->set(array('SuspectedDrug' => $suspectedDrug));
+            if (!$this->Sae->SuspectedDrug->validates()) {
+                $errors = array_merge($errors, $this->_formatValidationErrors(
+                    $this->Sae->SuspectedDrug->validationErrors,
+                    'suspected_drugs.' . $index . '.'
+                ));
+            }
+        }
+
+        foreach ($data['ConcomittantDrug'] as $index => $concomittantDrug) {
+            $this->Sae->ConcomittantDrug->create();
+            $this->Sae->ConcomittantDrug->set(array('ConcomittantDrug' => $concomittantDrug));
+            if (!$this->Sae->ConcomittantDrug->validates()) {
+                $errors = array_merge($errors, $this->_formatValidationErrors(
+                    $this->Sae->ConcomittantDrug->validationErrors,
+                    'concomittant_drugs.' . $index . '.'
+                ));
+            }
+        }
+
+        return $errors;
+    }
+
+    private function _resolveSubmissionApplication($data = array(), $user = array())
+    {
+        $referenceNo = $this->_extractApplicationReference($data);
+
+        if ($referenceNo !== '') {
+            $application = $this->_findApplicationByReference($referenceNo);
+            if (empty($application)) {
+                return array(
+                    'status_code' => 422,
+                    'message' => 'Please correct the highlighted errors.',
+                    'errors' => array(
+                        'reference_no' => array('The supplied application reference number was not found.')
+                    )
+                );
+            }
+
+            $accessibleApplication = $this->_findAccessibleSubmissionApplication($application['Application']['id']);
+            if (!empty($accessibleApplication)) {
+                return array('application' => $accessibleApplication);
+            }
+
+            return array(
+                'status_code' => 422,
+                'message' => 'Please correct the highlighted errors.',
+                'errors' => array(
+                    'reference_no' => array('The supplied application reference number is not eligible for SAE submission.')
+                )
+            );
+        }
+
+        if (!empty($data['Sae']['application_id'])) {
+            $application = $this->_findAccessibleSubmissionApplication($data['Sae']['application_id']);
+            if (!empty($application)) {
+                return array('application' => $application);
+            }
+
+            return array(
+                'status_code' => 422,
+                'message' => 'Please correct the highlighted errors.',
+                'errors' => array(
+                    'application_id' => array('The supplied application could not be found or is not eligible for SAE submission.')
+                )
+            );
+        }
+
+        return array(
+            'status_code' => 422,
+            'message' => 'Please correct the highlighted errors.',
+            'errors' => array(
+                'reference_no' => array('Please provide the application reference number.')
+            )
+        );
+    }
+
+    private function _formatValidationErrors($validationErrors = array(), $prefix = '')
+    {
+        $errors = array();
+
+        foreach ($validationErrors as $field => $messages) {
+            if (!is_array($messages)) {
+                $messages = array($messages);
+            }
+
+            $messages = array_values(array_unique(array_filter($messages)));
+            if (empty($messages)) {
+                continue;
+            }
+
+            $errors[$prefix . $field] = $messages;
+        }
+
+        return $errors;
+    }
+
+    private function _extractApplicationReference($data = array())
+    {
+        if (!empty($data['Sae']['application_reference_no'])) {
+            return trim((string)$data['Sae']['application_reference_no']);
+        }
+
+        if (!empty($data['Sae']['protocol_no'])) {
+            return trim((string)$data['Sae']['protocol_no']);
+        }
+
+        return '';
+    }
+
+    private function _findApplicationByReference($referenceNo = '')
+    {
+        $referenceNo = trim((string)$referenceNo);
+        if ($referenceNo === '') {
+            return array();
+        }
+
+        return $this->Application->find('first', array(
+            'contain' => array(),
+            'conditions' => array(
+                'Application.protocol_no' => $referenceNo
+            )
+        ));
+    }
+
+    private function _applyApplicationContext($data = array(), $application = array())
+    {
+        if (!empty($application['Application']['id'])) {
+            $data['Sae']['application_id'] = $application['Application']['id'];
+        }
+
+        if (empty($data['Sae']['email_address']) && !empty($application['Application']['email_address'])) {
+            $data['Sae']['email_address'] = $application['Application']['email_address'];
+        }
+
+        return $data;
+    }
+
+    private function _findAccessibleSubmissionApplication($applicationId = null)
+    {
+        if (empty($applicationId)) {
+            return array();
+        }
+
+        return $this->Application->find('first', array(
+            'contain' => array(),
+            'conditions' => array(
+                'Application.id' => $applicationId,
+                'Application.approved' => array(1, 2)
+            )
+        ));
+    }
+
+    private function _findDuplicateSubmittedSae($data = array(), $user = array())
+    {
+        if (empty($user['id'])) {
+            return array();
+        }
+
+        $reactionOnset = !empty($data['Sae']['reaction_onset']) ? date('Y-m-d', strtotime($data['Sae']['reaction_onset'])) : null;
+        if (empty($reactionOnset)) {
+            return array();
+        }
+
+        return $this->Sae->find('first', array(
+            'contain' => array(),
+            'fields' => array('Sae.id', 'Sae.reference_no', 'Sae.date_submitted'),
+            'conditions' => array(
+                'Sae.application_id' => $data['Sae']['application_id'],
+                'Sae.form_type' => $data['Sae']['form_type'],
+                'Sae.patient_initials' => $data['Sae']['patient_initials'],
+                'Sae.reaction_onset' => $reactionOnset,
+                'Sae.reaction_description' => $data['Sae']['reaction_description'],
+                'Sae.approved >' => 0
+            )
+        ));
+    }
+
+    private function _queueSaeSubmissionNotifications($sae = array(), $submitter = array())
+    {
+        if (empty($sae['Sae']['id']) || empty($submitter['id'])) {
+            return;
+        }
+
+        try {
+            $this->loadModel('Message');
+            $this->loadModel('User');
+
+            $message = $this->Message->find('first', array(
+                'contain' => array(),
+                'conditions' => array('Message.name' => 'applicant_sae_submit')
+            ));
+
+            if (empty($message['Message']['subject']) || empty($message['Message']['content'])) {
+                $this->_logSaeApiAttempt('warning', 'SAE submission notification template was not found.', array(
+                    'sae_id' => $sae['Sae']['id']
+                ));
+                return;
+            }
+
+            $submitterPrefix = $this->_userPrefix($submitter['group_id']);
+            $html = new HtmlHelper(new ThemeView());
+            $recipients = $this->User->find('all', array(
+                'contain' => array(),
+                'conditions' => array(
+                    'OR' => array(
+                        'User.id' => $submitter['id'],
+                        'User.group_id' => 2
+                    )
+                )
+            ));
+
+            foreach ($recipients as $recipient) {
+                $actionPrefix = ($recipient['User']['id'] == $submitter['id'] && !empty($submitterPrefix)) ? $submitterPrefix : 'manager';
+                $variables = array(
+                    'name' => $recipient['User']['name'],
+                    'reference_no' => $sae['Sae']['reference_no'],
+                    'protocol_no' => $sae['Application']['protocol_no'],
+                    'reference_link' => $html->link(
+                        $sae['Sae']['reference_no'],
+                        array('controller' => 'saes', 'action' => 'view', $sae['Sae']['id'], $actionPrefix => true, 'full_base' => true),
+                        array('escape' => false)
+                    ),
+                    'protocol_link' => $html->link(
+                        $sae['Application']['protocol_no'],
+                        array('controller' => 'applications', 'action' => 'view', $sae['Application']['id'], $actionPrefix => true, 'full_base' => true),
+                        array('escape' => false)
+                    ),
+                    'modified' => $sae['Sae']['modified']
+                );
+
+                $datum = array(
+                    'email' => !empty($recipient['User']['email']) ? $recipient['User']['email'] : $sae['Sae']['reporter_email'],
+                    'id' => $sae['Sae']['id'],
+                    'user_id' => $recipient['User']['id'],
+                    'type' => 'applicant_sae_submit',
+                    'model' => 'Sae',
+                    'subject' => String::insert($message['Message']['subject'], $variables),
+                    'message' => String::insert($message['Message']['content'], $variables)
+                );
+
+                CakeResque::enqueue('default', 'GenericEmailShell', array('sendEmail', $datum));
+                CakeResque::enqueue('default', 'GenericNotificationShell', array('sendNotification', $datum));
+            }
+        } catch (Exception $exception) {
+            $this->_logSaeApiAttempt('warning', 'SAE submission notifications could not be queued.', array(
+                'sae_id' => isset($sae['Sae']['id']) ? $sae['Sae']['id'] : null,
+                'exception' => $exception->getMessage()
+            ));
+        }
+    }
+
+    private function _userPrefix($groupId = null)
+    {
+        $map = array(
+            '1' => 'admin',
+            '2' => 'manager',
+            '5' => 'applicant',
+            '7' => 'monitor',
+            '8' => 'outsource',
+        );
+
+        $groupId = (string)$groupId;
+
+        return isset($map[$groupId]) ? $map[$groupId] : null;
+    }
+
+    private function _logSaeApiAttempt($status = 'info', $message = '', $context = array())
+    {
+        $entry = array(
+            'status' => $status,
+            'message' => $message,
+            'request_url' => $this->request->here(),
+            'ip' => env('REMOTE_ADDR'),
+            'context' => $context
+        );
+
+        $logType = ($status === 'success') ? 'sae_api_success' : 'sae_api_error';
+        if ($status === 'warning') {
+            $logType = 'sae_api_warning';
+        }
+
+        $this->log($entry, $logType);
+    }
+
+    private function _jsonSuccessResponse($message = '', $data = array())
+    {
+        return $this->_jsonResponse(200, array(
+            'status' => 'success',
+            'message' => $message,
+            'data' => $data
+        ));
+    }
+
+    private function _jsonErrorResponse($statusCode = 400, $message = '', $errors = array())
+    {
+        if (empty($errors)) {
+            $errors = new stdClass();
+        }
+
+        return $this->_jsonResponse($statusCode, array(
+            'status' => 'error',
+            'message' => $message,
+            'errors' => $errors
+        ));
+    }
+
+    private function _jsonResponse($statusCode = 200, $payload = array())
+    {
+        $this->autoRender = false;
+        $this->_setApiResponseStatusCode($statusCode);
+        $this->response->type('json');
+        $this->response->body(json_encode($payload));
+
+        return $this->response;
     }
     /**
      * view method

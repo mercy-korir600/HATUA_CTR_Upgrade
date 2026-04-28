@@ -201,8 +201,11 @@ echo $this->Session->flash();
                 <?php
                 if (!empty($eid) && !empty($eid['Comment']))  echo $this->element('comments/add', [
                   'model' => [
-                    'model_id' => $application['Application']['id'], 'foreign_key' => $eid['id'],
-                    'model' => 'ApplicationStage', 'category' => 'external', 'url' => 'add_screening_query'
+                    'model_id' => $application['Application']['id'],
+                    'foreign_key' => $eid['id'],
+                    'model' => 'ApplicationStage',
+                    'category' => 'external',
+                    'url' => 'add_screening_query'
                   ]
                 ])
                 ?>
@@ -340,6 +343,12 @@ echo $this->Session->flash();
 
           <table class="table  table-condensed">
             <tbody>
+              <tr>
+                <td class="table-label required">
+                  <p>Protocol No: <span class="sterix">*</span></p>
+                </td>
+                <td><?php echo $application['Application']['reference_no'] ?></td>
+              </tr>
               <tr>
                 <td class="table-label required">
                   <p>Version No: <span class="sterix">*</span></p>
@@ -664,8 +673,11 @@ echo $this->Session->flash();
                 <?php
                 if (!empty($rid))  echo $this->element('comments/add', [
                   'model' => [
-                    'model_id' => $application['Application']['id'], 'foreign_key' => $rid['id'],
-                    'model' => 'Review', 'category' => 'external', 'url' => 'add_review_response'
+                    'model_id' => $application['Application']['id'],
+                    'foreign_key' => $rid['id'],
+                    'model' => 'Review',
+                    'category' => 'external',
+                    'url' => 'add_review_response'
                   ]
                 ])
                 ?>
@@ -748,13 +760,14 @@ echo $this->Session->flash();
                       array('controller' => 'saes', 'action' => 'view', $sae['id']),
                       array('target' => '_blank', 'escape' => false)
                     ); ?>
-                   
+
                     <?php
                     if ($sae['approved'] < 1) {
-                      if($sae['user_id'] == $this->Session->read('Auth.User.id')){
+                      if ($sae['user_id'] == $this->Session->read('Auth.User.id')) {
                         echo $this->Html->link(__('<label class="label label-success">Edit</label>'), array('controller' => 'saes', 'action' => 'edit', $sae['id']), array('target' => '_blank', 'escape' => false));
-                      echo $this->Form->postLink(__('<label class="label label-important">Delete</label>'), array('controller' => 'saes', 'action' => 'delete', $sae['id'], 1), array('escape' => false), __('Are you sure you want to delete # %s?', $sae['id']));
-                    }}
+                        echo $this->Form->postLink(__('<label class="label label-important">Delete</label>'), array('controller' => 'saes', 'action' => 'delete', $sae['id'], 1), array('escape' => false), __('Are you sure you want to delete # %s?', $sae['id']));
+                      }
+                    }
                     if ($redir === 'outsource' && $sae['approved'] > 0) echo $this->Form->postLink('<i class="icon-facebook"></i> Follow Up', array('controller' => 'saes', 'action' => 'followup', $sae['id']), array('class' => 'btn btn-mini btn-warning', 'escape' => false), __('Create followup for %s?', $sae['reference_no']));
                     ?>
                   </td>

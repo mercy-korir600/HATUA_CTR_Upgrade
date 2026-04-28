@@ -22,6 +22,8 @@
  */
 
 App::uses('Controller', 'Controller');
+App::uses('ClassRegistry', 'Utility');
+App::uses('Security', 'Utility');
 
 /**
  * Application Controller
@@ -279,5 +281,259 @@ class AppController extends Controller
     $candidates[] = APP . 'media' . DS . 'transfer' . DS . $relativePath;
 
     return array_unique($candidates);
+  }
+
+  protected function _getAuthenticatedApiUser()
+  {
+    $sessionUser = $this->Auth->user();
+    if (!empty($sessionUser['id'])) {
+      return $sessionUser;
+    }
+
+    $token = $this->_extractApiAccessToken();
+    if (empty($token)) {
+      return array();
+    }
+
+    return $this->_findUserByApiAccessToken($token);
+  }
+
+  protected function _extractApiAccessToken()
+  {
+    foreach ($this->_candidateApiAuthHeaders() as $header) {
+      $token = $this->_tokenFromHeaderValue($header);
+      if ($token !== '') {
+        return $token;
+      }
+    }
+
+    foreach (array('access_token', 'token', 'bearer_token', 'authorization') as $queryKey) {
+      if (!empty($this->request->query[$queryKey])) {
+        return trim((string) $this->request->query[$queryKey]);
+      }
+    }
+
+    if (is_array($this->request->data)) {
+      foreach (array('access_token', 'token', 'bearer_token', 'authorization') as $dataKey) {
+        if (!empty($this->request->data[$dataKey])) {
+          return trim((string) $this->request->data[$dataKey]);
+        }
+      }
+
+      if (!empty($this->request->data['auth']) && is_array($this->request->data['auth'])) {
+        foreach (array('access_token', 'token', 'bearer_token', 'authorization') as $dataKey) {
+          if (!empty($this->request->data['auth'][$dataKey])) {
+            return trim((string) $this->request->data['auth'][$dataKey]);
+          }
+        }
+      }
+    }
+
+    $rawBody = trim((string) $this->request->input());
+    if ($rawBody !== '') {
+      $decoded = json_decode($rawBody, true);
+      if (is_array($decoded)) {
+        foreach (array('access_token', 'token', 'bearer_token', 'authorization') as $dataKey) {
+          if (!empty($decoded[$dataKey])) {
+            return $this->_tokenFromHeaderValue($decoded[$dataKey]);
+          }
+        }
+
+        if (!empty($decoded['auth']) && is_array($decoded['auth'])) {
+          foreach (array('access_token', 'token', 'bearer_token', 'authorization') as $dataKey) {
+            if (!empty($decoded['auth'][$dataKey])) {
+              return $this->_tokenFromHeaderValue($decoded['auth'][$dataKey]);
+            }
+          }
+        }
+      }
+    }
+
+    return '';
+  }
+
+  protected function _candidateApiAuthHeaders()
+  {
+    $headers = array();
+
+    foreach (array(
+      'Authorization',
+      'authorization',
+      'X-Authorization',
+      'x-authorization',
+      'X-Access-Token',
+      'x-access-token'
+    ) as $headerName) {
+      $headerValue = $this->request->header($headerName);
+      if (!empty($headerValue)) {
+        $headers[] = $headerValue;
+      }
+    }
+
+    foreach (array(
+      'HTTP_AUTHORIZATION',
+      'REDIRECT_HTTP_AUTHORIZATION',
+      'Authorization',
+      'HTTP_X_AUTHORIZATION',
+      'HTTP_X_ACCESS_TOKEN'
+    ) as $serverKey) {
+      if (!empty($_SERVER[$serverKey])) {
+        $headers[] = $_SERVER[$serverKey];
+      }
+    }
+
+    if (function_exists('getallheaders')) {
+      $allHeaders = getallheaders();
+      if (is_array($allHeaders)) {
+        foreach (array('Authorization', 'authorization', 'X-Authorization', 'X-Access-Token') as $headerName) {
+          if (!empty($allHeaders[$headerName])) {
+            $headers[] = $allHeaders[$headerName];
+          }
+        }
+      }
+    }
+
+    return array_unique(array_filter($headers));
+  }
+
+  protected function _tokenFromHeaderValue($headerValue)
+  {
+    $headerValue = trim((string) $headerValue);
+    if ($headerValue === '') {
+      return '';
+    }
+
+    if (preg_match('/^(Bearer|Token)\s+(.+)$/i', $headerValue, $matches)) {
+      return trim($matches[2]);
+    }
+
+    if (strpos($headerValue, '.') !== false && strpos($headerValue, ' ') === false) {
+      return $headerValue;
+    }
+
+    return '';
+  }
+
+  protected function _issueApiAccessToken($user, $ttl = 86400)
+  {
+    $expiresAt = time() + (int) $ttl;
+    $payload = array(
+      'uid' => (int) $user['id'],
+      'exp' => $expiresAt
+    );
+
+    $encodedPayload = $this->_base64UrlEncode(json_encode($payload));
+    $signature = hash_hmac('sha256', $encodedPayload, $this->_apiTokenSecret($user));
+
+    return array(
+      'token' => $encodedPayload . '.' . $signature,
+      'expires_at' => $expiresAt
+    );
+  }
+
+  protected function _findUserByApiAccessToken($token)
+  {
+    $token = trim((string) $token);
+    if ($token === '' || strpos($token, '.') === false) {
+      return array();
+    }
+
+    list($encodedPayload, $providedSignature) = explode('.', $token, 2);
+    $payloadJson = $this->_base64UrlDecode($encodedPayload);
+    $payload = json_decode($payloadJson, true);
+
+    if (!is_array($payload) || empty($payload['uid']) || empty($payload['exp'])) {
+      return array();
+    }
+
+    if ((int) $payload['exp'] < time()) {
+      return array();
+    }
+
+    $User = ClassRegistry::init('User');
+    $user = $User->find('first', array(
+      'recursive' => -1,
+      'conditions' => array('User.id' => (int) $payload['uid']),
+      'fields' => array(
+        'User.id',
+        'User.group_id',
+        'User.name',
+        'User.username',
+        'User.email',
+        'User.phone_no',
+        'User.password',
+        'User.created',
+        'User.modified',
+        'User.is_active',
+        'User.deactivated'
+      )
+    ));
+
+    if (empty($user['User'])) {
+      return array();
+    }
+
+    if (
+      (isset($user['User']['is_active']) && (int) $user['User']['is_active'] === 0) ||
+      (isset($user['User']['deactivated']) && (int) $user['User']['deactivated'] === 1)
+    ) {
+      return array();
+    }
+
+    $expectedSignature = hash_hmac('sha256', $encodedPayload, $this->_apiTokenSecret($user['User']));
+    if (!$this->_hashEquals($expectedSignature, $providedSignature)) {
+      return array();
+    }
+
+    return $user['User'];
+  }
+
+  protected function _apiTokenSecret($user)
+  {
+    return implode('|', array(
+      Configure::read('Security.salt'),
+      isset($user['password']) ? $user['password'] : '',
+      isset($user['created']) ? $user['created'] : '',
+      isset($user['modified']) ? $user['modified'] : ''
+    ));
+  }
+
+  protected function _base64UrlEncode($value)
+  {
+    return rtrim(strtr(base64_encode((string) $value), '+/', '-_'), '=');
+  }
+
+  protected function _base64UrlDecode($value)
+  {
+    $remainder = strlen($value) % 4;
+    if ($remainder > 0) {
+      $value .= str_repeat('=', 4 - $remainder);
+    }
+
+    return base64_decode(strtr($value, '-_', '+/'));
+  }
+
+  protected function _hashEquals($knownString, $userString)
+  {
+    if (function_exists('hash_equals')) {
+      return hash_equals((string) $knownString, (string) $userString);
+    }
+
+    return (string) $knownString === (string) $userString;
+  }
+
+  protected function _setApiResponseStatusCode($statusCode)
+  {
+    $statusCode = (int) $statusCode;
+
+    if ($statusCode === 422) {
+      $this->response->httpCodes(array(
+        422 => 'Unprocessable Entity'
+      ));
+    }
+
+    $this->response->statusCode($statusCode);
+
+    return $statusCode;
   }
 }

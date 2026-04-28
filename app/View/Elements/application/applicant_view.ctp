@@ -129,6 +129,12 @@
 
       <table class="table  table-condensed">
         <tbody>
+            <tr>
+            <td class="table-label required">
+              <p>Protocol No: <span class="sterix">*</span></p>
+            </td>
+            <td><?php echo $application['Application']['reference_no'] ?></td>
+          </tr>
           <tr>
             <td class="table-label required">
               <p>Version No: <span class="sterix">*</span></p>

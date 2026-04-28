@@ -9,6 +9,17 @@ App::uses('AppModel', 'Model');
 class Sae extends AppModel {
 
     public $actsAs = array('Containable', 'Search.Searchable');
+    public $allowedFormTypes = array('SAE', 'SUSAR');
+    public $allowedGenders = array('Male', 'Female');
+    public $allowedCausality = array(
+        'Certain',
+        'Probable/Likely',
+        'Possible',
+        'Unlikely',
+        'Conditional/Unclassified',
+        'Not related',
+        'Unassessable/Unclassifiable',
+    );
     public $filterArgs = array(
             'reference_no' => array('type' => 'like', 'encode' => true),
             'protocol_no' => array('type' => 'query', 'method' => 'findByProtocolNo', 'encode' => true),
@@ -194,40 +205,132 @@ class Sae extends AppModel {
     public $validate = array(
         'application_id' => array(
             'notEmpty' => array(
-                'rule'     => 'notEmpty',
+                'rule' => 'notEmpty',
                 'required' => true,
-                'message'  => 'Please select an approved protocol!'
+                'message' => 'Please select an approved protocol!'
+            ),
+            'numeric' => array(
+                'rule' => 'numeric',
+                'message' => 'Please select an approved protocol!'
+            ),
+        ),
+        'form_type' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'required' => true,
+                'message' => 'Please select a valid SAE type!'
+            ),
+            'inList' => array(
+                'rule' => array('inList', array('SAE', 'SUSAR')),
+                'message' => 'Please select a valid SAE type!'
+            ),
+        ),
+        'patient_initials' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'required' => true,
+                'message' => 'Please enter the patient initials!'
             ),
         ),
         'country_id' => array(
             'notEmpty' => array(
-                'rule'     => 'notEmpty',
+                'rule' => 'notEmpty',
                 'required' => true,
-                'message'  => 'Please select a country!'
+                'message' => 'Please select a country!'
+            ),
+            'numeric' => array(
+                'rule' => 'numeric',
+                'message' => 'Please select a country!'
             ),
         ),
         'date_of_birth' => array(
-            // 'notEmpty' => array(
-            //     'rule'     => 'notEmpty',
-            //     'required' => true,
-            //     'message'  => 'Please select a valid date of birth!'
-            // ),
             'dateOrYears' => array(
-                'rule'     => 'dateOrYears',
-                'message'  => 'Please select a valid date of birth or enter the age in years!'
+                'rule' => 'dateOrYears',
+                'message' => 'Please select a valid date of birth or enter the age in years!'
+            ),
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'allowEmpty' => true,
+                'message' => 'Please select a valid date of birth or enter the age in years!'
             ),
         ),
         'age_years' => array(
             'dateOrYears' => array(
-                'rule'     => 'dateOrYears',
-                'message'  => 'Please select a valid date of birth or enter the age in years!'
+                'rule' => 'dateOrYears',
+                'message' => 'Please select a valid date of birth or enter the age in years!'
             ),
+            'validAgeYears' => array(
+                'rule' => 'validAgeYears',
+                'allowEmpty' => true,
+                'message' => 'Please enter a valid age in years between 0 and 140!'
+            ),
+        ),
+        'enrollment_date' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'required' => true,
+                'message' => 'Please enter the date of enrollment into the study!'
+            ),
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'message' => 'Please enter a valid date of enrollment into the study!'
+            ),
+            'dateBeforeAdministration' => array(
+                'rule' => 'dateBeforeAdministration',
+                'message' => 'The enrollment date must be before the date of administration of investigational product!'
+            ),
+            'dateAfterBirthDate' => array(
+                'rule' => 'dateAfterBirthDate',
+                'message' => 'The enrollment date must be after the date of birth!'
+            )
+        ),
+        'administration_date' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'required' => true,
+                'message' => 'Please enter the date of initial administration of the investigational product!'
+            ),
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'message' => 'Please enter a valid date of initial administration of the investigational product!'
+            ),
+            'dateBeforeAdministration' => array(
+                'rule' => 'dateBeforeAdministration',
+                'message' => 'The date of initial administration of the investigational product must be after the date of enrollment into the study!'
+            ),
+            'dateAfterBirthDate' => array(
+                'rule' => 'dateAfterBirthDate',
+                'message' => 'The date of initial administration of the investigational product must be after the date of birth!'
+            )
+        ),
+        'latest_date' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'required' => true,
+                'message' => 'Please enter the date of latest administration of the investigational product!'
+            ),
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'message' => 'Please enter a valid date of latest administration of the investigational product!'
+            ),
+            'dateBeforeAdministration' => array(
+                'rule' => 'dateBeforeAdministration',
+                'message' => 'The date of the latest administration of the investigational product must be after the date of enrollment into the study and date of initial administration!'
+            ),
+            'dateAfterBirthDate' => array(
+                'rule' => 'dateAfterBirthDate',
+                'message' => 'The date of the latest administration of the investigational product must be after the date of birth!'
+            )
         ),
         'reaction_onset' => array(
             'notEmpty' => array(
-                'rule'     => 'notEmpty',
+                'rule' => 'notEmpty',
                 'required' => true,
-                'message'  => 'Please select a valid reaction onset date!'
+                'message' => 'Please select a valid reaction onset date!'
+            ),
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'message' => 'Please select a valid reaction onset date!'
             ),
             'dateAfterStartDates' => array(
                 'rule' => 'dateAfterStartDates',
@@ -235,6 +338,11 @@ class Sae extends AppModel {
             )
         ),
         'reaction_end_date' => array(
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'allowEmpty' => true,
+                'message' => 'Please select a valid reaction end date!'
+            ),
             'dateAfterOnsetDate' => array(
                 'rule' => 'dateAfterOnsetDate',
                 'message' => 'The reaction end date must be after the reaction onset date'
@@ -242,23 +350,71 @@ class Sae extends AppModel {
         ),
         'gender' => array(
             'notEmpty' => array(
-                'rule'     => 'notEmpty',
+                'rule' => 'notEmpty',
                 'required' => true,
-                'message'  => 'Please select the gender!'
+                'message' => 'Please select the gender!'
+            ),
+            'inList' => array(
+                'rule' => array('inList', array('Male', 'Female')),
+                'message' => 'Please select a valid gender!'
             ),
         ),
         'causality' => array(
             'notEmpty' => array(
-                'rule'     => 'notEmpty',
+                'rule' => 'notEmpty',
                 'required' => true,
-                'message'  => 'Please select the causality!'
+                'message' => 'Please select the causality!'
+            ),
+            'inList' => array(
+                'rule' => array('inList', array(
+                    'Certain',
+                    'Probable/Likely',
+                    'Possible',
+                    'Unlikely',
+                    'Conditional/Unclassified',
+                    'Not related',
+                    'Unassessable/Unclassifiable',
+                )),
+                'message' => 'Please select a valid causality!'
             ),
         ),
         'reaction_description' => array(
             'notEmpty' => array(
-                'rule'     => 'notEmpty',
+                'rule' => 'notEmpty',
                 'required' => true,
-                'message'  => 'Please describe the reaction(s)!'
+                'message' => 'Please describe the reaction(s)!'
+            ),
+        ),
+        'manufacturer_name' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'message' => 'Please enter the manufacturer details!'
+            ),
+        ),
+        'mfr_no' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'message' => 'Please enter the manufacturer control number!'
+            ),
+        ),
+        'manufacturer_date' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'message' => 'Please enter the date received by the manufacturer!'
+            ),
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'message' => 'Please enter a valid date received by the manufacturer!'
+            ),
+        ),
+        'reporter_email' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'message' => 'Please enter the reporter email address!'
+            ),
+            'email' => array(
+                'rule' => 'email',
+                'message' => 'Please enter a valid reporter email address!'
             ),
         ),
         'source_study' => array(
@@ -297,52 +453,25 @@ class Sae extends AppModel {
                 'message' => 'Select at least one adverse reaction!!'
             )
         ),
-        'enrollment_date' => array(
-            'notEmpty' => array(
-                'rule'     => 'notEmpty',
-                'required' => true,
-                'message'  => 'Please enter the date of enrollment into the study!'
-            ),
-            'dateBeforeAdministration' => array(
-                'rule' => 'dateBeforeAdministration',
-                'message' => 'The enrollment date must be before the date of administration of investigational product!'
-            ),
-            'dateAfterBirthDate' => array(
-                'rule' => 'dateAfterBirthDate',
-                'message' => 'The enrollment date must be after the date of birth!'
-            )
-        ),
-        'administration_date' => array(
-            'notEmpty' => array(
-                'rule'     => 'notEmpty',
-                'required' => true,
-                'message'  => 'Please enter the date of initial administration of the investigational product!'
-            ),
-            'dateBeforeAdministration' => array(
-                'rule' => 'dateBeforeAdministration',
-                'message' => 'The date of initial administration of the investigational product must be after the date of enrollment into the study!'
-            ),
-            'dateAfterBirthDate' => array(
-                'rule' => 'dateAfterBirthDate',
-                'message' => 'The date of initial administration of the investigational product must be after the date of birth!'
-            )
-        ),
-        'latest_date' => array(
-            'notEmpty' => array(
-                'rule'     => 'notEmpty',
-                'required' => true,
-                'message'  => 'Please enter the date of latest administration of the investigational product!'
-            ),
-            'dateBeforeAdministration' => array(
-                'rule' => 'dateBeforeAdministration',
-                'message' => 'The date of the latest administration of the investigational product must be after the date of enrollment into the study and date of initial administration!'
-            ),
-            'dateAfterBirthDate' => array(
-                'rule' => 'dateAfterBirthDate',
-                'message' => 'The date of the latest administration of the investigational product must be after the date of birth!'
-            )
-        ),
       );
+
+    public function generateReferenceNumber($formType = 'SAE', $createdAt = null) {
+        if (empty($createdAt)) {
+            $createdAt = date('Y-m-d H:i:s');
+        }
+
+        $year = date('Y', strtotime($createdAt));
+        $count = $this->find('count', array(
+            'conditions' => array(
+                'Sae.form_type' => $formType,
+                'Sae.created BETWEEN ? and ?' => array($year . '-01-01 00:00:00', $createdAt)
+            )
+        ));
+        $count++;
+        $count = ($count < 10) ? '0' . $count : $count;
+
+        return $formType . '/' . $year . '/' . $count;
+    }
 
     public function beforeSave() {
         if (!empty($this->data['Sae']['date_of_birth'])) {
@@ -402,46 +531,110 @@ class Sae extends AppModel {
         return true;
     }
 
+    public function validDateValue($field = null) {
+        $value = reset($field);
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        return ($this->_dateTimestamp($value) !== false);
+    }
+
+    public function validAgeYears($field = null) {
+        $value = reset($field);
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        return is_numeric($value) && $value >= 0 && $value <= 140;
+    }
+
     public function dateAfterStartDates($field = null) {
+        $reactionOnset = $this->_dateTimestamp(reset($field));
+        if ($reactionOnset === false) {
+            return true;
+        }
+
         if (!empty($this->data['SuspectedDrug'])) {
             foreach ($this->data['SuspectedDrug'] as $val) {
-                if(strtotime($field['reaction_onset']) < strtotime($val['date_from']))    return false;
+                if (empty($val['date_from'])) {
+                    continue;
+                }
+
+                $therapyStart = $this->_dateTimestamp($val['date_from']);
+                if ($therapyStart !== false && $reactionOnset < $therapyStart) {
+                    return false;
+                }
             }
         }
         return true;
     }
 
     public function dateBeforeAdministration($field = null) {
-        if (!empty($field['administration_date'])) {
-            if(strtotime($field['administration_date']) < strtotime($this->data['Sae']['enrollment_date']))    return false;
+        $fieldName = key($field);
+        $value = $this->_dateTimestamp(reset($field));
+        if ($value === false) {
+            return true;
         }
-        if (!empty($field['latest_date'])) {
-            if(strtotime($field['latest_date']) < strtotime($this->data['Sae']['enrollment_date']))    return false;
+
+        $enrollmentDate = !empty($this->data['Sae']['enrollment_date']) ? $this->_dateTimestamp($this->data['Sae']['enrollment_date']) : false;
+        $administrationDate = !empty($this->data['Sae']['administration_date']) ? $this->_dateTimestamp($this->data['Sae']['administration_date']) : false;
+        $latestDate = !empty($this->data['Sae']['latest_date']) ? $this->_dateTimestamp($this->data['Sae']['latest_date']) : false;
+
+        if ($fieldName === 'enrollment_date') {
+            if ($administrationDate !== false && $value > $administrationDate) {
+                return false;
+            }
+            if ($latestDate !== false && $value > $latestDate) {
+                return false;
+            }
+
+            return true;
         }
-        if (!empty($field['latest_date'])) {
-            if(strtotime($field['latest_date']) < strtotime($this->data['Sae']['administration_date']))    return false;
+
+        if ($fieldName === 'administration_date' && $enrollmentDate !== false) {
+            if ($value < $enrollmentDate) {
+                return false;
+            }
+            if ($latestDate !== false && $value > $latestDate) {
+                return false;
+            }
+
+            return true;
         }
+
+        if ($fieldName === 'latest_date') {
+            if ($enrollmentDate !== false && $value < $enrollmentDate) {
+                return false;
+            }
+            if ($administrationDate !== false && $value < $administrationDate) {
+                return false;
+            }
+        }
+
         return true;
     }
 
     public function dateAfterBirthDate($field = null) {
-        if (!empty($field['enrollment_date']) && !empty($field['date_of_birth'])) {
-            if(strtotime($field['enrollment_date']) < strtotime($this->data['Sae']['date_of_birth']))    return false;
+        $value = $this->_dateTimestamp(reset($field));
+        $birthDate = !empty($this->data['Sae']['date_of_birth']) ? $this->_dateTimestamp($this->data['Sae']['date_of_birth']) : false;
+
+        if ($value === false || $birthDate === false) {
+            return true;
         }
-        if (!empty($field['administration_date']) && !empty($field['date_of_birth'])) {
-            if(strtotime($field['administration_date']) < strtotime($this->data['Sae']['date_of_birth']))    return false;
-        }
-        if (!empty($field['latest_date']) && !empty($field['date_of_birth'])) {
-            if(strtotime($field['latest_date']) < strtotime($this->data['Sae']['date_of_birth']))    return false;
-        }
-        return true;
+
+        return ($value >= $birthDate);
     }
 
     public function dateAfterOnsetDate($field = null) {
-        if (!empty($field['reaction_end_date'])) {
-            if(strtotime($field['reaction_end_date']) < strtotime($this->data['Sae']['reaction_onset']))    return false;
+        $reactionEndDate = $this->_dateTimestamp(reset($field));
+        $reactionOnset = !empty($this->data['Sae']['reaction_onset']) ? $this->_dateTimestamp($this->data['Sae']['reaction_onset']) : false;
+
+        if ($reactionEndDate === false || $reactionOnset === false) {
+            return true;
         }
-        return true;
+
+        return ($reactionEndDate >= $reactionOnset);
     }
 
     public function sourceSelected($field = null) {
@@ -456,5 +649,13 @@ class Sae extends AppModel {
             return false;
         }
         return true;
+    }
+
+    protected function _dateTimestamp($value) {
+        if ($value === null || $value === '') {
+            return false;
+        }
+
+        return strtotime($value);
     }
 }
