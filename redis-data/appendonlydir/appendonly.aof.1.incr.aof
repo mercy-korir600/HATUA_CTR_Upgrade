@@ -1,0 +1,43 @@
+*2
+$6
+SELECT
+$1
+0
+*3
+$4
+SADD
+$13
+resque:queues
+$7
+default
+*3
+$5
+RPUSH
+$20
+resque:queue:default
+$716
+{"class":"NotificationShell","args":[["registrationEmail",{"User":{"username":"jkiprotich2","password":"jkiprotich","confirm_password":"jkiprotich","name":"Imeja Repoter","email":"jkiprotich+2@intellisoftkenya.com","sponsor_email":"jkiprotich@intellisoftkenya.com","qualification":"Dentist","phone_no":"0724743788","name_of_institution":"","institution_physical":"","institution_address":"","institution_contact":"","county_id":"","country_id":"115","captcha_hash":"0e6aa216d8d3241cfa030d0478cabf6ba6067383","captcha_time":"1776403270","homepage":"","captcha":"5","bot_stop":"","group_id":5,"emailed":1,"activation_key":"13d3bd0116d8e84e738c2b991f6ad70fb13215cc","id":"3"}}]],"id":"f10bc86942d67e87eaaffa5686a10652"}
+*2
+$6
+SELECT
+$1
+0
+*3
+$5
+RPUSH
+$20
+resque:queue:default
+$1093
+{"class":"NotificationShell","args":[["registrationEmail",{"User":{"username":"kypuri","password":"kypuri","confirm_password":"kypuri","name":"vufiqoki","email":"jkiprotich+3@intellisoftkenya.com","sponsor_email":"jkiprotich+3@intellisoftkenya.com","qualification":"Quasi labore ex aut velit aliquid molestiae ut dolor et fugiat et","phone_no":"+1 (651) 362-6635","name_of_institution":"vusej","institution_physical":"Quae eos dignissimos quod sint sed quis minus eveniet omnis ipsam incididunt odio blanditiis expedita","institution_address":"Eveniet blanditiis nulla molestiae corporis iure qui non et velit minima debitis et aspernatur animi rerum corporis esse alias et","institution_contact":"Ratione a maiores sit exercitation molestiae cupidatat praesentium iusto tenetur sunt placeat","county_id":"","country_id":"115","captcha_hash":"4b8a19ffbf5f29f9cba0683da78a65d544c74387","captcha_time":"1776404922","homepage":"","captcha":"3","bot_stop":"","group_id":5,"emailed":1,"activation_key":"8600be019a937561535cd50be432c2bf81a34a0b","id":"4"}}]],"id":"02aa2b08a89f65dab88069b113285a0b"}
+*2
+$6
+SELECT
+$1
+0
+*3
+$5
+RPUSH
+$20
+resque:queue:default
+$986
+{"class":"NotificationShell","args":[["registrationEmail",{"User":{"username":"wazonoxyl","password":"wazonoxyl","confirm_password":"wazonoxyl","name":"wazonoxyl","email":"jkiprotich@intellisoftkenya.com","sponsor_email":"jkiprotich@intellisoftkenya.com","qualification":"Illum in anim dicta rem est in anim laboriosam","phone_no":"+1 (344) 566-2915","name_of_institution":"vatyq","institution_physical":"Doloribus est aut enim nemo quas","institution_address":"Voluptate sint ut nesciunt dolores ratione id est velit quia alias aut et officia aliquid","institution_contact":"Nobis sint non cupiditate placeat est placeat incidunt ut officiis quia sit quas possimus similique ut lorem","county_id":"","country_id":"115","captcha_hash":"c715bff6ee6a4947518fbd5c7c894eec19109c54","captcha_time":"1776405154","homepage":"","captcha":"8","bot_stop":"","group_id":5,"emailed":1,"activation_key":"7c486921853cad0dffc9d5e895c4972323c729c8","id":"1"}}]],"id":"8c1e1a75e50dafd5286830725a09a4b7"}
