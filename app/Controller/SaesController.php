@@ -300,21 +300,21 @@ class SaesController extends AppController
             return $this->_jsonErrorResponse(422, 'Please correct the highlighted errors.', $validationErrors);
         }
 
-        $duplicate = $this->_findDuplicateSubmittedSae($data, $user);
-        if (!empty($duplicate)) {
-            $message = 'A matching SAE has already been submitted.';
-            $this->_logSaeApiAttempt('failed', 'Duplicate SAE submission detected.', array(
-                'status_code' => 409,
-                'user_id' => $user['id'],
-                'application_id' => $data['Sae']['application_id'],
-                'duplicate_sae_id' => $duplicate['Sae']['id'],
-                'duplicate_reference_no' => $duplicate['Sae']['reference_no']
-            ));
+        // $duplicate = $this->_findDuplicateSubmittedSae($data, $user);
+        // if (!empty($duplicate)) {
+        //     $message = 'A matching SAE has already been submitted.';
+        //     $this->_logSaeApiAttempt('failed', 'Duplicate SAE submission detected.', array(
+        //         'status_code' => 409,
+        //         'user_id' => $user['id'],
+        //         'application_id' => $data['Sae']['application_id'],
+        //         'duplicate_sae_id' => $duplicate['Sae']['id'],
+        //         'duplicate_reference_no' => $duplicate['Sae']['reference_no']
+        //     ));
 
-            return $this->_jsonErrorResponse(409, $message, array(
-                'duplicate' => array($message . ' Existing reference: ' . $duplicate['Sae']['reference_no'])
-            ));
-        }
+        //     return $this->_jsonErrorResponse(409, $message, array(
+        //         'duplicate' => array($message . ' Existing reference: ' . $duplicate['Sae']['reference_no'])
+        //     ));
+        // }
 
         $submittedAt = date('Y-m-d H:i:s');
         $data['Sae']['reference_no'] = $this->Sae->generateReferenceNumber($data['Sae']['form_type'], $submittedAt);
@@ -612,6 +612,7 @@ class SaesController extends AppController
     private function _resolveSubmissionApplication($data = array(), $user = array())
     {
         $referenceNo = $this->_extractApplicationReference($data);
+ 
 
         if ($referenceNo !== '') {
             $application = $this->_findApplicationByReference($referenceNo);
@@ -706,7 +707,7 @@ class SaesController extends AppController
         return $this->Application->find('first', array(
             'contain' => array(),
             'conditions' => array(
-                'Application.protocol_no' => $referenceNo
+                'Application.reference_no' => $referenceNo
             )
         ));
     }
