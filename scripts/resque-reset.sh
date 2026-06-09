@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 QUEUE="${1:-default}"
- 
+
 docker compose exec -T web sh -c 'sudo app/Console/cake CakeResque.CakeResque stop -a -f || true'
 
 docker compose exec -T redis sh -c '
