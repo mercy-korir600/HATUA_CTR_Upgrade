@@ -10,10 +10,15 @@ services:
       DB_USER: root
       DB_PASSWORD: hatua.
       DB_NAME: ctr
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DATABASE: "0"
+      REDIS_NAMESPACE: resque
     volumes:
       - ./:/var/www/html
     depends_on:
       - db
+      - redis
 
   db:
     image: mysql:5.7.42
@@ -38,6 +43,10 @@ services:
       PMA_PASSWORD: hatua.
     depends_on:
       - db
+
+  redis:
+    image: redis:7-alpine
+    platform: linux/amd64
 
 volumes:
   db_data:
