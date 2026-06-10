@@ -19,7 +19,7 @@ require_running_service() {
 
 mysql_exec() {
   local sql="$1"
-  docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -uroot "$MYSQL_DATABASE"' <<< "$sql"
+  docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=TCP -h127.0.0.1 -P3306 -N -uroot "$MYSQL_DATABASE"' <<< "$sql"
 }
 
 web_exec() {
@@ -27,8 +27,36 @@ web_exec() {
   docker compose exec -T "$WEB_SERVICE" sh -c "$command"
 }
 
+wait_for_db() {
+  local attempt
+  for attempt in $(seq 1 60); do
+    if docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=TCP -h127.0.0.1 -P3306 --connect-timeout=2 -N -uroot "$MYSQL_DATABASE" -e "SELECT 1" >/dev/null 2>&1'; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Database service did not become ready in time." >&2
+  exit 1
+}
+
+wait_for_web() {
+  local attempt
+  for attempt in $(seq 1 60); do
+    if docker compose exec -T "$WEB_SERVICE" php -r '$ctx = stream_context_create(array("http" => array("ignore_errors" => true, "timeout" => 2))); $body = @file_get_contents("http://127.0.0.1/users/login", false, $ctx); exit($body === false ? 1 : 0);' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Web service did not become ready in time." >&2
+  exit 1
+}
+
 require_running_service "$DB_SERVICE"
 require_running_service "$WEB_SERVICE"
+wait_for_db
+wait_for_web
 
 echo "Repairing ARO records from groups/users..."
 

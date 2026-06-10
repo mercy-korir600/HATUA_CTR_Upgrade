@@ -67,7 +67,7 @@ fi
 
 mysql_exec() {
   local sql="$1"
-  docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -uroot "$MYSQL_DATABASE"' <<< "$sql"
+  docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=TCP -h127.0.0.1 -P3306 -N -uroot "$MYSQL_DATABASE"' <<< "$sql"
 }
 
 sql_escape() {
@@ -80,7 +80,9 @@ sql_escape() {
 wait_for_db() {
   local attempt
   for attempt in $(seq 1 60); do
-    if docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin -uroot ping --silent >/dev/null 2>&1'; then
+    # MySQL 5.7 starts a temporary init server on first boot; only proceed once
+    # the final TCP listener is accepting authenticated queries on port 3306.
+    if docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=TCP -h127.0.0.1 -P3306 --connect-timeout=2 -N -uroot "$MYSQL_DATABASE" -e "SELECT 1" >/dev/null 2>&1'; then
       return 0
     fi
     sleep 2
