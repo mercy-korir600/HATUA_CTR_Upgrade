@@ -16,36 +16,59 @@
         'class' => 'ctr-groups', 'style' => array('padding:9px;', 'background-color: #F5F5F5'),                                                                                                                                                              
     ));                                                                                                                                                                                                                                                      
     ?>                                                                                                                                                                                                                                                       
-    <div class="row-fluid">                                                                                                                                                                                                                                  
-        <div class="span4">                                                                                                                                                                                                                                  
-            <?php                                                                                                                                                                                                                                            
-            echo $this->Form->input(                                                                                                                                                                                                                         
-                'start_date',                                                                                                                                                                                                                                
-                array(                                                                                                                                                                                                                                       
-                    'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index', 'after' => '-to-',                                                                                                                                        
-                    'label' => array('class' => 'required', 'text' => 'Created Dates'), 'placeHolder' => 'Start Date'                                                                                                                                        
-                )                                                                                                                                                                                                                                            
-            );                                                                                                                                                                                                                                               
-            echo $this->Form->input(                                                                                                                                                                                                                         
-                'end_date',                                                                                                                                                                                                                                  
-                array(                                                                                                                                                                                                                                       
-                    'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index',                                                                                                                                                           
-                    'after' => '<a style="font-weight:normal" onclick="$(\'.unauthorized_index\').val(\'\');" >                                                                                                                                              
-                          <em class="accordion-toggle">clear!</em></a>',                                                                                                                                                                                     
-                    'label' => false, 'placeHolder' => 'End Date'                                                                                                                                                                                            
-                )                                                                                                                                                                                                                                            
-            );                                                                                                                                                                                                                                               
-            ?>                                                                                                                                                                                                                                               
-        </div>                                                                                                                                                                                                                                               
-        <div class="span2">                                                                                                                                                                                                                                  
-              <?php                                                                                                                                                                                                                                          
-                echo $this->Form->button('<i class="icon-search icon-white"></i> Search', array(                                                                                                                                                             
-                    'class' => 'btn btn-inverse', 'div' => 'control-group', 'div' => false,                                                                                                                                                                  
-                    'style' => array('margin-top: 25px')                                                                                                                                                                                                     
-                ));                                                                                                                                                                                                                                          
-              ?>                                                                                                                                                                                                                                             
-            </div>                                                                                                                                                                                                                                           
-    </div>                                                                                                                                                                                                                                                   
+     <div class="row-fluid">
+        <div class="span4">
+            <?php
+            echo $this->Form->input(
+                'start_date',
+                array(
+                    'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index', 'after' => '-to-',
+                    'label' => array('class' => 'required', 'text' => 'Created Dates'), 'placeHolder' => 'Start Date'
+                )
+            );
+            echo $this->Form->input(
+                'end_date',
+                array(
+                    'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index',
+                    'after' => '<a style="font-weight:normal" onclick="$(\'.unauthorized_index\').val(\'\');" >
+                          <em class="accordion-toggle">clear!</em></a>',
+                    'label' => false, 'placeHolder' => 'End Date'
+                )
+            );
+            ?>
+        </div>
+        
+        <!-- Add the status filter column here -->
+        <?php if (!$isManager): ?>
+        <div class="span3" style="margin-top: -5px;">
+            <?php
+            echo $this->Form->input(
+                'filter_target',
+                array(
+                    'label' => 'Filter Target Status',
+                    'type' => 'select',
+                    'options' => array(
+                        'all' => 'All (Submitted & Unsubmitted)',
+                        'submitted' => 'Submitted Only',
+                        'unsubmitted' => 'Unsubmitted Only'
+                    ),
+                    'value' => isset($filter) ? $filter : 'all',
+                    'class' => 'input-medium'
+                )
+            );
+            ?>
+        </div>
+        <?php endif; ?>
+        
+        <div class="span2">
+            <?php
+            echo $this->Form->button('<i class="icon-search icon-white"></i> Search', array(
+                'class' => 'btn btn-inverse', 'div' => 'control-group', 'div' => false,
+                'style' => array('margin-top: 25px')
+            ));
+            ?>
+        </div>
+    </div>                                                                                                                                                                                                                                                 
     <?php echo $this->Form->end(); ?>                                                                                                                                                                                                                        
                                                                                                                                                                                                                                                              
     <!-- Highcharts Column Chart Container -->                                                                                                                                                                                                               
