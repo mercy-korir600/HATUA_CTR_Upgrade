@@ -484,4 +484,62 @@ class ReportsController extends AppController
       }
     }
   }
+       /**
+ * Tally number of applications per year and calculate average number per year
+ */
+public function protocols_per_year()
+{
+    $criteria = array();
+    $criteria['Application.deleted'] = 0; // Filter out deleted applications
+
+    // Apply date filter if provided
+    if (
+        !empty($this->request->data['Application']['start_date']) &&
+        !empty($this->request->data['Application']['end_date'])
+    ) {
+        $criteria['Application.created BETWEEN ? AND ?'] = array(
+            date('Y-m-d', strtotime($this->request->data['Application']['start_date'])),
+            date('Y-m-d', strtotime($this->request->data['Application']['end_date']))
+        );
+    }
+
+    // Fetch yearly application counts
+    $data = $this->Application->find('all', array(
+        'fields' => array(
+            'YEAR(Application.created) AS year',
+            'COUNT(*) AS cnt'
+        ),
+        'conditions' => $criteria,
+        'group' => array('YEAR(Application.created)'),
+        'order' => array('year DESC'),
+        'recursive' => -1
+    ));
+
+    // Calculate average number of applications per year
+    $totalApplications = 0;
+    $totalYears = count($data);
+
+    foreach ($data as $row) {
+        $totalApplications += $row[0]['cnt'];
+    }
+
+    $average = ($totalYears > 0) ? ($totalApplications / $totalYears) : 0;
+
+    $this->set(compact('data', 'average'));
+    $this->set('_serialize', array('data', 'average'));
+    $this->render('protocols_per_year');
 }
+                                                                                                                                                                      
+      public function manager_protocols_per_year()                                                                                                                                                                                                           
+      {                                                                                                                                                                                                                                                      
+        $this->protocols_per_year();                                                                                                                                                                                                                         
+      }                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                             
+      public function inspector_protocols_per_year()                                                                                                                                                                                                         
+      {                                                                                                                                                                                                                                                      
+        $this->protocols_per_year();                                                                                                                                                                                                                         
+      }                                                                                                                                                                                                                                                      
+
+
+}
+

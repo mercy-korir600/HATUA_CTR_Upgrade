@@ -132,7 +132,11 @@
                                   array('escape' => false, 'tabindex' => '-1'));
                     ?>
             </li>
-            
+             <li><?php                                                                                                                                                                                                                                   
+                            echo $this->Html->link('<i class="icon-bar-chart"></i> Applications per Year',  array('controller' => 'reports', 'action'=>'protocols_per_year', 'manager' => true ),                                                            
+                                      array('escape' => false, 'tabindex' => '-1'));                                                                                                                                                                         
+                        ?>                                                                                                                                                                                                                                   
+                </li>     
         </ul>
        </li>
 
