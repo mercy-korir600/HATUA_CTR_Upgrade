@@ -485,20 +485,13 @@ class ReportsController extends AppController
     }
   }
   
-  /**
-     * Tally number of applications per year and calculate average number per year
-     */
     public function protocols_per_year()
     {
         $criteria = array();
-        $criteria['Application.deleted'] = 0; // Filter out deleted applications
-
-        // 1. Detect user role (Group 2 = Manager, Group 1 = Admin)
+        $criteria['Application.deleted'] = 0;
         $group_id = $this->Auth->user('group_id');
         $isManager = ($group_id == 2);
 
-        // 2. Read the filter target (submitted, unsubmitted, all)
-        // If the user is a manager, force the target to 'submitted'.
         if ($isManager) {
             $filter = 'submitted';
         } else {
@@ -506,15 +499,11 @@ class ReportsController extends AppController
                 ? $this->request->data['Application']['filter_target']
                 : 'all';
         }
-
-        // 3. Add conditions based on the filter target
         if ($filter === 'submitted') {
             $criteria['Application.submitted'] = 1;
         } elseif ($filter === 'unsubmitted') {
             $criteria['Application.submitted'] = 0;
-        } // For 'all', we don't append a condition on Application.submitted so both are returned
-
-        // Apply date filter if provided
+        } 
         if (
             !empty($this->request->data['Application']['start_date']) &&
             !empty($this->request->data['Application']['end_date'])
@@ -524,8 +513,7 @@ class ReportsController extends AppController
                 date('Y-m-d', strtotime($this->request->data['Application']['end_date']))
             );
         }
-
-        // Fetch yearly application counts
+      
         $data = $this->Application->find('all', array(
             'fields' => array(
                 'YEAR(Application.created) AS year',
@@ -537,7 +525,6 @@ class ReportsController extends AppController
             'recursive' => -1
         ));
 
-        // Calculate average number of applications per year
         $totalApplications = 0;
         $totalYears = count($data);
 
@@ -547,7 +534,6 @@ class ReportsController extends AppController
 
         $average = ($totalYears > 0) ? ($totalApplications / $totalYears) : 0;
 
-        // Pass variables to view
         $this->set(compact('data', 'average', 'filter', 'isManager'));
         $this->set('_serialize', array('data', 'average', 'filter', 'isManager'));
         $this->render('protocols_per_year');
@@ -563,7 +549,6 @@ class ReportsController extends AppController
         $this->protocols_per_year();
     }
 
-    // Add this wrapper so admins can access the same report action under the admin prefix
     public function admin_protocols_per_year()
     {
         $this->protocols_per_year();
