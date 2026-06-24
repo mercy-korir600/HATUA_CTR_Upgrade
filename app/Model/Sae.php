@@ -284,59 +284,44 @@ class Sae extends AppModel {
                 'message' => 'The enrollment date must be after the date of birth!'
             )
         ),
-       'administration_date' => array(
-                 'checkInitialRequired' => array(
-                     'rule' => 'checkInitialRequired',
-                     'message' => 'Please enter the initial date of administration (or check "IP was not given").'
-                 ),
-                 'validDateValue' => array(
-                     'rule' => 'validDateValue',
-                     'allowEmpty' => true,
-                     'message' => 'Please enter a valid date of initial administration of the investigational product!'
-               ),
-                'dateBeforeAdministration' => array(
-                    'rule' => 'dateBeforeAdministration',
-                    'allowEmpty' => true,
-                    'message' => 'The date of initial administration of the investigational product must be after the date of
-      enrollment into the study!'
-                ),
-                'dateAfterBirthDate' => array(
-                    'rule' => 'dateAfterBirthDate',
-                    'allowEmpty' => true,
-                    'message' => 'The date of initial administration of the investigational product must be after the date of
-      birth!'
-                )
+        'administration_date' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'required' => true,
+                'message' => 'Please enter the date of initial administration of the investigational product!'
             ),
-            'latest_date' => array(
-                'checkLatestDependency' => array(
-                   'rule' => 'checkLatestDependency',
-                    'message' => 'You cannot provide a latest administration date without an initial administration date.'
-                ),
-                'validDateValue' => array(
-                    'rule' => 'validDateValue',
-                    'allowEmpty' => true,
-                    'message' => 'Please enter a valid date of latest administration of the investigational product!'
-                ),
-                'dateBeforeAdministration' => array(
-                    'rule' => 'dateBeforeAdministration',
-                    'allowEmpty' => true,
-                  'message' => 'The date of the latest administration of the investigational product must be after the date
-      of enrollment into the study and date of initial administration!'
-               ),
-                'dateAfterBirthDate' => array(
-                   'rule' => 'dateAfterBirthDate',
-                   'allowEmpty' => true,
-                    'message' => 'The date of the latest administration of the investigational product must be after the date
-      of birth!'
-                )
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'message' => 'Please enter a valid date of initial administration of the investigational product!'
             ),
-            'ip_not_given_narrative' => array(
-                'checkNarrativeRequired' => array(
-                    'rule' => 'checkNarrativeRequired',
-                    'message' => 'Please provide a narrative explaining why the IP was not given.'
-                )
+            'dateBeforeAdministration' => array(
+                'rule' => 'dateBeforeAdministration',
+                'message' => 'The date of initial administration of the investigational product must be after the date of enrollment into the study!'
             ),
-
+            'dateAfterBirthDate' => array(
+                'rule' => 'dateAfterBirthDate',
+                'message' => 'The date of initial administration of the investigational product must be after the date of birth!'
+            )
+        ),
+        'latest_date' => array(
+            'notEmpty' => array(
+                'rule' => 'notEmpty',
+                'required' => true,
+                'message' => 'Please enter the date of latest administration of the investigational product!'
+            ),
+            'validDateValue' => array(
+                'rule' => 'validDateValue',
+                'message' => 'Please enter a valid date of latest administration of the investigational product!'
+            ),
+            'dateBeforeAdministration' => array(
+                'rule' => 'dateBeforeAdministration',
+                'message' => 'The date of the latest administration of the investigational product must be after the date of enrollment into the study and date of initial administration!'
+            ),
+            'dateAfterBirthDate' => array(
+                'rule' => 'dateAfterBirthDate',
+                'message' => 'The date of the latest administration of the investigational product must be after the date of birth!'
+            )
+        ),
         'reaction_onset' => array(
             'notEmpty' => array(
                 'rule' => 'notEmpty',
@@ -489,21 +474,6 @@ class Sae extends AppModel {
     }
 
     public function beforeSave() {
-
- if (!empty($this->data['Sae']['ip_not_given'])) {
-            
-                 $this->data['Sae']['administration_date'] = null;
-                 $this->data['Sae']['latest_date'] = null;
-             } else {
-        
-                 $this->data['Sae']['ip_not_given_narrative'] = null;
-                $this->data['Sae']['ip_not_given'] = 0;
-                
-                if (empty($this->data['Sae']['latest_date'])) {
-                     $this->data['Sae']['latest_date'] = null;
-                }
-            }
-
         if (!empty($this->data['Sae']['date_of_birth'])) {
             $this->data['Sae']['date_of_birth'] = $this->dateFormatBeforeSave($this->data['Sae']['date_of_birth']);
         }
@@ -688,29 +658,4 @@ class Sae extends AppModel {
 
         return strtotime($value);
     }
-
-         public function checkInitialRequired($check) {
-             if (!empty($this->data['Sae']['ip_not_given'])) {
-                 return true; 
-             }
-             $value = reset($check);
-             return !empty($value); 
-         }
-    
-        public function checkLatestDependency($check) {
-            $latestDate = reset($check);
-            
-            if (!empty($latestDate) && empty($this->data['Sae']['administration_date'])) {
-                return false;
-            }
-            return true;
-        }
-
-        public function checkNarrativeRequired($check) {
-            if (!empty($this->data['Sae']['ip_not_given'])) {
-                $value = reset($check);
-                return !empty($value); 
-            }
-            return true;
-        }
 }

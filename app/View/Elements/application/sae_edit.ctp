@@ -31,7 +31,6 @@
         <div class="span6">
         <?php
             echo $this->Form->input('id');
-              echo $this->Form->input('form_type', array('type' => 'hidden'));
             echo $this->Form->input('application_id', array('label' => array('class' => 'control-label required', 'text' => 'Protocol <span class="sterix">*</span>')));
         ?>
         </div>
@@ -47,66 +46,12 @@
                 echo $this->Form->input('enrollment_date', array('type' => 'text', 'class' => 'datepickers',
                     'label' => array('class' => 'control-label required', 'text' => 'Date of enrollment into the study </small> <span class="sterix">*</span>')
                 ));
-                ?>
-                  <div id="ip-dates-container">
-      <?php
-         echo $this->Form->input('administration_date', array(
-           'type' => 'text', 
-             'class' => 'datepickers ip-date-field',
-            'label' => array('class' => 'control-label', 'text' => 'Date of initial administration of investigational product
-      <span class="sterix" id="initial-sterix">*</span>')
-        ));
-        
-       echo $this->Form->input('latest_date', array(
-            'type' => 'text', 
-            'class' => 'datepickers ip-date-field',
-            'label' => array('class' => 'control-label', 'text' => 'Date of the latest administration of the investigational
-      product')
-        ));
-        ?>
-    </div>
-   
-    <?php
-    echo $this->Form->input('ip_not_given', array(
-        'type' => 'checkbox',
-        'id' => 'ip-not-given-checkbox',
-        'label' => array('class' => 'control-label', 'text' => 'IP was not given to the participant')
-    ));
-   
- 
-    echo '<div id="ip-narrative-container" style="display: none;">';
-    echo $this->Form->input('ip_not_given_narrative', array(
-        'type' => 'textarea',
-        'id' => 'ip-not-given-narrative',
-        'label' => array('class' => 'control-label required', 'text' => 'Reason IP was not given <span
-      class="sterix">*</span>')
-    ));
-    echo '</div>';
-    ?>
-   
-    <script type="text/javascript">
-    $(document).ready(function() {
-        function toggleIpFields() {
-           if ($('#ip-not-given-checkbox').is(':checked')) {
-               $('#ip-narrative-container').slideDown();
-                $('.ip-date-field').val('').prop('disabled', true);
-                $('#initial-sterix').hide();
-            } else {
-                $('#ip-narrative-container').slideUp();
-                $('#ip-not-given-narrative').val('');
-                $('.ip-date-field').prop('disabled', false);
-                $('#initial-sterix').show();
-            }
-        }
-
-        toggleIpFields();
-   
-        $('#ip-not-given-checkbox').change(function() {
-            toggleIpFields();
-        });
-    });
-    </script>
-    <?php
+                echo $this->Form->input('administration_date', array('type' => 'text', 'class' => 'datepickers',
+                    'label' => array('class' => 'control-label required', 'text' => 'Date of initial administration of investigational product </small> <span class="sterix">*</span>')
+                ));
+                echo $this->Form->input('latest_date', array('type' => 'text', 'class' => 'datepickers',
+                    'label' => array('class' => 'control-label required', 'text' => 'Date of the latest administration of the investigational product </small> <span class="sterix">*</span>')
+                ));
                 echo $this->Form->input('reaction_onset', array('type' => 'text', 'class' => 'datepickers',
                     'label' => array('class' => 'control-label required', 'text' => 'Reaction Onset <span class="sterix">*</span>')
                 ));
