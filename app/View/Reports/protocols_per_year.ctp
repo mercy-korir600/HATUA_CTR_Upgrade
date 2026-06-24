@@ -5,7 +5,6 @@
       $this->Html->script('highcharts/highcharts', array('inline' => false));
       $this->Html->script('highcharts/modules/data', array('inline' => false));
       $this->Html->script('highcharts/modules/exporting', array('inline' => false));
-      // Add the line below to enable local client-side exporting:
       $this->Html->script('highcharts/modules/offline-exporting', array('inline' => false));
       $this->Html->script('highcharts/modules/export-data', array('inline' => false));
     ?>                                                                                                                                                                                                                                               
