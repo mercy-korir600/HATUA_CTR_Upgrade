@@ -2086,7 +2086,11 @@ $this->Html->script('save', array('inline' => false));
           'label' => array('class' => 'control-label required', 'text' => ' <span class="sterix">*</span>'),
           'placeholder' => ' ',
           'class' => 'input-xlarge datepickers'
-        ));
+        ));                                                                                                                                                                                                                                          
+         echo $this->Form->input('protocol_not_ai_generated', array(                                                                                                                                                                                      
+              'type' => 'checkbox',                                                                                                                                                                                                                          
+              'label' => array('class' => 'control-label required', 'text' => ' I declare that the clinical trial protocol submitted is not AI-generated. <span class="sterix">*</span>'),                                                                   
+            ));    
         ?>
       </div>
       <div id="tabs-14">

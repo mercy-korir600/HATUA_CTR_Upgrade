@@ -1302,7 +1302,15 @@ class Application extends AppModel
                 'message'  => 'Declaration : Please enter the date for the declaration by the National Principal Investigator / National Co-ordinator /
                                 Other (state designation'
             ),
-        ),
+        ),                                                                                                                                                                                                                                                  
+            'protocol_not_ai_generated' => array(                                                                                                                                                                                                            
+                'must_be_checked' => array(                                                                                                                                                                                                                  
+                    'rule'     => array('notEmptyCheckbox', 'protocol_not_ai_generated'),                                                                                                                                                                    
+                    'required' => true,                                                                                                                                                                                                                      
+                    'message'  => 'Declaration: You must declare that the protocol is not AI-generated.'                                                                                                                                                     
+                ),                                                                                                                                                                                                                                           
+            ),                                                                                                                                                                                                                                               
+              
     );
 
     public function notEmptyCheckbox($field = null, $key)

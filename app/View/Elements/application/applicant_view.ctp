@@ -2506,6 +2506,17 @@
               <p><?php echo $application['Application']['declaration_principal_investigator']; ?> </p>
             </td>
           </tr>
+           <tr>
+    <td class="table-label required">
+        <p>Protocol is not AI-Generated</p>
+    </td>
+    <td>
+        <input type="checkbox"
+               <?php echo ($application['Application']['protocol_not_ai_generated'] == 1) ? 'checked' : ''; ?>
+               disabled>
+    </td>
+</tr>                                                                                                                                                                                                                                                      
+          
           <?php
           foreach ($application['Amendment']  as $key => $amendment) {
             if ($amendment['submitted'] == 1 && !empty($amendment['declaration_principal_investigator'])) {      ?>
