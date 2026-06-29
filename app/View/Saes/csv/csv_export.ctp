@@ -1,7 +1,7 @@
 <?php
 
 // app/Views/Subscribers/export.ctp
-$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'reference_no' => 'Reference No.', 'patient_initials' => 'Patient Initials', 'country_id' => 'Country', 'date_of_birth' => 'Date of Birth', 'age_years' => 'Age years', 'reaction_onset' => 'Reaction onset', 'duration' => 'Duration drug and SAE', 'gender' => 'Gender', 'adverse_reaction' => 'Adverse reaction', 'reaction_description' => 'Reaction description', 'suspected_drugs' => 'Suspected drugs', 'concomitant_drugs' => 'Concomitant drug', 'relevant_history' => 'History', 'manufacturer_name' => 'Manufacturer', 'mfr_no' => 'MFR Control No.', 'manufacturer_date' => 'Date received by manufacturer', 'report_source' => 'Report source', 'reporter_name' => 'Reporter name', 'reporter_phone' => 'Reporter phone', 'reporter_email' => 'Reporter email'
+$header = array('id' => '#', 'protocol_no' => 'Protocol No.', 'reference_no' => 'Reference No.', 'patient_initials' => 'Patient Initials', 'country_id' => 'Country', 'date_of_birth' => 'Date of Birth', 'age_years' => 'Age years', 'reaction_onset' => 'Reaction onset', 'duration' => 'Duration drug and SAE', 'gender' => 'Gender', 'adverse_reaction' => 'Adverse reaction', 'reaction_description' => 'Reaction description', 'ip_not_given' => 'IP Not Given', 'ip_not_given_narrative' => 'Reason IP Not Given', 'suspected_drugs' => 'Suspected drugs', 'concomitant_drugs' => 'Concomitant drug', 'relevant_history' => 'History', 'manufacturer_name' => 'Manufacturer', 'mfr_no' => 'MFR Control No.', 'manufacturer_date' => 'Date received by manufacturer', 'report_source' => 'Report source', 'reporter_name' => 'Reporter name', 'reporter_phone' => 'Reporter phone', 'reporter_email' => 'Reporter email'
             );
 
 
@@ -12,9 +12,18 @@ foreach ($csaes as $sae):
 	$row = [];
 	foreach ($header as $key => $val) {
 		
-		if (array_key_exists($key, $sae['Sae'])) {
-			$row[$key] = '"' . preg_replace('/"/','""',$sae['Sae'][$key]) . '"';
-		} elseif ($key == 'protocol_no') {
+	  if (array_key_exists($key, $sae['Sae'])) {
+                if ($key == 'ip_not_given') {
+                    $row[$key] = (!empty($sae['Sae']['ip_not_given'])) ? '"Yes"' : '"No"';
+                } elseif ($key == 'ip_not_given_narrative') {
+                    $row[$key] = (!empty($sae['Sae']['ip_not_given']) && !empty($sae['Sae']['ip_not_given_narrative'])) 
+                        ? '"' . preg_replace('/"/','""',$sae['Sae']['ip_not_given_narrative']) . '"' 
+                        : '""';
+                } else {
+                    $row[$key] = '"' . preg_replace('/"/','""',$sae['Sae'][$key]) . '"';
+                }
+            } elseif ($key == 'protocol_no') {
+    
 			$row[$key] = '"' . preg_replace('/"/','""',$sae['Application'][$key]) . '"';
 		} elseif ($key == 'country_id') {
 			$row[$key] = '"' . preg_replace('/"/','""',$sae['Country']['name']) . '"';
