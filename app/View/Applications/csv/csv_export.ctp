@@ -22,10 +22,13 @@ foreach ($applications as $application):
 		// pr($application);
 		//if simple match 
 		// pr($row['Application']);
-		if (array_key_exists($key, $application['Application'])) {
-			// $content .= '"' . preg_replace('/"/','""',$row['Application'][$key]) . '",';
-			$row[$key] = '"' . preg_replace('/"/','""',$application['Application'][$key]) . '"';
-		} 
+		if ($key == 'protocol_not_ai_generated') {
+             $row[$key] = ($application['Application']['protocol_not_ai_generated'] == 1) ? '"Yes"' : '"No"';
+         } 
+        
+         elseif (array_key_exists($key, $application['Application'])) {
+             $row[$key] = '"' . preg_replace('/"/','""',$application['Application'][$key]) . '"';
+         } 
 		elseif ($key == 'study_routes') {
 			foreach ($application['StudyRoute'] as $study_route) {
 				(isset($row[$key])) ? $row[$key] .= '; '.$study_route['study_route'] : $row[$key] = $study_route['study_route'];
