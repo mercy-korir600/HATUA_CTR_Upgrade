@@ -2664,6 +2664,18 @@ CREATE TABLE `users` (
   `modified` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+CREATE TABLE `auditor_protocols` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int DEFAULT NULL,
+  `application_id` int DEFAULT NULL,
+  `owner_id` int DEFAULT NULL,
+  `created` datetime DEFAULT NULL,
+  `modified` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `application_id` (`application_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
 --
 -- Indexes for dumped tables
 --

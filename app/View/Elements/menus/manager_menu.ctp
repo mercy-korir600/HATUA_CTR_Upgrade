@@ -25,6 +25,12 @@
             array('controller' => 'applications', 'action'=>'workflow', 'manager' => true ), array('escape' => false ));
             ?>
        </li>
+       <li class="<?php echo $this->fetch('Auditors') ?>">
+         <?php
+           echo $this->Html->link('<i class="icon-group"></i> Auditor Protocols',
+             array('controller' => 'auditor_protocols', 'action' => 'index', 'admin' => true), array('escape' => false ));
+         ?>
+       </li>
        <li class="dropdown <?php echo $this->fetch('SAE') ?> <?php echo $this->fetch('SI') ?> <?php echo $this->fetch('PF') ?> <?php echo $this->fetch('CIOM') ?> <?php echo $this->fetch('DEV') ?>">
          <a data-toggle="dropdown" class="dropdown-toggle" role="button" id="drop7" href="#">
             <i class="icon-paper-clip"></i> Application data <b class="caret"></b></a>

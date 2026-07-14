@@ -67,6 +67,11 @@
                                   array('escape' => false, 'tabindex' => '-1'));
                     ?>
             </li>
+             <li><?php
+                         echo $this->Html->link('<i class="icon-user-md"></i> Auditor Protocols',  array('controller' => 'auditor_protocols', 'action'=>'index', 'admin' => true ),
+                                   array('escape' => false, 'tabindex' => '-1'));
+                     ?>
+            </li>
             <li><?php
                 echo $this->Html->link('<i class="icon-group"></i> User Roles',  array('controller' => 'groups', 'action'=>'index', 'admin' => true ),
                                   array('escape' => false, 'tabindex' => '-1'));
