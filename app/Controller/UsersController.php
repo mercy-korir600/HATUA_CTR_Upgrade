@@ -293,6 +293,11 @@ class UsersController extends AppController
             'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
         )));
     }
+ public function auditor_dashboard()
+    {
+        $this->set('title_for_layout', 'Auditor Dashboard');
+    }
+
     public function partner_dashboard()
     {
         $applications = $this->Application->find('all', array(
@@ -424,6 +429,7 @@ class UsersController extends AppController
                 if ($this->Auth->User('group_id') == '7') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'monitor' => 'monitor'));
                 if ($this->Auth->User('group_id') == '8') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'outsource' => 'outsource'));
                 if ($this->Auth->User('group_id') == '9') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'internalreviewer' => 'internalreviewer'));
+                if ($this->Auth->User('group_id') == '10') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'auditor' => true));
             } else {
                 $this->Session->setFlash('Your username or password was incorrect.', 'alerts/flash_error');
             }
@@ -1085,6 +1091,7 @@ class UsersController extends AppController
 
     public function initDB()
     {
+        
         $group = $this->User->Group;
         //Allow admins to everything
         $group->id = 1;
@@ -1357,6 +1364,12 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Users/edit');
         $this->Acl->allow($group, 'controllers/Comments');
         $this->Acl->allow($group, 'controllers/MeetingDates');
+
+         $group->id = 10;
+        $this->Acl->deny($group, 'controllers');
+        // $this->Acl->allow($group, 'controllers/Users/auditor_dashboard');
+        $this->Acl->allow($group, 'controllers/Users/profile');
+        $this->Acl->allow($group, 'controllers/Users/edit');
         echo "all done";
         exit;
     }
