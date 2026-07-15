@@ -93,8 +93,8 @@ class User extends AppModel
       'foreignKey' => 'user_id',
       'dependent' => false,
     ),
- 'AuditorProtocol' => array(
-      'className' => 'AuditorProtocol',
+ 'StudyAuditor' => array(
+      'className' => 'StudyAuditor',
       'foreignKey' => 'user_id',
       'dependent' => false,
     ),

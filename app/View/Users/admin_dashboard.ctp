@@ -146,7 +146,7 @@ $this->assign('Dashboard', 'active');
         ); ?>
       </li>
         <li><?php
-                         echo $this->Html->link('<i class="icon-user-md"></i> Auditor Protocols',  array('controller' => 'auditor_protocols', 'action'=>'index', 'admin' => true ),
+                         echo $this->Html->link('<i class="icon-user-md"></i>Study Auditors',  array('controller' => 'study_auditors', 'action'=>'index', 'admin' => true ),
                                    array('escape' => false, 'tabindex' => '-1'));
                      ?>
             </li>

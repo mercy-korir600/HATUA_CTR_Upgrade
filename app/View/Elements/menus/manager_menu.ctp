@@ -27,8 +27,8 @@
        </li>
        <li class="<?php echo $this->fetch('Auditors') ?>">
          <?php
-           echo $this->Html->link('<i class="icon-group"></i> Auditor Protocols',
-             array('controller' => 'auditor_protocols', 'action' => 'index', 'admin' => true), array('escape' => false ));
+           echo $this->Html->link('<i class="icon-group"></i> Study Auditors',
+             array('controller' => 'study_auditors', 'action' => 'index', 'admin' => true), array('escape' => false ));
          ?>
        </li>
        <li class="dropdown <?php echo $this->fetch('SAE') ?> <?php echo $this->fetch('SI') ?> <?php echo $this->fetch('PF') ?> <?php echo $this->fetch('CIOM') ?> <?php echo $this->fetch('DEV') ?>">
