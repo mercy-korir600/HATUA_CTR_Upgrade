@@ -283,13 +283,30 @@
           <?php endif; ?>
         </tbody>
       </table>
+     </div>                                                                                                             
+      </div>                                                                                                               
+    </div>                                                                                                                 
+                                                                                                                                                                                                               
+    <div class="tab-pane" id="tab-audit-report">
+      <h4 class="text-info">Audit Findings & Report</h4>
+      <hr>
+      <div class="row-fluid">
+        <div class="span12 text-center">
+          <?php
+            echo $this->Html->link(
+              __('<i class="icon-edit"></i> Conduct / Edit Audit Report & Checklist'),
+              array('controller' => 'audit_reports', 'action' => 'edit', $application['Application']['id'], 'auditor' =>   
+  true),
+              array('escape' => false, 'class' => 'btn btn-large btn-primary')
+            );
+          ?>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-
-<script type="text/javascript">
-$(function() {
-  $("#tabs").tabs();
-});
-</script>
-<?php $this->end(); ?>
+  
+      <script type="text/javascript">
+        $(function() {
+          $("#tabs").tabs();
+        });
+        </script>
+    <?php $this->end(); ?>
