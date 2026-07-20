@@ -4157,4 +4157,61 @@ class ApplicationsController extends AppController
 
         return $priorFeedback;
     }
+      public function auditor_index()
+   {
+       $this->Prg->commonProcess();
+       $page_options = array('5' => '5', '10' => '10', '25' => '25', '50' => '50');
+       if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) $this->passedArgs['range'] = true;
+       if (!empty($this->passedArgs['month_year'])) $this->passedArgs['mode'] = true;
+       if (isset($this->passedArgs['pages']) && !empty($this->passedArgs['pages'])) $this->paginate['limit'] = $this->passedArgs['pages'];
+       else $this->paginate['limit'] = reset($page_options);
+
+       $criteria = $this->Application->parseCriteria($this->passedArgs);
+       
+       $this->loadModel('StudyAuditor');
+       $criteria['Application.id'] = $this->StudyAuditor->find('list', array(
+           'fields' => array('application_id', 'application_id'), 
+           'conditions' => array('StudyAuditor.user_id' => $this->Auth->User('id'))
+       ));
+       $criteria['Application.submitted'] = 1;
+       $this->paginate['conditions'] = $criteria;
+       $this->paginate['order'] = array('Application.created' => 'desc');
+       $this->paginate['contain'] = array('InvestigatorContact', 'Sponsor', 'SiteDetail' => array('County'), 'Review' => array('User'), 'TrialStatus');
+
+       // Support CSV Exports
+       if (isset($this->request->params['ext']) && $this->request->params['ext'] == 'csv') {
+           $this->csv_export($this->Application->find(
+               'all',
+               array('conditions' => $this->paginate['conditions'], 'order' => $this->paginate['order'], 'contain' => $this->a_contain)
+           ));
+       }
+
+       $this->set('page_options', $page_options);
+       $this->set('applications', Sanitize::clean($this->paginate(), array('encode' => false)));
+
+       $trial_statuses = $this->Application->TrialStatus->find('list');
+       $this->set(compact('trial_statuses'));
+   }
+    public function auditor_view($id = null)
+   {
+       $this->Application->id = $id;
+       if (!$this->Application->exists()) {
+           throw new NotFoundException(__('Invalid application'));
+       }
+
+       $this->loadModel('StudyAuditor');
+       $isAssigned = $this->StudyAuditor->find('count', array(
+           'conditions' => array(
+               'StudyAuditor.user_id' => $this->Auth->User('id'),
+               'StudyAuditor.application_id' => $id
+           )
+       ));
+
+       if ($isAssigned == 0) {
+           $this->Session->setFlash(__('You are not authorized to view this protocol.'), 'alerts/flash_error');
+           $this->redirect(array('controller' => 'users', 'action' => 'dashboard'));
+       }
+
+       $this->aview($id);
+   }
 }

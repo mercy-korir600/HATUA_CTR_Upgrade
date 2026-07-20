@@ -293,6 +293,27 @@ class UsersController extends AppController
             'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
         )));
     }
+     public function auditor_dashboard()
+   {
+       $this->loadModel('StudyAuditor');
+       
+       $assignedProtocols = $this->StudyAuditor->find('all', array(
+           'conditions' => array('StudyAuditor.user_id' => $this->Auth->User('id')),
+           'contain' => array(
+               'Application' => array(
+                   'TrialStatus'
+               )
+           ),
+           'order' => array('StudyAuditor.created' => 'desc')
+       ));
+       $this->set('assignedProtocols', $assignedProtocols);
+       
+       $this->set('notifications', $this->User->Notification->find('all', array(
+           'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+           'order' => 'Notification.created DESC',
+           'limit' => 5
+       )));
+   }
     public function partner_dashboard()
     {
         $applications = $this->Application->find('all', array(
@@ -424,6 +445,8 @@ class UsersController extends AppController
                 if ($this->Auth->User('group_id') == '7') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'monitor' => 'monitor'));
                 if ($this->Auth->User('group_id') == '8') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'outsource' => 'outsource'));
                 if ($this->Auth->User('group_id') == '9') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'internalreviewer' => 'internalreviewer'));
+                 if ($this->Auth->User('group_id') == '10') { $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'auditor' => true));
+   }
             } else {
                 $this->Session->setFlash('Your username or password was incorrect.', 'alerts/flash_error');
             }
@@ -1357,6 +1380,19 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Users/edit');
         $this->Acl->allow($group, 'controllers/Comments');
         $this->Acl->allow($group, 'controllers/MeetingDates');
+
+    
+   $group->id = 10;
+   $this->Acl->deny($group, 'controllers');
+   $this->Acl->allow($group, 'controllers/Users/auditor_dashboard');
+   $this->Acl->allow($group, 'controllers/Applications/auditor_index');
+   $this->Acl->allow($group, 'controllers/Applications/auditor_view');
+     $this->Acl->allow($group, 'controllers/Saes/view');
+   $this->Acl->allow($group, 'controllers/Applications/stages');
+   $this->Acl->allow($group, 'controllers/Attachments/download');
+   $this->Acl->allow($group, 'controllers/Notifications');
+   $this->Acl->allow($group, 'controllers/Users/profile');
+   $this->Acl->allow($group, 'controllers/Users/edit');
         echo "all done";
         exit;
     }
