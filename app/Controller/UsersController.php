@@ -1387,6 +1387,8 @@ class UsersController extends AppController
    $this->Acl->allow($group, 'controllers/Users/auditor_dashboard');
    $this->Acl->allow($group, 'controllers/Applications/auditor_index');
    $this->Acl->allow($group, 'controllers/Applications/auditor_view');
+    $this->Acl->allow($group, 'controllers/AuditReports');
+    $this->Acl->allow($group, 'controllers/AuditReports/auditor_edit');
      $this->Acl->allow($group, 'controllers/Saes/view');
    $this->Acl->allow($group, 'controllers/Applications/stages');
    $this->Acl->allow($group, 'controllers/Attachments/download');

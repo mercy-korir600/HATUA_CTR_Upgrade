@@ -11,7 +11,8 @@
 ?>
 <div class="tabbable tabs-left">
   <ul class="nav nav-tabs">
-    <li class="active"><a href="#tab1" data-toggle="tab">Application Overview</a></li>
+    <li class="active"><a href="#tab-auditor-report" data-toggle="tab"><strong style="color: #0088cc;"><i class="icon-file-text"></i> Auditor's Report Page</strong></a></li>
+    <li><a href="#tab1" data-toggle="tab">Application Overview</a></li>
     <li><a href="#tab-timeline" data-toggle="tab">Study Timeline</a></li>
      <li><a href="#tab-inspections" data-toggle="tab">Site Inspections (<?php echo count($application['SiteInspection']); ?>)</a></li>                                                                                                                    
         <li><a href="#tab-saes" data-toggle="tab">SAE/SUSAR (<?php echo count($application['Sae']); ?>)</a></li>                                                                                                                                             
@@ -24,7 +25,10 @@
       
 
   <div class="tab-content my-tab-content">
-    <div class="tab-pane active" id="tab1">
+    <div class="tab-pane active" id="tab-auditor-report">
+      <?php echo $this->element('application/auditor_report_form'); ?>
+    </div>
+    <div class="tab-pane" id="tab1">
       <div class="row-fluid">
         <h4 class="text-success">
           Submitted Application: <?php echo $application['Application']['protocol_no']; ?> &mdash;

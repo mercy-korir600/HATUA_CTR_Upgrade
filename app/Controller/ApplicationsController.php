@@ -4212,6 +4212,16 @@ class ApplicationsController extends AppController
            $this->redirect(array('controller' => 'users', 'action' => 'dashboard'));
        }
 
+       $this->loadModel('AuditReport');
+       $audit_report = $this->AuditReport->find('first', array(
+           'conditions' => array(
+               'AuditReport.application_id' => $id,
+               'AuditReport.user_id' => $this->Auth->User('id')
+           ),
+           'contain' => array('AuditChecklist')
+       ));
+       $this->set('audit_report', $audit_report);
+
        $this->aview($id);
    }
 }

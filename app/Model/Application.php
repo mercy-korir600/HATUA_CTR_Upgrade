@@ -235,6 +235,11 @@ class Application extends AppModel
             'foreignKey' => 'application_id',
             'dependent' => false,
         ),
+        'AuditReport' => array(
+            'className' => 'AuditReport',
+            'foreignKey' => 'application_id',
+            'dependent' => true,
+        ),
         // 'Request' => array(
         //            'className' => 'Review',
         //            'foreignKey' => 'application_id',
