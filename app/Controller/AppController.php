@@ -37,7 +37,7 @@ App::uses('Security', 'Utility');
 class AppController extends Controller
 {
   protected $a_contain = array(
-    'AuditReport' => array('AuditChecklist', 'User'),
+     'AuditReport' => array('AuditChecklist', 'User'), 
     'Amendment',
     'EthicalCommittee',
     'InvestigatorContact',

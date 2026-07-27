@@ -426,20 +426,29 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
     <li><a href="#tab14" data-toggle="tab" style="color: #52A652;">Manufacturing Site(s)</a></li>
     <!-- <li><a href="#tab11" data-toggle="tab" style="color: #52A652;">Study Budget</a></li> -->
     <li><a href="#tab12" data-toggle="tab" style="color: #5e3ed3;">Approval Letters</a></li>
-      <li>                                                                                                               
-          <a href="#tab-audit-findings" data-toggle="tab">                                                                 
-            Audit Findings & Report (<?php echo !empty($application['AuditReport']) ? count($application['AuditReport']) : 
-  0; ?>)                                                                                                                   
-          </a>                                                                                                             
-        </li>                                                                                                              
-      </ul> 
-    <?php if ($application['Application']['approved'] == 2) { ?>
-      <li><a href="#tab9" data-toggle="tab" style="color: #52A652;">Final Study Report</a></li>
-    <?php } ?>
-    <?php if (!empty($application['Application']['ecitizen_invoice'])) { ?>
-      <li><a href="#ecitizen_invoice" data-toggle="tab" style="color: #52A652;">eCitizen Invoice</a></li>
-    <?php } ?>
-  </ul>
+     <?php                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+      $submitted_reports_count = 0;                                                                                                                                                                                                                                                                                               
+      if (!empty($application['AuditReport'])) {                                                                                                                                                                                                                                                                                  
+          foreach ($application['AuditReport'] as $rep) {                                                                                                                                                                                                                                                                         
+              if (!empty($rep['submitted']) && $rep['submitted'] == 1) {
+                  $submitted_reports_count++;
+              }
+          }
+      }
+    ?>
+            <li>
+          <a href="#tab-audit-findings" data-toggle="tab">                                                                                                                                                                                                                                                                        
+            Audit Findings & Report (<?php echo $submitted_reports_count; ?>)
+          </a>
+        </li>
+
+        <?php if ($application['Application']['approved'] == 2) { ?>
+          <li><a href="#tab9" data-toggle="tab" style="color: #52A652;">Final Study Report</a></li>
+        <?php } ?>
+        <?php if (!empty($application['Application']['ecitizen_invoice'])) { ?>
+          <li><a href="#ecitizen_invoice" data-toggle="tab" style="color: #52A652;">eCitizen Invoice</a></li>
+        <?php } ?>
+      </ul>
   <div class="tab-content my-tab-content">
     <div class="tab-pane active" id="tab1">
       <!-- content for tab1 comes here -->
@@ -556,72 +565,86 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
 
       <?php $this->start('endjs'); ?>
     </div> <!-- End or bootstrab tab1 -->
-       <div class="tab-pane" id="tab-audit-findings">                                                                     
-          <h4 class="text-info"><i class="icon-file-text"></i> Official Audit Reports & Findings</h4>                      
-          <hr>                                                                                                             
-                                                                                                                           
-          <?php if (!empty($application['AuditReport'])): ?>                                                               
-            <?php foreach ($application['AuditReport'] as $report): ?>                                                     
-              <?php if ($report['submitted'] == 1): ?>                                                                     
-                <div class="well" style="background-color: #fafafa; border-left: 5px solid #006dcc; margin-bottom: 20px;"> 
-                  <h5 style="margin-top: 0;">                                                                              
-                    Audit Outcome:                                                                                         
-                    <span class="label <?php                                                                               
-                      if ($report['outcome'] == 'Compliant') echo 'label-success';                                         
-                      elseif (strpos($report['outcome'], 'Conditions') !== false) echo 'label-warning';                    
-                      else echo 'label-important';                                                                         
-                    ?>">                                                                                                   
-                      <?php echo h($report['outcome']); ?>                                                                 
-                    </span>                                                                                                
-                    &mdash; <small>Submitted by Auditor <?php echo h($report['User']['name']); ?> on <?php echo date('d-m-Y
-  H:i', strtotime($report['modified'])); ?></small>                                                                        
-                  </h5>                                                                                                    
-                                                                                                                           
-                  <p><strong>Overall Audit Summary:</strong></p>                                                           
-                  <p class="muted"><?php echo nl2br(h($report['overall_comments'])); ?></p>                                
-                                                                                                                           
-                  <?php if (!empty($report['recommendations'])): ?>                                                        
-                    <p><strong>CAPA & Action Items:</strong></p>                                                           
-                    <p class="text-info"><?php echo nl2br(h($report['recommendations'])); ?></p>                           
-                  <?php endif; ?>                                                                                          
-                                                                                                                           
-                  <!-- CHECKLIST OBSERVATIONS TABLE -->                                                                    
-                  <h5 class="text-primary" style="margin-top: 15px;">Detailed Compliance Observations:</h5>                
-                  <table class="table table-bordered table-striped">                                                       
-                    <thead>                                                                                                
-                      <tr style="background-color: #f0f0f0;">                                                              
-                        <th style="width: 25%;">Audit Section</th>                                                         
-                        <th style="width: 20%;">Status</th>                                                                
-                        <th style="width: 55%;">Auditor Observations</th>                                                  
-                      </tr>                                                                                                
-                    </thead>                                                                                               
-                    <tbody>                                                                                                
-                      <?php foreach ($report['AuditChecklist'] as $item): ?>                                               
-                        <tr>                                                                                               
-                          <td><strong><?php echo h($item['section_name']); ?></strong></td>                                
-                          <td>                                                                                             
-                            <span class="label <?php                                                                       
-                              if ($item['compliance_status'] == 'Compliant') echo 'label-success';                         
-                              elseif ($item['compliance_status'] == 'Non-Compliant') echo 'label-important';               
-                              else echo 'label-info';                                                                      
-                            ?>">
-                              <?php echo h($item['compliance_status']); ?>
-                            </span>
-                          </td>
-                          <td><?php echo nl2br(h($item['observation'])); ?></td>
-                        </tr>
-                      <?php endforeach; ?>
-                    </tbody>
-                  </table>
-                </div>
-              <?php endif; ?>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <div class="alert alert-info">
-              <i class="icon-info-sign"></i> No official audit report has been submitted for this application yet.         
-            </div>
-          <?php endif; ?>
+     <?php                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+      $submitted_reports = array();                                                                                                                                                                                                                                                                                               
+      if (!empty($application['AuditReport'])) {                                                                                                                                                                                                                                                                                  
+          foreach ($application['AuditReport'] as $ar) {                                                                                                                                                                                                                                                                          
+              if (!empty($ar['submitted']) && $ar['submitted'] == 1) {                                                                                                                                                                                                                                                            
+                  $submitted_reports[] = $ar;                                                                                                                                                                                                                                                                                     
+              }                                                                                                                                                                                                                                                                                                                   
+          }                                                                                                                                                                                                                                                                                                                       
+      }                                                                                                                                                                                                                                                                                                                           
+    ?>                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                  
+    <div class="tab-pane" id="tab-audit-findings">                                                                                                                                                                                                                                                                                
+      <h4 class="text-info"><i class="icon-file-text"></i> Official Audit Reports & Findings</h4>                                                                                                                                                                                                                                 
+      <hr>                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                  
+      <?php if (!empty($submitted_reports)): ?>                                                                                                                                                                                                                                                                                   
+        <?php foreach ($submitted_reports as $report): ?>                                                                                                                                                                                                                                                                         
+          <div class="well" style="border-left: 5px solid #006dcc; margin-bottom: 20px;">                                                                                                                                                                                                                                         
+            <h5>                                                                                                                                                                                                                                                                                                                  
+              Audit Outcome:                                                                                                                                                                                                                                                                                                      
+              <span class="label <?php                                                                                                                                                                                                                                                                                            
+                if ($report['outcome'] == 'Compliant') echo 'label-success';                                                                                                                                                                                                                                                      
+                elseif (strpos($report['outcome'], 'Conditions') !== false) echo 'label-warning';                                                                                                                                                                                                                                 
+                else echo 'label-important';                                                                                                                                                                                                                                                                                      
+              ?>">                                                                                                                                                                                                                                                                                                                
+                <?php echo h($report['outcome']); ?>                                                                                                                                                                                                                                                                              
+              </span>                                                                                                                                                                                                                                                                                                             
+              &mdash; <small>Submitted by Auditor <?php echo !empty($report['User']['name']) ? h($report['User']['name']) : 'Auditor'; ?> on <?php echo date('d-M-Y H:i', strtotime($report['modified'])); ?></small>                                                                                                             
+            </h5>                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                                  
+            <p><strong>Overall Audit Summary / Observations:</strong></p>                                                                                                                                                                                                                                                         
+            <p><?php echo nl2br(h(!empty($report['compliance_observations']) ? $report['compliance_observations'] : $report['overall_comments'])); ?></p>                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                  
+            <?php if (!empty($report['recommendations'])): ?>                                                                                                                                                                                                                                                                     
+              <p><strong>Recommendations & CAPA Items:</strong></p>                                                                                                                                                                                                                                                               
+              <p class="text-info"><?php echo nl2br(h($report['recommendations'])); ?></p>                                                                                                                                                                                                                                        
+            <?php endif; ?>                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                                                                                  
+            <!-- Detailed Checklist Observations Table -->                                                                                                                                                                                                                                                                        
+            <h5 class="text-primary" style="margin-top: 15px;">Detailed Compliance Observations:</h5>                                                                                                                                                                                                                             
+            <table class="table table-bordered table-striped">                                                                                                                                                                                                                                                                    
+              <thead>                                                                                                                                                                                                                                                                                                             
+                <tr>                                                                                                                                                                                                                                                                                                              
+                  <th style="width: 30%;">Audit Section</th>                                                                                                                                                                                                                                                                      
+                  <th style="width: 20%;">Status</th>                                                                                                                                                                                                                                                                             
+                  <th style="width: 50%;">Auditor Observations</th>                                                                                                                                                                                                                                                               
+                </tr>                                                                                                                                                                                                                                                                                                             
+              </thead>                                                                                                                                                                                                                                                                                                            
+              <tbody>                                                                                                                                                                                                                                                                                                             
+                <?php if (!empty($report['AuditChecklist'])): ?>                                                                                                                                                                                                                                                                  
+                  <?php foreach ($report['AuditChecklist'] as $item): ?>                                                                                                                                                                                                                                                          
+                    <tr>                                                                                                                                                                                                                                                                                                          
+                      <td><strong><?php echo h($item['section_name']); ?></strong></td>                                                                                                                                                                                                                                           
+                      <td>                                                                                                                                                                                                                                                                                                        
+                        <span class="label <?php                                                                                                                                                                                                                                                                                  
+                          if ($item['compliance_status'] == 'Compliant') echo 'label-success';                                                                                                                                                                                                                                    
+                          elseif ($item['compliance_status'] == 'Non-Compliant') echo 'label-important';                                                                                                                                                                                                                          
+                          else echo 'label-info';                                                                                                                                                                                                                                                                                 
+                        ?>">                                                                                                                                                                                                                                                                                                      
+                          <?php echo h($item['compliance_status']); ?>                                                                                                                                                                                                                                                            
+                        </span>                                                                                                                                                                                                                                                                                                   
+                      </td>                                                                                                                                                                                                                                                                                                       
+                      <td><?php echo nl2br(h($item['observation'])); ?></td>                                                                                                                                                                                                                                                      
+                    </tr>                                                                                                                                                                                                                                                                                                         
+                  <?php endforeach; ?>                                                                                                                                                                                                                                                                                            
+                <?php else: ?>
+                  <tr>
+                    <td colspan="3" class="muted"><em>No detailed checklist observations recorded for this report.</em></td>
+                  </tr>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <div class="alert alert-info">
+          <i class="icon-info-sign"></i> No official audit report has been submitted for this application yet.
         </div>
+      <?php endif; ?>
+    </div>
 
     <div class="tab-pane" id="tab17">
       <div class="marketing">
