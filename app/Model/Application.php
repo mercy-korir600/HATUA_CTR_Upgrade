@@ -41,12 +41,49 @@ class Application extends AppModel
         'stages' => array('type' => 'query', 'method' => 'findByStage', 'encode' => true),
         'month_year' => array('type' => 'query', 'method' => 'dummy'),
         'mode' => array('type' => 'expression', 'method' => 'makeMonthYearCondition', 'field' => 'Application.date_submitted BETWEEN ? AND ?'),
-        'phase'=>array('type' => 'query', 'method' => 'phaseConditions', 'encode' => true),
+        'phase' => array('type' => 'query', 'method' => 'phaseConditions', 'encode' => true),
+        'status'     => array('type' => 'query', 'method' => 'statusCheckConditions', 'encode' => true),
+
     );
-    public function phaseConditions($data=array()){
-        $filter = $data['phase'];     
+
+    public function statusCheckConditions($data = array())
+    {
+        $conditions = array();
+
+        if (empty($data['status'])) {
+            return $conditions;
+        }
+
+        switch ($data['status']) {
+            case 'rejected':
+                $conditions['Application.approved'] = 1;
+                $conditions['Application.deactivated'] = 0;
+                break;
+
+            case 'stopped':
+            case 'suspended':
+                $trialStatus = $this->TrialStatus->find('first', array(
+                    'conditions' => array('TrialStatus.name' => ucfirst($data['status'])), // adjust field/value to match actual TrialStatus data
+                    'fields' => array('TrialStatus.id')
+                ));
+                $conditions['Application.trial_status_id'] = !empty($trialStatus['TrialStatus']['id'])
+                    ? $trialStatus['TrialStatus']['id']
+                    : 0; // 0 forces no results if not found, instead of matching everything
+                break;
+            case 'approved':
+            default:
+                $conditions['Application.approved'] = 2;
+                $conditions['Application.deactivated'] = 0;
+                break;
+        }
+
+        return $conditions;
+    }
+    public function phaseConditions($data = array())
+    {
+        $filter = $data['phase'];
         $cond = array();
-    
+
         if ($filter == 1) {
             $cond[$this->alias . '.trial_human_pharmacology'] = 1;
         } elseif ($filter == 2) {
@@ -56,12 +93,10 @@ class Application extends AppModel
         } elseif ($filter == 4) {
             $cond[$this->alias . '.trial_therapeutic_use'] = 1;
         }
-    
-        // Add other conditions if needed
-    
-        return $cond;
-     
 
+        // Add other conditions if needed
+
+        return $cond;
     }
     public function dummy($data = array())
     {
@@ -286,7 +321,7 @@ class Application extends AppModel
         'AmendmentApprovalSummary' => array(
             'className' => 'AmendmentApproval',
             'foreignKey' => 'application_id',
-            'dependent' => false,            
+            'dependent' => false,
             'conditions' => array('AmendmentApprovalSummary.status' => 'summary'),
         ),
 
@@ -491,13 +526,13 @@ class Application extends AppModel
             'className' => 'StudyMonitor',
             'foreignKey' => 'user_id',
             'dependent' => false,
-        ), 
-         'ProtocolOutsource' => array(
+        ),
+        'ProtocolOutsource' => array(
             'className' => 'ProtocolOutsource',
             'foreignKey' => 'user_id',
             'dependent' => false,
         ),
-        
+
         'Outsource' => array(
             'className' => 'Outsource',
             'foreignKey' => 'application_id',
