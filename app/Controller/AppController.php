@@ -24,6 +24,7 @@
 App::uses('Controller', 'Controller');
 App::uses('ClassRegistry', 'Utility');
 App::uses('Security', 'Utility');
+use Firebase\JWT\JWT;
 
 /**
  * Application Controller
@@ -108,6 +109,27 @@ class AppController extends Controller
 
   public function beforeFilter()
   {
+
+     // --- API requests: bypass session Auth entirely, use token auth instead ---
+    $this->_isApiRequest = !empty($this->request->params['prefix']) && $this->request->params['prefix'] === 'api';
+
+    if ($this->_isApiRequest) {
+        $this->Auth->allow(); // skip session-Auth checks/redirects for API actions
+        $this->response->type('json');
+        $this->autoRender = false;
+        $this->layout = false;
+
+        // api_login must be reachable without a token (it's how tokens are issued)
+        if ($this->request->action !== 'api_login') {
+            $this->apiUser = $this->_requireApiToken();
+            if (!$this->apiUser) {
+                return $this->response; // 401 already sent inside _requireApiToken()
+            }
+        }
+
+        return; // stop here — none of the web-app group/redirect logic below applies to API calls
+    }
+    
     $this->Auth->allow('display');
     //Configure AuthComponent
     // $this->set( 'domain', 'tools' );
@@ -134,13 +156,7 @@ class AppController extends Controller
                       <button data-dismiss="alert" class="close">&times;</button>
                       <h4>Invalid e-mail / password combination.  Please try again.</h4>
                      </div>', true);
-    $this->set('redir', $redir);
-    // $this->Auth->authenticate = array(
-    //     'all' => array (
-    //         'scope' => array('User.is_active' => 1)
-    //     ),
-    //     'Form'
-    // );
+    $this->set('redir', $redir); 
   }
   public function beforeRender()
   {
@@ -159,6 +175,57 @@ class AppController extends Controller
       $this->pdfConfig['filename'] .= '.pdf';
     }
   }
+
+  protected function _requireApiToken()
+{
+    $header = $this->request->header('authorization');
+
+    if (empty($header) || stripos($header, 'bearer') !== 0) {
+        $this->_apiJsonResponse(401, array(
+            'status' => 'error',
+            'message' => 'Missing or malformed Authorization header.'
+        ));
+        return false;
+    }
+
+    $token = trim(str_ireplace('bearer', '', $header));
+
+    
+    try {
+        $payload = JWT::decode($token, Configure::read('Security.salt'), array('HS256'));
+    } catch (Exception $e) {
+        $this->_apiJsonResponse(401, array(
+            'status' => 'error',
+            'message' => 'Invalid or expired token.'
+        ));
+        return false;
+    }
+
+    $user = ClassRegistry::init('User')->find('first', array(
+        'conditions' => array('User.id' => $payload->sub), // adjust to whatever claim _issueApiAccessToken() actually sets
+        'recursive' => -1,
+        'contain' => null
+    ));
+
+    if (empty($user['User']['id'])) {
+        $this->_apiJsonResponse(401, array(
+            'status' => 'error',
+            'message' => 'User not found for this token.'
+        ));
+        return false;
+    }
+
+    return $user['User'];
+}
+
+protected function _apiJsonResponse($statusCode, $data)
+{
+    $this->autoRender = false;
+    $this->response->statusCode($statusCode);
+    $this->response->type('json');
+    $this->response->body(json_encode($data));
+    return $this->response;
+}
   // public function isAuthorized($user) {
   // if (empty($this->request->prefix)) {
   // return true;
