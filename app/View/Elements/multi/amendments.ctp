@@ -706,29 +706,29 @@ if ($redir == 'applicant') {
         var submitButton = document.getElementById('submit-all-button');
 
         // Attach a click event listener to the button
-        submitButton.addEventListener('click', function(event) {
-            // Prevent the default action (stopping the link from navigating immediately)
-            event.preventDefault();
+        // submitButton.addEventListener('click', function(event) {
+        //     // Prevent the default action (stopping the link from navigating immediately)
+        //     event.preventDefault();
 
-            // Get the protocol ID (this value comes from PHP)
-            var protocolId = '<?php echo $application['Application']['id']; ?>'; // Example: '77'
+        //     // Get the protocol ID (this value comes from PHP)
+        //     var protocolId = '<?php echo $application['Application']['id']; ?>'; // Example: '77'
 
-            // Get the value from the <p> element (the selected year)
-            var selectedYear = document.querySelector('.selected-year-name').textContent.trim();
+        //     // Get the value from the <p> element (the selected year)
+        //     var selectedYear = document.querySelector('.selected-year-name').textContent.trim();
 
-            // Confirm the submission
-            var confirmation = confirm("Are you sure you want to submit all?\nPlease be sure to have uploaded the individual file");
+        //     // Confirm the submission
+        //     var confirmation = confirm("Are you sure you want to submit all?\nPlease be sure to have uploaded the individual file");
 
-            // Ensure both protocolId and selectedYear are present and confirmed by the user
-            if (confirmation && selectedYear) {
-                // Construct the correct URL format: /submitall/{protocolId}/{selectedYear}
-                var newHref = '/applicant/applications/submitall/' + protocolId + '/' + encodeURIComponent(selectedYear);
+        //     // Ensure both protocolId and selectedYear are present and confirmed by the user
+        //     if (confirmation && selectedYear) {
+        //         // Construct the correct URL format: /submitall/{protocolId}/{selectedYear}
+        //         var newHref = '/applicant/applications/submitall/' + protocolId + '/' + encodeURIComponent(selectedYear);
 
-                // Navigate to the constructed URL
-                window.location.href = newHref;
-            } else if (!selectedYear) {
-                alert('Please select a year before submitting.');
-            }
-        });
+        //         // Navigate to the constructed URL
+        //         window.location.href = newHref;
+        //     } else if (!selectedYear) {
+        //         alert('Please select a year before submitting.');
+        //     }
+        // });
     });
 </script>

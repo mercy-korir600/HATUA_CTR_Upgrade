@@ -367,7 +367,22 @@ class AttachmentsController extends AppController
             $this->set($params);
         }
     }
-
+  public function internal_reviewer_download($id = null)
+    {
+        $this->viewClass = 'Media';
+        $this->Attachment->id = $id;
+        if (!$this->Attachment->exists()) {
+            $this->Session->setFlash(__('The requested file does not exist!.'), 'alerts/flash_error');
+            $this->redirect($this->referer());
+        } else {
+            $attachment = $this->Attachment->read(null, $id);
+            $params = $this->buildMediaDownloadParams(
+                $attachment['Attachment']['dirname'],
+                $attachment['Attachment']['basename']
+            );
+            $this->set($params);
+        }
+    }
     public function manager_download($id = null)
     {
         $this->viewClass = 'Media';
