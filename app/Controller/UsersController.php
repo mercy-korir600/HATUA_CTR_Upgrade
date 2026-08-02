@@ -781,13 +781,20 @@ class UsersController extends AppController
             'name', 'email', 'phone_no', 'name_of_institution', 'institution_physical', 'institution_address',
             'institution_contact', 'county_id', 'country_id', 'group_id', 'is_active'
         );
-        if ($this->request->is('post') || $this->request->is('put')) {
-            if ($this->User->save($this->request->data)) {
-                $this->Session->setFlash(__('Your registration details have been updated.'), 'alerts/flash_success');
-                $this->redirect($this->referer());
-            } else {
-                $this->Session->setFlash(__('The user could not be saved. Please, try again.'), 'alerts/flash_error');
-            }
+        if ($this->request->is('post') || $this->request->is('put')) {                                                                                                                                                                                                           
+        if (isset($this->request->data['User']['password']) && empty($this->request->data['User']['password'])) {                                                            
+            unset($this->request->data['User']['password'], $this->request->data['User']['confirm_password']);                                                               
+        }                                                                                                                                                                    
+                                                                                                                                                                             
+        $submittedFields = array_keys($this->request->data['User']);                                                                                                         
+                                                                                                                                                                             
+        if ($this->User->save($this->request->data, array('fieldList' => $submittedFields))) {                                                                               
+            $this->Session->setFlash(__('User details updated successfully.'), 'alerts/flash_success');                                                                      
+            $this->redirect($this->referer());                                                                                                                               
+        } else {                                                                                                                                                             
+            $this->Session->setFlash(__('The section details could not be saved. Please check the errors and try again.'), 'alerts/flash_error');                            
+        }                                                                                                                                                                    
+    
         } else {
             // $this->request->data = $this->User->read(null, $id);
             $fieldlist[] = 'id';
