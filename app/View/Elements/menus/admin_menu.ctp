@@ -24,7 +24,7 @@
                           array('controller' => 'applications', 'action' => 'index', 'submitted'=>'1', 'approved'=>0, 'admin' => true), array('escape' => false));   ?>
             </li>
             <li>
-              <?php     echo $this->Html->link('<i class="icon-pause"></i> On hold',
+              <?php     echo $this->Html->link('<i class="icon-pause"></i> Rejected',
                           array('controller' => 'applications', 'action' => 'index', 'submitted'=>'1', 'approved'=>1, 'admin' => true), array('escape' => false));   ?>
             </li>
             <li>

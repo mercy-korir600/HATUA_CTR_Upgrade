@@ -75,7 +75,7 @@
                     array('action' => 'index', 'submitted'=>'1', 'approved'=>0), array('escape' => false, 'class' =>  'text-success'));   ?>
       </li>
       <li class="<?php echo $x_approved; ?>">
-        <?php     echo $this->Html->link('<i class="icon-pause"></i> On hold',
+        <?php     echo $this->Html->link('<i class="icon-pause"></i> Rejected',
                     array('action' => 'index', 'submitted'=>'1', 'approved'=>1), array('escape' => false, 'class' =>  'text-success'));   ?>
       </li>
       <li class="<?php echo $unsubmitted; ?>">

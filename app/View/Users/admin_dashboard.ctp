@@ -36,7 +36,7 @@ $this->assign('Dashboard', 'active');
       </li>
       <li>
         <?php echo $this->Html->link(
-          '<i class="icon-pause"></i> On hold',
+          '<i class="icon-pause"></i> Rejected',
           array('controller' => 'applications', 'action' => 'index', 'submitted' => '1', 'approved' => 1),
           array('escape' => false, 'class' =>  'text-success')
         );   ?>

@@ -255,7 +255,7 @@
                         'options' => array(
                           '2' => 'Approved',
                           '0' => 'Waiting Approval',
-                          '1' => 'On Hold'
+                          '1' => 'Rejected'
                         ),
                         'label' => array('class' => 'required', 'text' => 'Status'),
                       ));
