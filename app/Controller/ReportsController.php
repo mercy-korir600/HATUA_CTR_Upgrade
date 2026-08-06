@@ -484,4 +484,76 @@ class ReportsController extends AppController
       }
     }
   }
+  
+    public function protocols_per_year()
+    {
+        $criteria = array();
+        $criteria['Application.deleted'] = 0;
+        $group_id = $this->Auth->user('group_id');
+        $isManager = ($group_id == 2);
+
+        if ($isManager) {
+            $filter = 'submitted';
+        } else {
+            $filter = isset($this->request->data['Application']['filter_target'])
+                ? $this->request->data['Application']['filter_target']
+                : 'all';
+        }
+        if ($filter === 'submitted') {
+            $criteria['Application.submitted'] = 1;
+        } elseif ($filter === 'unsubmitted') {
+            $criteria['Application.submitted'] = 0;
+        } 
+        if (
+            !empty($this->request->data['Application']['start_date']) &&
+            !empty($this->request->data['Application']['end_date'])
+        ) {
+            $criteria['Application.created BETWEEN ? AND ?'] = array(
+                date('Y-m-d', strtotime($this->request->data['Application']['start_date'])),
+                date('Y-m-d', strtotime($this->request->data['Application']['end_date']))
+            );
+        }
+      
+        $data = $this->Application->find('all', array(
+            'fields' => array(
+                'YEAR(Application.created) AS year',
+                'COUNT(*) AS cnt'
+            ),
+            'conditions' => $criteria,
+            'group' => array('YEAR(Application.created)'),
+            'order' => array('year DESC'),
+            'recursive' => -1
+        ));
+
+        $totalApplications = 0;
+        $totalYears = count($data);
+
+        foreach ($data as $row) {
+            $totalApplications += $row[0]['cnt'];
+        }
+
+        $average = ($totalYears > 0) ? ($totalApplications / $totalYears) : 0;
+
+        $this->set(compact('data', 'average', 'filter', 'isManager'));
+        $this->set('_serialize', array('data', 'average', 'filter', 'isManager'));
+        $this->render('protocols_per_year');
+    }
+
+    public function manager_protocols_per_year()
+    {
+        $this->protocols_per_year();
+    }
+
+    public function inspector_protocols_per_year()
+    {
+        $this->protocols_per_year();
+    }
+
+    public function admin_protocols_per_year()
+    {
+        $this->protocols_per_year();
+    }                                                                                                                                                                                        
+
+
 }
+

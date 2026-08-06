@@ -215,7 +215,8 @@
                         </div>
                         <div class="span4 lefty">
                         <?php  
-                            if(!empty($rid))  echo $this->element('comments/add', [
+                            // if(!empty($rid))  
+                              echo $this->element('comments/add', [
                                          'model' => ['model_id' => $application['Application']['id'], 'foreign_key' => $rid['id'],   
                                                      'model' => 'Review', 'category' => 'internal', 'url' => 'add_internal_review_response']]) 
                         ?>

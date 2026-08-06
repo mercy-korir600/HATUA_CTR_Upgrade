@@ -332,8 +332,8 @@ class ApplicationsController extends AppController
                             );
                             $result =  CakeResque::enqueue('default', 'NotificationShell', array('generate_report_invoice', $invoice));
 
-// debug($result);
-// exit;
+                            // debug($result);
+                            // exit;
                             $this->Session->setFlash(__('The application has been created, An Invoice has been sent to your email with the invoice details'), 'alerts/flash_success');
                             $this->redirect(array('controller' => 'applications', 'action' => 'applicant_edit', $this->Application->id));
                         } else {
@@ -1616,15 +1616,18 @@ class ApplicationsController extends AppController
 
     public function index()
     {
+
         $this->Prg->commonProcess();
         $page_options = array('5' => '5', '10' => '10');
         if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) $this->passedArgs['range'] = true;
         if (isset($this->passedArgs['pages']) && !empty($this->passedArgs['pages'])) $this->paginate['limit'] = $this->passedArgs['pages'];
         else $this->paginate['limit'] = reset($page_options);
-
+        $this->passedArgs['status'] = !empty($this->params['named']['status'])
+            ? $this->params['named']['status']
+            : 'approved';
         $criteria = $this->Application->parseCriteria($this->passedArgs);
         $criteria['Application.submitted'] = 1;
-        $criteria['Application.approved'] = 2;
+        // $criteria['Application.approved'] = 2;
         $criteria['Application.deactivated'] = 0;
         $this->paginate['conditions'] = $criteria;
         $this->paginate['order'] = array('Application.created' => 'desc');
@@ -1817,7 +1820,7 @@ class ApplicationsController extends AppController
     {
         $this->Prg->commonProcess();
 
-        $page_options = array( '10' => '10', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000');
+        $page_options = array('10' => '10', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000');
         if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) {
             if (!empty($this->passedArgs['approved']) && $this->passedArgs['approved'] == '2') {
                 $this->passedArgs['approvedrange'] = true;
@@ -1849,11 +1852,11 @@ class ApplicationsController extends AppController
             $this->csv_export($this->Application->find(
                 'all',
                 array(
-                    'conditions' => $this->paginate['conditions'], 
-                'order' => $this->paginate['order'], 
-                'limit' => 10000,
-               'contain' => $this->paginate['contain']
-                )//$this->a_contain)
+                    'conditions' => $this->paginate['conditions'],
+                    'order' => $this->paginate['order'],
+                    'limit' => 10000,
+                    'contain' => $this->paginate['contain']
+                ) //$this->a_contain)
             ));
         }
         //end csv export
@@ -1920,7 +1923,7 @@ class ApplicationsController extends AppController
     public function inspector_index()
     {
         $this->Prg->commonProcess();
-        $page_options = array('5' => '5', '10' => '10','50'=>'50','100'=>'100');
+        $page_options = array('5' => '5', '10' => '10', '50' => '50', '100' => '100');
         if (!empty($this->passedArgs['start_date']) || !empty($this->passedArgs['end_date'])) $this->passedArgs['range'] = true;
         if (!empty($this->passedArgs['month_year'])) $this->passedArgs['mode'] = true;
         if (isset($this->passedArgs['pages']) && !empty($this->passedArgs['pages'])) $this->paginate['limit'] = $this->passedArgs['pages'];
@@ -2351,7 +2354,7 @@ class ApplicationsController extends AppController
         $this->set('users', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(3, 2, 6), 'User.is_active' => 1))));
         $this->set('inspectors', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(2, 6), 'User.is_active' => 1))));
         $this->set('external', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(9), 'User.is_active' => 1))));
-       
+
 
         $this->request->data = $application;
 
@@ -3866,7 +3869,7 @@ class ApplicationsController extends AppController
 
     private function csv_export($applications = '')
     {
-        
+
         $this->response->download('applications_' . date('Ymd_Hi') . '.csv'); // <= setting the file name
         $this->set(compact('applications'));
         $this->layout = false;
@@ -3933,7 +3936,7 @@ class ApplicationsController extends AppController
             $this->Session->setFlash(__('The application status has been successfully updated'), 'alerts/flash_success');
             $this->redirect($this->referer());
         } else {
-            
+
             $this->Session->setFlash(__('Failed to update the application status: '), 'alerts/flash_error'); // Displaying application save errors
             $this->redirect($this->referer());
         }
@@ -3947,15 +3950,15 @@ class ApplicationsController extends AppController
             throw new NotFoundException(__('Invalid application'));
         }
         $this->set('priorInternalFeedback', array());
- 
+
         $my_applications = $this->Application->Review->find('list', array(
             'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request',  'Review.application_id' => $id),
             'fields' => array('Review.id', 'Review.accepted')
         ));
-        
+
         $accept = array_search('accepted', $my_applications);
         $declined = array_search('declined', $my_applications);
-      
+
         if ($accept) {
             $contains = $this->a_contain;
             $contains['Review']['conditions'] = array('Review.user_id' => $this->Auth->User('id'),  'Review.type' => 'reviewer_comment');
