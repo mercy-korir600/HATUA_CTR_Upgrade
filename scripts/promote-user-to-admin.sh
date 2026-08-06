@@ -54,7 +54,7 @@ require_running_service "$WEB_SERVICE"
 
 mysql_exec() {
   local sql="$1"
-  docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -uroot "$MYSQL_DATABASE"' <<< "$sql"
+  docker compose exec -T "$DB_SERVICE" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=TCP -h127.0.0.1 -P3306 -N -uroot "$MYSQL_DATABASE"' <<< "$sql"
 }
 
 sql_escape() {

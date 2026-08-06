@@ -44,6 +44,10 @@
             echo $this->Html->link('<i class="icon-arrow-right"></i> SAE by Type by Study',  
                  array('controller' => 'reports', 'action'=>'sae_by_type', 'inspector' => true ), array('escape' => false, 'tabindex' => '-1'));?>
           </li>
+             <li><?php  
+                 echo $this->Html->link('<i class="icon-bar-chart"></i> Applications per Year',  
+                      array('controller' => 'reports', 'action'=>'protocols_per_year', 'inspector' => true ), array('escape' => false, 'tabindex' => '-1'));?>
+               </li>
         </ul>
        </li>
        <li class="<?php echo $this->fetch('Profile') ?>">
