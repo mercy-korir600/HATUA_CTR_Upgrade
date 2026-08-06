@@ -24,411 +24,11 @@ class UsersController extends AppController
         $this->Auth->allow('register', 'login', 'api_login', 'activate_account', 'forgotPassword', 'resetPassword', 'logout', 'initDB');
         if (!empty($this->request->params['prefix']) && $this->request->params['prefix'] === 'api') {
             $this->response->type('json');
+            $this->autoRender = false;
+            $this->layout = false;
         }
     }
 
-    public function forgotPassword()
-    {
-        if ($this->Session->read('Auth.User')) {
-            $this->Session->setFlash('You are logged in!', 'alerts/flash_success');
-            $this->redirect('/', null, false);
-        }
-        if ($this->request->is('post')) {
-            $this->User->recursive = -1;
-            $user = $this->User->find('first', array('conditions' => array('User.email' => $this->request->data['User']['email'])));
-            if ($user) {
-                $this->User->id = $user['User']['id'];
-                $this->User->saveField('forgot_password', 1);
-                CakeResque::enqueue('default', 'UserShell', array('forgotPassword', $user));
-                $this->Session->setFlash(__('A new password has been sent to the requested email address.'), 'alerts/flash_success');
-                $this->redirect('/');
-            } else {
-                $this->Session->setFlash(__('Could not verify your email address.'), 'alerts/flash_error');
-            }
-        }
-    }
-
-    public function resetPassword($id = null)
-    {
-        //confirm user id hash for authenticity
-        $this->User->id = $id;
-        if (!$this->User->exists()) {
-            $this->Session->setFlash(__('Could not verify the user ID. Please ensure the ID is correct.'), 'alerts/flash_error');
-            $this->redirect('/');
-        } else {
-            $this->User->recursive = -1;
-            // $user = $this->User->read(null, $id);
-            $user = $this->User->find('first', array('conditions' => array('User.id' => $id)));
-            if ($user['User']['forgot_password'] != 1) {
-                $this->Session->setFlash(__('The password has not been reset.'), 'alerts/flash_error');
-                $this->redirect('/');
-            }
-            $password = date('Ymdhis', strtotime($user['User']['created']));
-            if ($this->User->save(
-                array('User' => array('password' =>  $password, 'confirm_password' => $password, 'forgot_password' => 0)),
-                array('fieldList' =>  array('password', 'confirm_password', 'forgot_password'))
-            )) {
-                $this->Session->setFlash(__('The password has been reset. You may login using your new password.'), 'alerts/flash_success');
-                $this->redirect(array('controller' => 'users', 'action' => 'login'));
-            } else {
-                $this->Session->setFlash(__('The password has not been reset. Please contact PPB for further help'), 'alerts/flash_error');
-            }
-            $this->redirect('/');
-        }
-    }
-
-    public function applicant_dashboard()
-    {
-        $applications = $this->Application->find('all', array(
-            'limit' => 20,
-            'fields' => array(
-                'Application.id', 'Application.user_id', 'Application.created', 'Application.protocol_no',
-                'Application.study_drug', 'Application.submitted', 'Application.trial_status_id', 'Application.admin_stopped', 'Application.admin_stopped_reason'
-            ),
-            'order' => array('Application.created' => 'desc'),
-            'contain' => array('Review'),
-            'conditions' => array('Application.user_id' => $this->Auth->User('id')),
-        ));
-        $this->set('applications', $applications);
-        $trial_statuses = $this->Application->TrialStatus->find('list');
-        $this->set(compact('trial_statuses'));
-
-        if ($this->request->is('post')) {
-            //Ensure the applicant has set a sponsor's email first
-            $user = $this->User->find('first', array('conditions' => array('User.id' => $this->Auth->User('id'))));
-            if (!empty($user['User']['sponsor_email'])) {
-                $this->Application->create();
-                $this->request->data['Application']['user_id'] = $this->Auth->User('id');
-                if ($this->Application->save($this->request->data, true, array('user_id', 'email_address'))) {
-                    $this->Session->setFlash(__('The application has been created'), 'alerts/flash_success');
-                    $this->redirect(array('controller' => 'applications', 'action' => 'applicant_edit', $this->Application->id));
-                } else {
-                    $this->Session->setFlash(__('The application could not be saved. Please, try again.'), 'alerts/flash_error');
-                }
-            } else {
-                $this->Session->setFlash(__('Please update the sponsor\'s email before creating an application.'), 'alerts/flash_warning');
-                $this->redirect(array('controller' => 'users', 'action' => 'edit', 'admin' => false));
-            }
-        }
-
-        $this->set('notifications', $this->User->Notification->find('all', array(
-            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
-        )));
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        $this->set('saes', $this->Sae->find('all', array(
-            'limit' => 5,
-            'conditions' => array('Sae.user_id' => $this->Auth->User('id')), 'order' => 'Sae.created DESC'
-        )));
-        $this->set('meetingDates', $this->MeetingDate->find('all', array(
-            'limit' => 5,
-            'conditions' => array('MeetingDate.user_id' => $this->Auth->User('id')), 'order' => 'MeetingDate.created DESC'
-        )));
-    }
-
-    public function monitor_dashboard()
-    {
-        $user = $this->User->find(
-            'first',
-            array(
-                'contain' => array('StudyMonitor' => array('Application')),
-                'conditions' => array('User.id' => $this->Auth->User('id'))
-            )
-        );
-        $applications = $this->Application->find('all', array(
-            'limit' => 20,
-            'fields' => array(
-                'Application.id', 'Application.user_id', 'Application.created', 'Application.protocol_no',
-                'Application.study_drug', 'Application.submitted', 'Application.trial_status_id'
-            ),
-            'order' => array('Application.created' => 'desc'),
-            'contain' => array('Review'),
-            'conditions' => array('Application.id' => Hash::extract($user['StudyMonitor'], '{n}.application_id'), 'Application.submitted' => 1),
-        ));
-        $this->set('applications', $applications);
-
-        $this->set('notifications', $this->User->Notification->find('all', array(
-            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
-        )));
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        $aids = $this->Application->StudyMonitor->find('list', array('fields' => array('application_id', 'application_id'), 'conditions' => array('StudyMonitor.user_id' => $this->Auth->User('id'))));
-        $this->set('saes', $this->Sae->find('all', array(
-            'limit' => 20,
-            'conditions' => array('Sae.application_id' => $aids), 'order' => 'Sae.created DESC'
-        )));
-    }
-    public function outsource_dashboard()
-    {
-        $user = $this->User->find(
-            'first',
-            array(
-                'contain' => array('ProtocolOutsource' => array('Application')),
-                'conditions' => array('User.id' => $this->Auth->User('id'))
-            )
-        );
-        $applications = $this->Application->find('all', array(
-            'limit' => 20,
-            'fields' => array(
-                'Application.id', 'Application.user_id', 'Application.created', 'Application.protocol_no',
-                'Application.study_drug', 'Application.submitted', 'Application.trial_status_id'
-            ),
-            'order' => array('Application.created' => 'desc'),
-            'contain' => array('Review','Outsource'=>array('User')),
-            'conditions' => array('Application.id' => Hash::extract($user['ProtocolOutsource'], '{n}.application_id'), 'Application.submitted' => 1),
-        ));
-
-        // debug($applications);
-        // exit;
-        $this->set('applications', $applications);
-
-        $this->set('notifications', $this->User->Notification->find('all', array(
-            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
-        )));
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        $aids = $this->Application->ProtocolOutsource->find('list', array('fields' => array('application_id', 'application_id'), 'conditions' => array('ProtocolOutsource.user_id' => $this->Auth->User('id'))));
-        $this->set('saes', $this->Sae->find('all', array(
-            'limit' => 20,
-            'conditions' => array('Sae.application_id' => $aids,'Sae.user_id'=>$this->Auth->User('id')), 'order' => 'Sae.created DESC'
-        )));
-    }
-
-    public function manager_dashboard()
-    {
-        $applications = $this->Application->find('all', array(
-            'limit' => 5,
-            'fields' => array('Application.id', 'Application.created', 'Application.study_drug', 'Application.submitted', 'Application.protocol_no'),
-            'order' => array('Application.created' => 'desc'),
-            'conditions' => array('submitted' => 1),
-            'contain' => array(),
-        ));
-        $this->set('applications', $applications);
-        $this->User->Notification->recursive = -1;
-        $this->set('notifications', $this->User->Notification->find('all', array(
-            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
-        )));
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        $this->set('users', $this->User->find('list', array('conditions' => array('User.group_id' => 3, 'User.is_active' => 1))));
-        // $this->set('saes', $this->Sae->find('all', array(
-        //     'order' => 'Sae.created DESC'
-        //     )));
-        $this->set('meetingDates', $this->MeetingDate->find('all', array(
-            'limit' => 5,
-            'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
-        )));
-    }
-
-    public function inspector_dashboard()
-    {
-
-        $my_applications = $this->User->ActiveInspector->find('list', array(
-            'conditions' => array('ActiveInspector.user_id' => $this->Auth->User('id'), 'ActiveInspector.type' => 'request', 'ifnull(ActiveInspector.accepted,-1)' => array('accepted', '-1')),
-            'fields' => array('ActiveInspector.application_id'),
-            'contain' => array()
-        ));
-        // pr($my_applications);
-        $this->set('applications', $this->Application->find('all', array(
-            'limit' => 5, 'fields' => array('id', 'study_drug', 'created'),
-            'order' => array('Application.created' => 'desc'),
-            'conditions' => array('submitted' => 1, 'Application.id' => array_values($my_applications)),
-            'contain' => array('ActiveInspector'),
-        )));
-        $this->User->Notification->recursive = -1;
-        $this->set('notifications', $this->User->Notification->find('all', array(
-            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
-        )));
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        $this->set('users', $this->User->find('list', array('conditions' => array('User.group_id' => 3, 'User.is_active' => 1))));
-        $this->set('saes', $this->Sae->find('all', array(
-            'order' => 'Sae.created DESC'
-        )));
-    }
-
-    public function reviewer_dashboard()
-    {
-        // $this->Application->recursive = -1;
-        $my_applications = $this->User->Review->find('list', array(
-            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request', 'ifnull(Review.accepted,-1)' => array('accepted', '-1')),
-            'fields' => array('Review.application_id'),
-            'contain' => array()
-        ));
-        // pr($my_applications);
-        $this->set('applications', $this->Application->find('all', array(
-            'limit' => 5, 'fields' => array('id', 'study_drug', 'created'),
-            'order' => array('Application.created' => 'desc'),
-            'conditions' => array('submitted' => 1, 'Application.id' => array_values($my_applications)),
-            'contain' => array('Review'),
-        )));
-
-        $this->set('notifications', $this->User->Notification->find('all', array(
-            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
-        )));
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        $this->set('meetingDates', $this->MeetingDate->find('all', array(
-            'limit' => 5,
-            'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
-        )));
-    }
-
-    public function internalreviewer_dashboard()
-    {
-        // $this->Application->recursive = -1;
-        $my_applications = $this->User->Review->find('list', array(
-            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request', 'ifnull(Review.accepted,-1)' => array('accepted', '-1')),
-            'fields' => array('Review.application_id'),
-            'contain' => array()
-        ));
-        // pr($my_applications);
-        $this->set('applications', $this->Application->find('all', array(
-            'limit' => 5, 'fields' => array('id', 'study_drug', 'created'),
-            'order' => array('Application.created' => 'desc'),
-            'conditions' => array('submitted' => 1, 'Application.id' => array_values($my_applications)),
-            'contain' => array('Review'),
-        )));
-
-        $this->set('notifications', $this->User->Notification->find('all', array(
-            'conditions' => array('Notification.user_id' => $this->Auth->User('id')), 'order' => 'Notification.created DESC', 'limit' => 5
-        )));
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        $this->set('meetingDates', $this->MeetingDate->find('all', array(
-            'limit' => 5,
-            'conditions' => array('MeetingDate.approved >' => 0), 'order' => 'MeetingDate.created DESC'
-        )));
-    }
-    public function partner_dashboard()
-    {
-        $applications = $this->Application->find('all', array(
-            'limit' => 10,
-            'fields' => array('Application.id', 'Application.user_id', 'Application.created', 'Application.protocol_no', 'Application.submitted'),
-            'order' => array('Application.created' => 'desc'),
-            'contain' => array(),
-            'conditions' => array('Application.user_id' => $this->Auth->User('id')),
-        ));
-        $this->set('applications', $applications);
-
-        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
-        if ($this->request->is('post')) {
-            $this->Application->create();
-            $this->request->data['Application']['user_id'] = $this->Auth->User('id');
-            $fieldList = array('user_id');
-            if (isset($this->request->data['Application']['email_address'])) $fieldList[] = 'email_address';
-            if (isset($this->request->data['Application']['protocol_no'])) $fieldList[] = 'protocol_no';
-            if ($this->Application->save($this->request->data, true, $fieldList)) {
-                $this->Session->setFlash(__('The application has been created'), 'alerts/flash_success');
-                $this->redirect(array('controller' => 'applications', 'action' => 'partner_edit', $this->Application->id));
-            } else {
-                $this->Session->setFlash(__('The application could not be saved. Please, try again.'), 'alerts/flash_error');
-                // $this->redirect(array('controller' => 'users', 'action' => 'dashboard'));
-            }
-        }
-    }
-
-    public function admin_dashboard()
-    {
-        $this->loadModel('Outsource');
-        $this->request->data['Feedback']['user_id'] = $this->Auth->User('id');
-        $this->User->Feedback->recursive = -1;
-        $this->set('previous_messages', $this->User->Feedback->find('all', array('limit' => 3, 'order' => array('id' => 'desc'))));
-        $this->set('outsources', $this->Outsource->find('all', array(
-            'limit' => 3, 
-            'conditions'=>array('Outsource.approved'=>0),
-            'order' => array('Outsource.id' => 'desc'))));
-    }
-
-     public function getUserIpAddress()
-    {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            // IP from shared internet
-            return $_SERVER['HTTP_CLIENT_IP'];
-        }
-
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            // IP passed from proxy/load balancer
-            $ipList = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            return trim($ipList[0]); // return the first IP
-        }
-
-        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
-            // IP from Cloudflare
-            return $_SERVER['HTTP_CF_CONNECTING_IP'];
-        }
-
-        // Default remote address
-        return $_SERVER['REMOTE_ADDR'];
-    }
-  public function create_audit_trail($type, $user, $message)
-    {
-        $this->loadModel('AuditTrail');
-
-        $audit = array(
-            'AuditTrail' => array(
-                'foreign_key' => $user['id'],
-                'model' => $type,
-                'message' => $message,
-                'ip' => $this->getUserIpAddress(),
-                'uri' => $this->request->here(),
-                'hostname' => gethostname(),
-                'refer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
-                'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '',
-            )
-        );
-        $this->AuditTrail->Create();
-        if ($this->AuditTrail->save($audit)) {
-            $this->log($this->request->data, 'audit_success');
-        } else {
-            $this->log('Error creating an audit trail', 'notifications_error');
-            $this->log($this->request->data, 'notifications_error');
-        }
-    }
-    public function login()
-    {
-        if ($this->Session->read('Auth.User')) {
-            $this->Session->setFlash('You are logged in!', 'alerts/flash_success');
-            $this->redirect('/', null, false);
-        }
-        if ($this->request->is('post')) {
-
-            if (Validation::email($this->request->data['User']['username'])) {
-                $this->Auth->authenticate = array(
-                    'Form' => ['fields' => ['username' => 'email']]
-                );
-                $this->Auth->constructAuthenticate();
-                $this->request->data['User']['email'] = $this->request->data['User']['username'];
-                unset($this->request->data['User']['username']);
-            }
-
-            if ($this->Auth->login()) {
-
-                if ($this->Auth->User('is_active') == 0) {
-                    $this->Session->setFlash('Your account is not activated! If you have just registered, please click the activation link
-                        sent to your email. Remember to check you spam folder too!', 'alerts/flash_error');
-                    $this->redirect($this->Auth->logout());
-                } elseif ($this->Auth->User('deactivated') == 1) {
-                    $this->Session->setFlash('Your account has been deactivated! Please contact PPB.', 'alerts/flash_error');
-                    $this->redirect($this->Auth->logout());
-                }
- $user = $this->Auth->User();
-
- $message = "A user with ID " . $user['id'] . " and name  " . $user['name'] . " logged in via Web";
-                    $this->create_audit_trail("Web Login", $user, $message);
-
-
-                // $this->redirect($this->Auth->redirect());
-                // if(strlen($this->Auth->redirect()) > 12) {
-                //     return $this->redirect($this->Auth->redirect());           
-                // }
-                if ($this->Auth->User('group_id') == '1') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'admin' => true));
-                if ($this->Auth->User('group_id') == '2') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'manager' => true));
-                if ($this->Auth->User('group_id') == '3') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'reviewer' => true));
-                if ($this->Auth->User('group_id') == '4') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'partner' => true));
-                if ($this->Auth->User('group_id') == '5') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'applicant' => 'applicant'));
-                if ($this->Auth->User('group_id') == '6') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'inspector' => true));
-                if ($this->Auth->User('group_id') == '7') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'monitor' => 'monitor'));
-                if ($this->Auth->User('group_id') == '8') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'outsource' => 'outsource'));
-                if ($this->Auth->User('group_id') == '9') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'internalreviewer' => 'internalreviewer'));
-            } else {
-                $this->Session->setFlash('Your username or password was incorrect.', 'alerts/flash_error');
-            }
-        }
-    }
 
     public function api_login()
     {
@@ -563,6 +163,452 @@ class UsersController extends AppController
         ));
     }
 
+    public function forgotPassword()
+    {
+        if ($this->Session->read('Auth.User')) {
+            $this->Session->setFlash('You are logged in!', 'alerts/flash_success');
+            $this->redirect('/', null, false);
+        }
+        if ($this->request->is('post')) {
+            $this->User->recursive = -1;
+            $user = $this->User->find('first', array('conditions' => array('User.email' => $this->request->data['User']['email'])));
+            if ($user) {
+                $this->User->id = $user['User']['id'];
+                $this->User->saveField('forgot_password', 1);
+                CakeResque::enqueue('default', 'UserShell', array('forgotPassword', $user));
+                $this->Session->setFlash(__('A new password has been sent to the requested email address.'), 'alerts/flash_success');
+                $this->redirect('/');
+            } else {
+                $this->Session->setFlash(__('Could not verify your email address.'), 'alerts/flash_error');
+            }
+        }
+    }
+
+    public function resetPassword($id = null)
+    {
+        //confirm user id hash for authenticity
+        $this->User->id = $id;
+        if (!$this->User->exists()) {
+            $this->Session->setFlash(__('Could not verify the user ID. Please ensure the ID is correct.'), 'alerts/flash_error');
+            $this->redirect('/');
+        } else {
+            $this->User->recursive = -1;
+            // $user = $this->User->read(null, $id);
+            $user = $this->User->find('first', array('conditions' => array('User.id' => $id)));
+            if ($user['User']['forgot_password'] != 1) {
+                $this->Session->setFlash(__('The password has not been reset.'), 'alerts/flash_error');
+                $this->redirect('/');
+            }
+            $password = date('Ymdhis', strtotime($user['User']['created']));
+            if ($this->User->save(
+                array('User' => array('password' =>  $password, 'confirm_password' => $password, 'forgot_password' => 0)),
+                array('fieldList' =>  array('password', 'confirm_password', 'forgot_password'))
+            )) {
+                $this->Session->setFlash(__('The password has been reset. You may login using your new password.'), 'alerts/flash_success');
+                $this->redirect(array('controller' => 'users', 'action' => 'login'));
+            } else {
+                $this->Session->setFlash(__('The password has not been reset. Please contact PPB for further help'), 'alerts/flash_error');
+            }
+            $this->redirect('/');
+        }
+    }
+
+    public function applicant_dashboard()
+    {
+        $applications = $this->Application->find('all', array(
+            'limit' => 20,
+            'fields' => array(
+                'Application.id',
+                'Application.user_id',
+                'Application.created',
+                'Application.protocol_no',
+                'Application.study_drug',
+                'Application.submitted',
+                'Application.trial_status_id',
+                'Application.admin_stopped',
+                'Application.admin_stopped_reason'
+            ),
+            'order' => array('Application.created' => 'desc'),
+            'contain' => array('Review'),
+            'conditions' => array('Application.user_id' => $this->Auth->User('id')),
+        ));
+        $this->set('applications', $applications);
+        $trial_statuses = $this->Application->TrialStatus->find('list');
+        $this->set(compact('trial_statuses'));
+
+        if ($this->request->is('post')) {
+            //Ensure the applicant has set a sponsor's email first
+            $user = $this->User->find('first', array('conditions' => array('User.id' => $this->Auth->User('id'))));
+            if (!empty($user['User']['sponsor_email'])) {
+                $this->Application->create();
+                $this->request->data['Application']['user_id'] = $this->Auth->User('id');
+                if ($this->Application->save($this->request->data, true, array('user_id', 'email_address'))) {
+                    $this->Session->setFlash(__('The application has been created'), 'alerts/flash_success');
+                    $this->redirect(array('controller' => 'applications', 'action' => 'applicant_edit', $this->Application->id));
+                } else {
+                    $this->Session->setFlash(__('The application could not be saved. Please, try again.'), 'alerts/flash_error');
+                }
+            } else {
+                $this->Session->setFlash(__('Please update the sponsor\'s email before creating an application.'), 'alerts/flash_warning');
+                $this->redirect(array('controller' => 'users', 'action' => 'edit', 'admin' => false));
+            }
+        }
+
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+            'order' => 'Notification.created DESC',
+            'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $this->set('saes', $this->Sae->find('all', array(
+            'limit' => 5,
+            'conditions' => array('Sae.user_id' => $this->Auth->User('id')),
+            'order' => 'Sae.created DESC'
+        )));
+        $this->set('meetingDates', $this->MeetingDate->find('all', array(
+            'limit' => 5,
+            'conditions' => array('MeetingDate.user_id' => $this->Auth->User('id')),
+            'order' => 'MeetingDate.created DESC'
+        )));
+    }
+
+    public function monitor_dashboard()
+    {
+        $user = $this->User->find(
+            'first',
+            array(
+                'contain' => array('StudyMonitor' => array('Application')),
+                'conditions' => array('User.id' => $this->Auth->User('id'))
+            )
+        );
+        $applications = $this->Application->find('all', array(
+            'limit' => 20,
+            'fields' => array(
+                'Application.id',
+                'Application.user_id',
+                'Application.created',
+                'Application.protocol_no',
+                'Application.study_drug',
+                'Application.submitted',
+                'Application.trial_status_id'
+            ),
+            'order' => array('Application.created' => 'desc'),
+            'contain' => array('Review'),
+            'conditions' => array('Application.id' => Hash::extract($user['StudyMonitor'], '{n}.application_id'), 'Application.submitted' => 1),
+        ));
+        $this->set('applications', $applications);
+
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+            'order' => 'Notification.created DESC',
+            'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $aids = $this->Application->StudyMonitor->find('list', array('fields' => array('application_id', 'application_id'), 'conditions' => array('StudyMonitor.user_id' => $this->Auth->User('id'))));
+        $this->set('saes', $this->Sae->find('all', array(
+            'limit' => 20,
+            'conditions' => array('Sae.application_id' => $aids),
+            'order' => 'Sae.created DESC'
+        )));
+    }
+    public function outsource_dashboard()
+    {
+        $user = $this->User->find(
+            'first',
+            array(
+                'contain' => array('ProtocolOutsource' => array('Application')),
+                'conditions' => array('User.id' => $this->Auth->User('id'))
+            )
+        );
+        $applications = $this->Application->find('all', array(
+            'limit' => 20,
+            'fields' => array(
+                'Application.id',
+                'Application.user_id',
+                'Application.created',
+                'Application.protocol_no',
+                'Application.study_drug',
+                'Application.submitted',
+                'Application.trial_status_id'
+            ),
+            'order' => array('Application.created' => 'desc'),
+            'contain' => array('Review', 'Outsource' => array('User')),
+            'conditions' => array('Application.id' => Hash::extract($user['ProtocolOutsource'], '{n}.application_id'), 'Application.submitted' => 1),
+        ));
+
+        // debug($applications);
+        // exit;
+        $this->set('applications', $applications);
+
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+            'order' => 'Notification.created DESC',
+            'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $aids = $this->Application->ProtocolOutsource->find('list', array('fields' => array('application_id', 'application_id'), 'conditions' => array('ProtocolOutsource.user_id' => $this->Auth->User('id'))));
+        $this->set('saes', $this->Sae->find('all', array(
+            'limit' => 20,
+            'conditions' => array('Sae.application_id' => $aids, 'Sae.user_id' => $this->Auth->User('id')),
+            'order' => 'Sae.created DESC'
+        )));
+    }
+
+    public function manager_dashboard()
+    {
+        $applications = $this->Application->find('all', array(
+            'limit' => 5,
+            'fields' => array('Application.id', 'Application.created', 'Application.study_drug', 'Application.submitted', 'Application.protocol_no'),
+            'order' => array('Application.created' => 'desc'),
+            'conditions' => array('submitted' => 1),
+            'contain' => array(),
+        ));
+        $this->set('applications', $applications);
+        $this->User->Notification->recursive = -1;
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+            'order' => 'Notification.created DESC',
+            'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $this->set('users', $this->User->find('list', array('conditions' => array('User.group_id' => 3, 'User.is_active' => 1))));
+        // $this->set('saes', $this->Sae->find('all', array(
+        //     'order' => 'Sae.created DESC'
+        //     )));
+        $this->set('meetingDates', $this->MeetingDate->find('all', array(
+            'limit' => 5,
+            'conditions' => array('MeetingDate.approved >' => 0),
+            'order' => 'MeetingDate.created DESC'
+        )));
+    }
+
+    public function inspector_dashboard()
+    {
+
+        $my_applications = $this->User->ActiveInspector->find('list', array(
+            'conditions' => array('ActiveInspector.user_id' => $this->Auth->User('id'), 'ActiveInspector.type' => 'request', 'ifnull(ActiveInspector.accepted,-1)' => array('accepted', '-1')),
+            'fields' => array('ActiveInspector.application_id'),
+            'contain' => array()
+        ));
+        // pr($my_applications);
+        $this->set('applications', $this->Application->find('all', array(
+            'limit' => 5,
+            'fields' => array('id', 'study_drug', 'created'),
+            'order' => array('Application.created' => 'desc'),
+            'conditions' => array('submitted' => 1, 'Application.id' => array_values($my_applications)),
+            'contain' => array('ActiveInspector'),
+        )));
+        $this->User->Notification->recursive = -1;
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+            'order' => 'Notification.created DESC',
+            'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $this->set('users', $this->User->find('list', array('conditions' => array('User.group_id' => 3, 'User.is_active' => 1))));
+        $this->set('saes', $this->Sae->find('all', array(
+            'order' => 'Sae.created DESC'
+        )));
+    }
+
+    public function reviewer_dashboard()
+    {
+        // $this->Application->recursive = -1;
+        $my_applications = $this->User->Review->find('list', array(
+            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request', 'ifnull(Review.accepted,-1)' => array('accepted', '-1')),
+            'fields' => array('Review.application_id'),
+            'contain' => array()
+        ));
+        // pr($my_applications);
+        $this->set('applications', $this->Application->find('all', array(
+            'limit' => 5,
+            'fields' => array('id', 'study_drug', 'created'),
+            'order' => array('Application.created' => 'desc'),
+            'conditions' => array('submitted' => 1, 'Application.id' => array_values($my_applications)),
+            'contain' => array('Review'),
+        )));
+
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+            'order' => 'Notification.created DESC',
+            'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $this->set('meetingDates', $this->MeetingDate->find('all', array(
+            'limit' => 5,
+            'conditions' => array('MeetingDate.approved >' => 0),
+            'order' => 'MeetingDate.created DESC'
+        )));
+    }
+
+    public function internalreviewer_dashboard()
+    {
+        // $this->Application->recursive = -1;
+        $my_applications = $this->User->Review->find('list', array(
+            'conditions' => array('Review.user_id' => $this->Auth->User('id'), 'Review.type' => 'request', 'ifnull(Review.accepted,-1)' => array('accepted', '-1')),
+            'fields' => array('Review.application_id'),
+            'contain' => array()
+        ));
+        // pr($my_applications);
+        $this->set('applications', $this->Application->find('all', array(
+            'limit' => 5,
+            'fields' => array('id', 'study_drug', 'created'),
+            'order' => array('Application.created' => 'desc'),
+            'conditions' => array('submitted' => 1, 'Application.id' => array_values($my_applications)),
+            'contain' => array('Review'),
+        )));
+
+        $this->set('notifications', $this->User->Notification->find('all', array(
+            'conditions' => array('Notification.user_id' => $this->Auth->User('id')),
+            'order' => 'Notification.created DESC',
+            'limit' => 5
+        )));
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        $this->set('meetingDates', $this->MeetingDate->find('all', array(
+            'limit' => 5,
+            'conditions' => array('MeetingDate.approved >' => 0),
+            'order' => 'MeetingDate.created DESC'
+        )));
+    }
+    public function partner_dashboard()
+    {
+        $applications = $this->Application->find('all', array(
+            'limit' => 10,
+            'fields' => array('Application.id', 'Application.user_id', 'Application.created', 'Application.protocol_no', 'Application.submitted'),
+            'order' => array('Application.created' => 'desc'),
+            'contain' => array(),
+            'conditions' => array('Application.user_id' => $this->Auth->User('id')),
+        ));
+        $this->set('applications', $applications);
+
+        $this->set('messages', $this->Message->find('list', array('fields' => array('name', 'style'))));
+        if ($this->request->is('post')) {
+            $this->Application->create();
+            $this->request->data['Application']['user_id'] = $this->Auth->User('id');
+            $fieldList = array('user_id');
+            if (isset($this->request->data['Application']['email_address'])) $fieldList[] = 'email_address';
+            if (isset($this->request->data['Application']['protocol_no'])) $fieldList[] = 'protocol_no';
+            if ($this->Application->save($this->request->data, true, $fieldList)) {
+                $this->Session->setFlash(__('The application has been created'), 'alerts/flash_success');
+                $this->redirect(array('controller' => 'applications', 'action' => 'partner_edit', $this->Application->id));
+            } else {
+                $this->Session->setFlash(__('The application could not be saved. Please, try again.'), 'alerts/flash_error');
+                // $this->redirect(array('controller' => 'users', 'action' => 'dashboard'));
+            }
+        }
+    }
+
+    public function admin_dashboard()
+    {
+        $this->loadModel('Outsource');
+        $this->request->data['Feedback']['user_id'] = $this->Auth->User('id');
+        $this->User->Feedback->recursive = -1;
+        $this->set('previous_messages', $this->User->Feedback->find('all', array('limit' => 3, 'order' => array('id' => 'desc'))));
+        $this->set('outsources', $this->Outsource->find('all', array(
+            'limit' => 3,
+            'conditions' => array('Outsource.approved' => 0),
+            'order' => array('Outsource.id' => 'desc')
+        )));
+    }
+
+    public function getUserIpAddress()
+    {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            // IP from shared internet
+            return $_SERVER['HTTP_CLIENT_IP'];
+        }
+
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            // IP passed from proxy/load balancer
+            $ipList = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            return trim($ipList[0]); // return the first IP
+        }
+
+        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+            // IP from Cloudflare
+            return $_SERVER['HTTP_CF_CONNECTING_IP'];
+        }
+
+        // Default remote address
+        return $_SERVER['REMOTE_ADDR'];
+    }
+    public function create_audit_trail($type, $user, $message)
+    {
+        $this->loadModel('AuditTrail');
+
+        $audit = array(
+            'AuditTrail' => array(
+                'foreign_key' => $user['id'],
+                'model' => $type,
+                'message' => $message,
+                'ip' => $this->getUserIpAddress(),
+                'uri' => $this->request->here(),
+                'hostname' => gethostname(),
+                'refer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
+                'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '',
+            )
+        );
+        $this->AuditTrail->Create();
+        if ($this->AuditTrail->save($audit)) {
+            $this->log($this->request->data, 'audit_success');
+        } else {
+            $this->log('Error creating an audit trail', 'notifications_error');
+            $this->log($this->request->data, 'notifications_error');
+        }
+    }
+    public function login()
+    {
+        if ($this->Session->read('Auth.User')) {
+            $this->Session->setFlash('You are logged in!', 'alerts/flash_success');
+            $this->redirect('/', null, false);
+        }
+        if ($this->request->is('post')) {
+
+            if (Validation::email($this->request->data['User']['username'])) {
+                $this->Auth->authenticate = array(
+                    'Form' => ['fields' => ['username' => 'email']]
+                );
+                $this->Auth->constructAuthenticate();
+                $this->request->data['User']['email'] = $this->request->data['User']['username'];
+                unset($this->request->data['User']['username']);
+            }
+
+            if ($this->Auth->login()) {
+
+                if ($this->Auth->User('is_active') == 0) {
+                    $this->Session->setFlash('Your account is not activated! If you have just registered, please click the activation link
+                        sent to your email. Remember to check you spam folder too!', 'alerts/flash_error');
+                    $this->redirect($this->Auth->logout());
+                } elseif ($this->Auth->User('deactivated') == 1) {
+                    $this->Session->setFlash('Your account has been deactivated! Please contact PPB.', 'alerts/flash_error');
+                    $this->redirect($this->Auth->logout());
+                }
+                $user = $this->Auth->User();
+
+                $message = "A user with ID " . $user['id'] . " and name  " . $user['name'] . " logged in via Web";
+                $this->create_audit_trail("Web Login", $user, $message);
+
+
+                // $this->redirect($this->Auth->redirect());
+                // if(strlen($this->Auth->redirect()) > 12) {
+                //     return $this->redirect($this->Auth->redirect());           
+                // }
+                if ($this->Auth->User('group_id') == '1') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'admin' => true));
+                if ($this->Auth->User('group_id') == '2') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'manager' => true));
+                if ($this->Auth->User('group_id') == '3') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'reviewer' => true));
+                if ($this->Auth->User('group_id') == '4') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'partner' => true));
+                if ($this->Auth->User('group_id') == '5') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'applicant' => 'applicant'));
+                if ($this->Auth->User('group_id') == '6') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'inspector' => true));
+                if ($this->Auth->User('group_id') == '7') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'monitor' => 'monitor'));
+                if ($this->Auth->User('group_id') == '8') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'outsource' => 'outsource'));
+                if ($this->Auth->User('group_id') == '9') $this->redirect(array('controller' => 'users', 'action' => 'dashboard', 'internalreviewer' => 'internalreviewer'));
+            } else {
+                $this->Session->setFlash('Your username or password was incorrect.', 'alerts/flash_error');
+            }
+        }
+    }
+
+
     public function logout()
     {
         $this->Session->setFlash('Good-Bye', 'alerts/flash_success');
@@ -671,7 +717,7 @@ class UsersController extends AppController
             ));
         }
         //end csv export
-     $groups = $this->User->Group->find('list', array('order' => array('id' => 'desc')));
+        $groups = $this->User->Group->find('list', array('order' => array('id' => 'desc')));
         $this->set(compact('groups'));
         $this->set('page_options', $page_options);
         $this->set('users', $this->paginate());
@@ -897,8 +943,17 @@ class UsersController extends AppController
     {
         if ($this->request->is('post') || $this->request->is('put')) {
             $fieldlist = array(
-                'name', 'email', 'phone_no', 'name_of_institution', 'institution_physical', 'institution_address',
-                'institution_contact', 'county_id', 'country_id', 'sponsor_email', 'qualification'
+                'name',
+                'email',
+                'phone_no',
+                'name_of_institution',
+                'institution_physical',
+                'institution_address',
+                'institution_contact',
+                'county_id',
+                'country_id',
+                'sponsor_email',
+                'qualification'
             );
             if ($this->User->save($this->request->data, true, $fieldlist)) {
                 $this->Session->setFlash(__('Your registration details have been updated.'), 'alerts/flash_success');
@@ -932,8 +987,18 @@ class UsersController extends AppController
             $this->redirect($this->referer());
         }
         $fieldlist = array(
-            'name', 'email', 'phone_no', 'name_of_institution', 'institution_physical', 'institution_address', 'sponsor_email',
-            'institution_contact', 'county_id', 'country_id', 'group_id', 'is_active'
+            'name',
+            'email',
+            'phone_no',
+            'name_of_institution',
+            'institution_physical',
+            'institution_address',
+            'sponsor_email',
+            'institution_contact',
+            'county_id',
+            'country_id',
+            'group_id',
+            'is_active'
         );
         if ($this->request->is('post') || $this->request->is('put')) {
             if ($this->User->save($this->request->data)) {
@@ -948,7 +1013,8 @@ class UsersController extends AppController
             $fieldlist[] = 'group_id';
             $fieldlist[] = 'username';
             $this->request->data = $this->User->find('first', array(
-                'conditions' => array('User.id' => $id), 'fields' => $fieldlist,
+                'conditions' => array('User.id' => $id),
+                'fields' => $fieldlist,
                 'contain' => array('County', 'Country')
             ));
         }
@@ -966,8 +1032,17 @@ class UsersController extends AppController
             $this->redirect($this->referer());
         }
         $fieldlist = array(
-            'name', 'email', 'phone_no', 'name_of_institution', 'institution_physical', 'institution_address',
-            'institution_contact', 'county_id', 'country_id', 'group_id', 'is_active'
+            'name',
+            'email',
+            'phone_no',
+            'name_of_institution',
+            'institution_physical',
+            'institution_address',
+            'institution_contact',
+            'county_id',
+            'country_id',
+            'group_id',
+            'is_active'
         );
         if ($this->request->is('post') || $this->request->is('put')) {
             if ($this->User->save($this->request->data)) {
@@ -982,7 +1057,8 @@ class UsersController extends AppController
             $fieldlist[] = 'group_id';
             $fieldlist[] = 'username';
             $this->request->data = $this->User->find('first', array(
-                'conditions' => array('User.id' => $id), 'fields' => $fieldlist,
+                'conditions' => array('User.id' => $id),
+                'fields' => $fieldlist,
                 'contain' => array('County', 'Country')
             ));
         }
@@ -1067,14 +1143,37 @@ class UsersController extends AppController
         //todo: check if data exists in $users
         $_serialize = 'cusers';
         $_header = array(
-            'Id', 'Username', 'Name', 'Phone No', 'Email', 'Sponsor\'s Email', 'Qualification', 'Role', 'Name of institution',
-            'Physical Address', 'Institution Address', 'Institution Contact', 'County', 'Country',
+            'Id',
+            'Username',
+            'Name',
+            'Phone No',
+            'Email',
+            'Sponsor\'s Email',
+            'Qualification',
+            'Role',
+            'Name of institution',
+            'Physical Address',
+            'Institution Address',
+            'Institution Contact',
+            'County',
+            'Country',
             'Created',
         );
         $_extract = array(
-            'User.id', 'User.username', 'User.name', 'User.phone_no', 'User.email', 'User.sponsor_email', 'User.qualification',
-            'Group.name', 'User.name_of_institution', 'User.institution_physical', 'User.institution_address', 'User.institution_contact',
-            'County.county_name', 'Country.name',
+            'User.id',
+            'User.username',
+            'User.name',
+            'User.phone_no',
+            'User.email',
+            'User.sponsor_email',
+            'User.qualification',
+            'Group.name',
+            'User.name_of_institution',
+            'User.institution_physical',
+            'User.institution_address',
+            'User.institution_contact',
+            'County.county_name',
+            'Country.name',
             'User.created'
         );
 
@@ -1103,14 +1202,14 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Applications/manager_delete');
         $this->Acl->allow($group, 'controllers/Applications/manager_deactivate');
         $this->Acl->allow($group, 'controllers/Applications/manager_amendment_summary');
-        $this->Acl->allow($group, 'controllers/Applications/manager_stages_summary');        
+        $this->Acl->allow($group, 'controllers/Applications/manager_stages_summary');
         $this->Acl->allow($group, 'controllers/Applications/stages');
         $this->Acl->allow($group, 'controllers/Attachments/manager_download');
         $this->Acl->allow($group, 'controllers/Attachments/manager_delete');
         $this->Acl->allow($group, 'controllers/Attachments/download');
         $this->Acl->allow($group, 'controllers/Notifications');
         $this->Acl->allow($group, 'controllers/Notifications/manager_resend');
-        $this->Acl->allow($group, 'controllers/Reviews/manager_add'); 
+        $this->Acl->allow($group, 'controllers/Reviews/manager_add');
         $this->Acl->allow($group, 'controllers/Reviews/manager_comment');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assign_internal');
         $this->Acl->allow($group, 'controllers/Reviews/manager_assign');
@@ -1124,7 +1223,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Users/edit');
         $this->Acl->allow($group, 'controllers/SiteInspections');
         $this->Acl->allow($group, 'controllers/ParticipantFlows');
-        $this->Acl->allow($group, 'controllers/Comments');        
+        $this->Acl->allow($group, 'controllers/Comments');
         $this->Acl->allow($group, 'controllers/Comments/manager_add_annual_letter');
         $this->Acl->allow($group, 'controllers/Comments/manager_add_amendment_discussion');
         $this->Acl->allow($group, 'controllers/Saes');
@@ -1143,10 +1242,10 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/ApplicationStages/manager_complete_screening');
         $this->Acl->allow($group, 'controllers/MeetingDates');
         $this->Acl->allow($group, 'controllers/Feedbacks');
-        $this->Acl->allow($group, 'controllers/AmendmentApprovals/manager_approve');        
+        $this->Acl->allow($group, 'controllers/AmendmentApprovals/manager_approve');
         $this->Acl->allow($group, 'controllers/AmendmentApprovals/manager_approve_amendment');
-          $this->Acl->allow($group, 'controllers/Applications/manager_view');                                                                                                                                                                                                                                                           
-    $this->Acl->allow($group, 'controllers/AuditReports');  
+        $this->Acl->allow($group, 'controllers/Applications/manager_view');                                                                                                                                                                                                                                                           
+        $this->Acl->allow($group, 'controllers/AuditReports'); 
 
         //Allow Inpectors
         $group->id = 6;
@@ -1222,7 +1321,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Applications/applicant_delete');
         $this->Acl->allow($group, 'controllers/Applications/applicant_final_report');
         $this->Acl->allow($group, 'controllers/Applications/applicant_assign_other_protocol');
-        $this->Acl->allow($group, 'controllers/Applications/stages'); 
+        $this->Acl->allow($group, 'controllers/Applications/stages');
         $this->Acl->allow($group, 'controllers/Attachments/applicant_download');
         $this->Acl->allow($group, 'controllers/Attachments/applicant_delete');
         $this->Acl->allow($group, 'controllers/Attachments/download');
@@ -1340,7 +1439,7 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Comments'); //
         //we add an exit to avoid an ugly "missing views" error message
 
-        $group->id = 9; 
+        $group->id = 9;
         $this->Acl->deny($group, 'controllers');
         $this->Acl->allow($group, 'controllers/Applications/internalreviewer_index');
         $this->Acl->allow($group, 'controllers/Applications/internalreviewer_view');
