@@ -143,6 +143,7 @@ class AppController extends Controller
     if ($this->Auth->User('group_id') == '7')  $redir = 'monitor';
     if ($this->Auth->User('group_id') == '8')  $redir = 'outsource';
     if ($this->Auth->User('group_id') == '9')  $redir = 'internalreviewer';
+     if ($this->Auth->User('group_id') == '10') $redir = 'auditor';
 
     $this->Auth->loginAction = array('controller' => 'users', 'action' => 'login', 'admin' => false);
     $this->Auth->logoutRedirect = array('controller' => 'users', 'action' => 'login', 'admin' => false);
