@@ -367,7 +367,7 @@ class AttachmentsController extends AppController
             $this->set($params);
         }
     }
-  public function internal_reviewer_download($id = null)
+  public function internalreviewer_download($id = null)
     {
         $this->viewClass = 'Media';
         $this->Attachment->id = $id;
