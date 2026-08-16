@@ -96,9 +96,9 @@ if ($redir === 'applicant') {
                     if (!empty($year)) {
                         if ($redir === 'manager') { ?>
 
-                            <a class="btn btn-link btn-comment" role="button" data-toggle="collapse" href="#amendment-summary" aria-controls="amendment-summary">Review & Approve</a>
+                            <a class="btn btn-link btn-comment" role="button" data-toggle="collapse" href="#amendment-summary-<?php echo h($year); ?>" aria-controls="amendment-summary-<?php echo h($year); ?>">Review & Approve</a>
 
-                            <div id="amendment-summary" class="collapse show">
+                            <div id="amendment-summary-<?php echo h($year); ?>" class="collapse">
                                 <div class="amend-form">
                                     <ul id="rreview_tab" class="nav nav-tabs">
                                         <li class="active"><a href="#amendment_approval">Approval</a></li>
