@@ -21,6 +21,14 @@
         line-height: 1.5;
         padding: 6px 0;
     }
+    /* Guard every value cell in the SAE view/PDF, not just the reaction description -
+       long drug names, indications, causality text, etc. wrap instead of overflowing
+       or getting clipped by the table's fixed-width label columns. */
+    .sae-form table td {
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-word;
+    }
 </style>
 
 <div class="sae-form">
