@@ -4,14 +4,22 @@
 ?>
 
 <style type="text/css">
+    .sae-large-text-block {
+        margin-bottom: 20px;
+    }
+    .sae-large-text-label {
+        color: #007000;
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
     .sae-large-text {
+        display: block;
+        width: 100%;
         white-space: normal;
         word-wrap: break-word;
         word-break: break-word;
-        vertical-align: top;
-        padding-top: 8px;
-        padding-bottom: 8px;
         line-height: 1.5;
+        padding: 6px 0;
     }
 </style>
 
@@ -104,12 +112,12 @@
           <td class="table-label required" width="25%"><p>Causality of the reaction <span class="sterix">*</span></p></td>
           <td><?php  echo $sae['Sae']['causality']; ?></td>
         </tr>
-        <tr>
-          <td class="table-label required" width="25%" style="vertical-align: top;"><p>Describe Reaction(s) <small class="muted">(including relevant test, lab data)</small> <span class="sterix">*</span></p></td>
-          <td class="sae-large-text"><?php  echo nl2br(h($sae['Sae']['reaction_description'])); ?></td>
-        </tr>
       </tbody>
     </table>
+    <div class="sae-large-text-block">
+      <p class="sae-large-text-label required">Describe Reaction(s) <small class="muted">(including relevant test, lab data)</small> <span class="sterix">*</span></p>
+      <div class="sae-large-text"><?php  echo nl2br(h($sae['Sae']['reaction_description'])); ?></div>
+    </div>
     <hr class="my-view">
 
     <h4 style="text-align: center; text-decoration: underline;">SUSPECTED DRUG(S) INFORMATION</h4>
