@@ -192,7 +192,7 @@ class PrgComponent extends Component {
 				$data[$field['field']] = $values;
 			}
 
-			if ($this->encode || !empty($field['encode'])) {
+			if (($this->encode || !empty($field['encode'])) && isset($data[$field['field']])) {
 				$fieldContent = $data[$field['field']];
 				$tmp = base64_encode($fieldContent);
 				//replace chars base64 uses that would mess up the url

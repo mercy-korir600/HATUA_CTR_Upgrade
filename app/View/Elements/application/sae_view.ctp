@@ -3,7 +3,19 @@
     $nChecked = '&#x25a2;';
 ?>
 
-<div class="sae-form">    
+<style type="text/css">
+    .sae-large-text {
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-word;
+        vertical-align: top;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        line-height: 1.5;
+    }
+</style>
+
+<div class="sae-form">
     <table class="table  table-condensed">
       <tbody>
         <tr>
@@ -93,8 +105,8 @@
           <td><?php  echo $sae['Sae']['causality']; ?></td>
         </tr>
         <tr>
-          <td class="table-label required" width="25%"><p>Describe Reaction(s) <small class="muted">(including relevant test, lab data)</small> <span class="sterix">*</span></p></td>
-          <td><?php  echo $sae['Sae']['reaction_description']; ?></td>
+          <td class="table-label required" width="25%" style="vertical-align: top;"><p>Describe Reaction(s) <small class="muted">(including relevant test, lab data)</small> <span class="sterix">*</span></p></td>
+          <td class="sae-large-text"><?php  echo nl2br(h($sae['Sae']['reaction_description'])); ?></td>
         </tr>
       </tbody>
     </table>
