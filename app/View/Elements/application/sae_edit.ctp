@@ -474,15 +474,39 @@
 
     $(function() {
         $( "#SaeCountryId" ).combobox();
-        $('.causality').click(function(){            
-            if ($(this).val() == 'Certain' || $(this).val() == 'Probable/Likely' || $(this).val() == 'Possible') {
-                if($("#suspected-drugs .suspected-group").length == 0) {
+
+        function causalityRequiresSuspectedDrug(value) {
+            return value === 'Certain' || value === 'Probable/Likely' || value === 'Possible';
+        }
+
+        function ensureSuspectedDrugRow() {
+            if (causalityRequiresSuspectedDrug($('.causality:checked').val())) {
+                if ($("#suspected-drugs .suspected-group").length === 0) {
                     $('#addSuspectedDrug').click();
                 }
-            } 
+            }
+        }
+
+        // Cover the case where the user actively picks a causality that requires a suspected drug.
+        $('.causality').click(function(){
+            ensureSuspectedDrugRow();
         });
-        // function causality_click() {
-        //    console.log($(this).val());
-        // }
+
+        // Cover the case where the SAE was saved as a draft with the causality already selected
+        // (radio comes back pre-checked from the server) - the click handler above never fires on
+        // page load, so without this the "Suspected Drug(s)" section can stay empty even though the
+        // causality implies one is required.
+        ensureSuspectedDrugRow();
+
+        // Belt-and-braces: don't let "Submit" go through with zero suspected drug rows when the
+        // selected causality requires one - this used to silently submit successfully with the
+        // Suspected Drug(s) section left blank.
+        $('#SaeSubmitReport').on('click', function(e) {
+            if (causalityRequiresSuspectedDrug($('.causality:checked').val()) && $("#suspected-drugs .suspected-group").length === 0) {
+                alert('Please add at least one Suspected Drug before submitting the report.');
+                e.preventDefault();
+                return false;
+            }
+        });
     });
     </script>

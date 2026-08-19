@@ -9,7 +9,10 @@ $(function() {
         if ( typeof se !== 'undefined' && se !== false && se !== "") {
             intId = parseFloat(se.replace('suspected_drugsButton', '')) + 1;
         } else {
-            intId = 1;
+            // Server-rendered rows are 0-indexed (data[SuspectedDrug][0], [1], ...) - start
+            // dynamically-added rows at 0 too, otherwise the first JS-added row lands on index 1
+            // and the two numbering schemes drift apart across saves.
+            intId = 0;
         }
         if ($("#suspected-drugs .suspected-group").length < 9) {
             var new_suspectdrug = $('<div class="suspected-group">\

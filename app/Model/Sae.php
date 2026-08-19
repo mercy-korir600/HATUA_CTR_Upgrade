@@ -253,6 +253,10 @@ class Sae extends AppModel {
                 'required' => true,
                 'message'  => 'Please select the causality!'
             ),
+            'suspectedDrugRequired' => array(
+                'rule'     => 'suspectedDrugRequired',
+                'message'  => 'Please add at least one Suspected Drug before submitting the report!'
+            ),
         ),
         'reaction_description' => array(
             'notEmpty' => array(
@@ -456,5 +460,27 @@ class Sae extends AppModel {
             return false;
         }
         return true;
+    }
+
+    /**
+     * A causality of Certain/Probable/Possible implies the reaction was attributed to a drug, so
+     * the Suspected Drug(s) section can't be left empty on submission. This only runs when the
+     * form is validated (i.e. on final "Submit", not on draft "Save Changes" - see
+     * SaesController::applicant_edit()), so drafts can still be saved incrementally.
+     */
+    public function suspectedDrugRequired($field = null) {
+        $causality = isset($field['causality']) ? $field['causality'] : null;
+        if (!in_array($causality, array('Certain', 'Probable/Likely', 'Possible'))) {
+            return true;
+        }
+        if (empty($this->data['SuspectedDrug'])) {
+            return false;
+        }
+        foreach ($this->data['SuspectedDrug'] as $drug) {
+            if (!empty($drug['generic_name'])) {
+                return true;
+            }
+        }
+        return false;
     }
 }
