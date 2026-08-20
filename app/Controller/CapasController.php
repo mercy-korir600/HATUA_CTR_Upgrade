@@ -82,7 +82,10 @@ class CapasController extends AppController
         }
 
         $reviewers = $this->Capa->Reviewer->find('list', array(
-            'conditions' => array('User.group_id' => array(3, 9), 'User.is_active' => 1),
+            // 'Reviewer' is a belongsTo alias for User (see Capa.php), so
+            // the query builder uses that alias as the table alias too -
+            // conditions must match it, not 'User'.
+            'conditions' => array('Reviewer.group_id' => array(3, 9), 'Reviewer.is_active' => 1),
         ));
 
         $this->set('page_options', $page_options);
