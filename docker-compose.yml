@@ -43,7 +43,7 @@ services:
       PMA_PASSWORD: hatua.
     depends_on:
       - db
- 
+
   redis:
     image: redis:7-alpine
     platform: linux/amd64
