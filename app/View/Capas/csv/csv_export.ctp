@@ -1,8 +1,8 @@
 <?php
 $header = array(
-    'reference_no' => 'Reference_No', 'type' => 'Type', 'protocol_no' => 'Protocol_No', 'reviewer' => 'Reviewer',
-    'status' => 'Status', 'closed_date' => 'Closed_Date', 'opened_date' => 'Opened_Date', 'deadline_date' => 'Deadline_Date',
-    'days_overdue' => 'Days_Overdue_At_Open', 'description' => 'Description',
+    'reference_no' => 'Reference_No', 'type' => 'Type', 'protocol_no' => 'Protocol No', 'reviewer' => 'Reviewer',
+    'status' => 'Status', 'closed_date' => 'Closed Date', 'opened_date' => 'Opened Date', 'deadline_date' => 'Deadline Date',
+    'days_overdue' => 'Days Overdue At Open', 'description' => 'Description',
 );
 
 echo implode(',', $header) . "\n";
