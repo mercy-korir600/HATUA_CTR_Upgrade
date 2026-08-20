@@ -260,6 +260,10 @@ class ReviewDeadlineAlertShell extends AppShell
 
     protected function _ensureCapa($review, $row, DateTime $deadline, $daysOverdue)
     {
+        // A CAPA "case" is a group of rows sharing (review_id,
+        // source_stage) - the 'Initial' row plus any manager-added
+        // 'FollowUp' rows (see Capa.php). Once ANY row exists for this
+        // pair, the case is already open - don't open a second one.
         $existing = $this->Capa->find('first', array(
             'conditions' => array('Capa.review_id' => $review['id'], 'Capa.source_stage' => 'Review'),
         ));
@@ -279,6 +283,7 @@ class ReviewDeadlineAlertShell extends AppShell
 
         $this->Capa->create();
         $saved = $this->Capa->save(array('Capa' => array(
+            'type' => 'Initial',
             'reference_no' => $refNo,
             'application_id' => $row['Application']['id'],
             'application_stage_id' => !empty($applicationStage['ApplicationStage']['id']) ? $applicationStage['ApplicationStage']['id'] : null,

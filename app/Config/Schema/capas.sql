@@ -11,14 +11,24 @@
 --
 -- No FOREIGN KEY constraints, matching this codebase's existing convention
 -- of enforcing relations in the CakePHP ORM layer rather than in MySQL.
+--
+-- Follow-ups reuse this same table rather than a separate one - see
+-- capas_followup_columns.sql for the full rationale (this CREATE already
+-- has those columns baked in for fresh installs). In short: `type`
+-- distinguishes the one auto-opened 'Initial' row per reviewer assignment
+-- from any number of manager-added 'FollowUp' rows appended later, all
+-- sharing the same (review_id, source_stage) - which is why that pair is
+-- a plain index here rather than a UNIQUE key.
 
 CREATE TABLE IF NOT EXISTS `capas` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `type` varchar(20) NOT NULL DEFAULT 'Initial',
   `reference_no` varchar(50) DEFAULT NULL,
   `application_id` int(11) NOT NULL,
   `application_stage_id` int(11) DEFAULT NULL,
   `review_id` int(11) DEFAULT NULL,
   `reviewer_user_id` int(11) NOT NULL,
+  `created_by_user_id` int(11) DEFAULT NULL,
   `source_stage` varchar(30) NOT NULL DEFAULT 'Review',
   `deadline_date` date DEFAULT NULL,
   `days_overdue` int(11) DEFAULT NULL,
@@ -27,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `capas` (
   `created` datetime DEFAULT NULL,
   `modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_review_source_stage` (`review_id`,`source_stage`),
+  KEY `idx_capas_review_source_stage` (`review_id`,`source_stage`),
   KEY `idx_capas_application_id` (`application_id`),
   KEY `idx_capas_reviewer_user_id` (`reviewer_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

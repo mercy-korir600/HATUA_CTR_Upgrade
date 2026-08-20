@@ -2355,6 +2355,29 @@ class ApplicationsController extends AppController
         $this->set('inspectors', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(2, 6), 'User.is_active' => 1))));
         $this->set('external', $this->Application->User->find('list', array('conditions' => array('User.group_id' => array(9), 'User.is_active' => 1))));
 
+        // CAPAs (Corrective and Preventive Action records) auto-opened by
+        // ReviewDeadlineAlertShell when a reviewer misses the Review-stage
+        // deadline. Each CAPA "case" is a group of Capa rows sharing the
+        // same review_id (an 'Initial' row plus any 'FollowUp' rows a
+        // manager has appended since - see Capa.php) - grouped here by
+        // review_id, oldest first, so the template can render Initial as
+        // the header and any FollowUps as its thread, for both external
+        // (Review) and internal (InternalReview) assignments - both are
+        // Review rows under the hood (see Application::$hasMany), so one
+        // fetch covers both.
+        $this->loadModel('Capa');
+        $capas = $this->Capa->find('all', array(
+            'contain' => array('Reviewer', 'CreatedBy'),
+            'conditions' => array('Capa.application_id' => $id),
+            'order' => array('Capa.created' => 'ASC'),
+        ));
+        $capasByReview = array();
+        foreach ($capas as $capa) {
+            if (!empty($capa['Capa']['review_id'])) {
+                $capasByReview[$capa['Capa']['review_id']][] = $capa;
+            }
+        }
+        $this->set('capasByReview', $capasByReview);
 
         $this->request->data = $application;
 
@@ -2365,6 +2388,56 @@ class ApplicationsController extends AppController
     public function manager_view($id = null)
     {
         $this->aview($id);
+    }
+
+    /**
+     * Append a follow-up note to an existing CAPA "case", and optionally
+     * move its status forward (Open -> In Progress -> Closed). This saves
+     * a NEW `capas` row with type='FollowUp', copying the case's fixed
+     * fields (application/review/reviewer/stage) from the row the manager
+     * was looking at - see Capa.php for why follow-ups live in the same
+     * table instead of a child one. Manager-side only for now, posted
+     * from the CAPA list on manager_view - see
+     * app/View/Elements/capas/list.ctp.
+     */
+    public function manager_add_capa_followup()
+    {
+        $this->loadModel('Capa');
+
+        $capaId = !empty($this->request->data['Capa']['id']) ? $this->request->data['Capa']['id'] : null;
+        $source = $this->Capa->find('first', array('conditions' => array('Capa.id' => $capaId)));
+        if (!$capaId || empty($source)) {
+            $this->Session->setFlash(__('Invalid CAPA record.'), 'alerts/flash_error');
+            $this->redirect($this->referer());
+        }
+
+        if ($this->request->is('post')) {
+            $note = !empty($this->request->data['Capa']['note']) ? $this->request->data['Capa']['note'] : '';
+            $newStatus = !empty($this->request->data['Capa']['status']) ? $this->request->data['Capa']['status'] : $source['Capa']['status'];
+
+            $this->Capa->create();
+            $data = array('Capa' => array(
+                'type' => 'FollowUp',
+                'reference_no' => $source['Capa']['reference_no'],
+                'application_id' => $source['Capa']['application_id'],
+                'application_stage_id' => $source['Capa']['application_stage_id'],
+                'review_id' => $source['Capa']['review_id'],
+                'reviewer_user_id' => $source['Capa']['reviewer_user_id'],
+                'created_by_user_id' => $this->Auth->User('id'),
+                'source_stage' => $source['Capa']['source_stage'],
+                'deadline_date' => $source['Capa']['deadline_date'],
+                'days_overdue' => $source['Capa']['days_overdue'],
+                'description' => $note,
+                'status' => $newStatus,
+            ));
+
+            if ($this->Capa->save($data)) {
+                $this->Session->setFlash(__('Follow-up added to the CAPA.'), 'alerts/flash_success');
+            } else {
+                $this->Session->setFlash(__('The follow-up could not be saved. Please try again.'), 'alerts/flash_error');
+            }
+        }
+        $this->redirect($this->referer());
     }
     public function inspector_view($id = null)
     {

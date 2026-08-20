@@ -649,6 +649,9 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
                   echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
+                  echo $this->element('capas/list', array(
+                    'capas' => !empty($capasByReview[$response['id']]) ? $capasByReview[$response['id']] : array(),
+                  ));
                   echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
                   $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
                   echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
@@ -660,7 +663,7 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
                     __('Are you sure you want to revoke access for %s?', $user)
                   );
                   echo '<hr>';
-                
+
                 } elseif ($response['type'] == 'request' && $response['accepted'] == 'declined') {
                   $responded = true;
                   echo '<p class="text-error"><i class="icon-remove"> </i> ' . $user . ' <small class="muted">(Declines)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
@@ -732,6 +735,9 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
                   echo '<p class="text-success"><i class="icon-check"> </i> ' . $user . ' <small class="muted">(Accepts)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
                   // echo '<p><i class="icon-minus"> </i> '.$response['text'].'</p>';
                   echo '<p>Has Conflict of interest? ' . $response['conflict'] . ' </p>';
+                  echo $this->element('capas/list', array(
+                    'capas' => !empty($capasByReview[$response['id']]) ? $capasByReview[$response['id']] : array(),
+                  ));
                   echo '<p><i class="icon-time"> </i> Date Assigned: ' . date('d-m-Y H:i:s', strtotime($response['created'])) . '</p>';
                   $assignedBy = !empty($response['assigned_by_name']) ? $response['assigned_by_name'] : 'N/A';
                   echo '<p><i class="icon-user"> </i> Assigned By: ' . h($assignedBy) . '</p>';
@@ -743,7 +749,7 @@ $renderTimelineStrip = function ($timelineEntry) use ($amendmentStageOrder, $res
                     __('Are you sure you want to revoke access for %s?', $user)
                   );
                   echo '<hr>';
-                
+
                 } elseif ($response['type'] == 'request' && $response['accepted'] == 'declined') {
                   $responded = true;
                   echo '<p class="text-error"><i class="icon-remove"> </i> ' . $user . ' <small class="muted">(Declines)</small> <i class="icon-minus"> </i> ' . $response['recommendation'] . '</p>';
