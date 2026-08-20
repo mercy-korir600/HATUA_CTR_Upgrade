@@ -225,7 +225,19 @@ class ReviewDeadlineAlertShell extends AppShell
             $this->Notification->create();
             $this->Notification->save(array('Notification' => array(
                 'user_id' => $row['User']['id'],
-                'type' => 'review_deadline_' . preg_replace('/[^a-z0-9]+/', '_', strtolower($tierLabel)),
+                // IMPORTANT: this must exactly equal a `messages`.`name` row
+                // that has a `style` set - app/View/Elements/alerts/notifications.ctp
+                // renders every notification via
+                // $messages[$notification['Notification']['type']] (a
+                // name => style lookup built in UsersController::*_dashboard()),
+                // and throws "Undefined index" if the type isn't a real
+                // Message name. $bodyKey already IS that Message name, so
+                // reuse it directly instead of deriving a new string from
+                // $tierLabel (the old code below produced mismatched values
+                // like 'review_deadline_overdue' - missing the 'r' in
+                // "review[er]" - and 'review_deadline_100_' with a stray
+                // trailing underscore for the '%' tiers).
+                'type' => $bodyKey,
                 'model' => 'Review',
                 'foreign_key' => $reviewId,
                 'title' => $subject,

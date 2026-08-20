@@ -38,24 +38,38 @@ CREATE TABLE IF NOT EXISTS `capas` (
 -- Placeholders use CakePHP's String::insert() default syntax (":key") and
 -- are filled in by ReviewDeadlineAlertShell.
 --
+-- `style` matters beyond email formatting: app/View/Elements/alerts/notifications.ctp
+-- (rendered on every dashboard) looks up each notification's alert-box CSS
+-- class via $messages[Notification.type], where $messages is exactly this
+-- Message.name => Message.style list (see UsersController::*_dashboard()).
+-- ReviewDeadlineAlertShell sets Notification.type to the same name used
+-- here, so every one of these rows MUST have a `style` - leaving it NULL
+-- causes "Undefined index" the moment a matching notification is displayed.
+-- Valid values (see app/View/Messages/admin_add.ctp): info, success,
+-- warning, error.
+--
 -- Adjust column names below if your live `messages` table differs -
 -- ctr.sql/app/Config/ctr.sql in this repo are both stale relative to the
--- live schema (neither has the `name`/`content` columns the active code
--- already relies on), so this targets the columns the running app uses.
-INSERT INTO `messages` (`name`, `subject`, `content`, `created`, `modified`) VALUES
+-- live schema (neither has the `name`/`content`/`style` columns the active
+-- code already relies on), so this targets the columns the running app uses.
+INSERT INTO `messages` (`name`, `subject`, `content`, `style`, `created`, `modified`) VALUES
 ('reviewer_deadline_50',
  'Reminder: your review of :protocol_no is due soon',
  '<p>Dear :name,</p><p>This is a reminder that your review of <strong>:protocol_no - :study_title</strong> is now :days_elapsed of :sla_days days in (50% of the review window elapsed). Please submit your comments at your earliest convenience.</p><p><a href=":protocol_link">Open the application to submit your review</a></p>',
+ 'info',
  NOW(), NOW()),
 ('reviewer_deadline_70',
  'Second reminder: your review of :protocol_no is due soon',
  '<p>Dear :name,</p><p>Your review of <strong>:protocol_no - :study_title</strong> is now :days_elapsed of :sla_days days in (70% of the review window elapsed). The submission deadline is :deadline_date. Please submit your comments soon.</p><p><a href=":protocol_link">Open the application to submit your review</a></p>',
+ 'warning',
  NOW(), NOW()),
 ('reviewer_deadline_100',
  'Deadline today: your review of :protocol_no is due',
  '<p>Dear :name,</p><p>Today, :deadline_date, is the submission deadline for your review of <strong>:protocol_no - :study_title</strong>. Please submit your comments today to avoid this being logged as a missed deadline.</p><p><a href=":protocol_link">Open the application to submit your review</a></p>',
+ 'warning',
  NOW(), NOW()),
 ('reviewer_deadline_overdue',
  'OVERDUE: your review of :protocol_no is :days_overdue day(s) past deadline',
  '<p>Dear :name,</p><p>Your review of <strong>:protocol_no - :study_title</strong> was due on :deadline_date and is now :days_overdue day(s) overdue. This has been logged as a CAPA (Corrective and Preventive Action) item. Please submit your comments as soon as possible.</p><p><a href=":protocol_link">Open the application to submit your review</a></p>',
- NOW(), NOW()); 
+ 'error',
+ NOW(), NOW());
