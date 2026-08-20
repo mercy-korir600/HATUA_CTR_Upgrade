@@ -279,7 +279,11 @@ class ReviewDeadlineAlertShell extends AppShell
             'order' => array('ApplicationStage.id' => 'ASC'),
         ));
 
-        $refNo = 'CAPA/' . $row['Application']['protocol_no'] . '/' . date('Y') . '/' . ($this->Capa->find('count') + 1);
+        // Count only 'Initial' rows (i.e. CAPA cases) for the running
+        // sequence number - counting all rows would inflate it every time
+        // a manager appends a 'FollowUp' elsewhere in the table.
+        $caseCount = $this->Capa->find('count', array('conditions' => array('Capa.type' => 'Initial')));
+        $refNo = 'CAPA/' . $row['Application']['protocol_no'] . '/' . date('Y') . '/' . ($caseCount + 1);
 
         $this->Capa->create();
         $saved = $this->Capa->save(array('Capa' => array(

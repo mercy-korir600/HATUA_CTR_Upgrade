@@ -2412,8 +2412,10 @@ class ApplicationsController extends AppController
         }
 
         if ($this->request->is('post')) {
+            $validStatuses = array('Open', 'In Progress', 'Closed');
             $note = !empty($this->request->data['Capa']['note']) ? $this->request->data['Capa']['note'] : '';
-            $newStatus = !empty($this->request->data['Capa']['status']) ? $this->request->data['Capa']['status'] : $source['Capa']['status'];
+            $requestedStatus = !empty($this->request->data['Capa']['status']) ? $this->request->data['Capa']['status'] : null;
+            $newStatus = in_array($requestedStatus, $validStatuses, true) ? $requestedStatus : $source['Capa']['status'];
 
             $this->Capa->create();
             $data = array('Capa' => array(
@@ -2432,6 +2434,24 @@ class ApplicationsController extends AppController
             ));
 
             if ($this->Capa->save($data)) {
+                // Keep the 'Initial' row's own status in sync with the
+                // case's latest status, so callers that only need
+                // "is this case open/closed" (e.g. the dedicated CAPA
+                // section's filter/list) can read it directly off the
+                // Initial row without pulling the whole follow-up thread.
+                if ($newStatus !== $source['Capa']['status']) {
+                    $initial = $this->Capa->find('first', array(
+                        'conditions' => array(
+                            'Capa.review_id' => $source['Capa']['review_id'],
+                            'Capa.source_stage' => $source['Capa']['source_stage'],
+                            'Capa.type' => 'Initial',
+                        ),
+                    ));
+                    if (!empty($initial['Capa']['id'])) {
+                        $this->Capa->id = $initial['Capa']['id'];
+                        $this->Capa->saveField('status', $newStatus);
+                    }
+                }
                 $this->Session->setFlash(__('Follow-up added to the CAPA.'), 'alerts/flash_success');
             } else {
                 $this->Session->setFlash(__('The follow-up could not be saved. Please try again.'), 'alerts/flash_error');

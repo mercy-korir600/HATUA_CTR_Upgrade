@@ -20,9 +20,13 @@ App::uses('AppModel', 'Model');
  *                            these per case. See ApplicationsController::
  *                            manager_add_capa_followup().
  *
- * The case's *current* status is simply the `status` of the most recent
- * row (Initial or FollowUp) for that (review_id, source_stage) pair -
- * there is no separate "head" record to keep in sync.
+ * The case's *current* status is the `status` of the most recent row
+ * (Initial or FollowUp) for that (review_id, source_stage) pair - but for
+ * cheap filtering/listing (see CapasController), the 'Initial' row's own
+ * `status` is ALSO kept in sync with every follow-up's status change (see
+ * ApplicationsController::manager_add_capa_followup()), so callers that
+ * only need "is this case open/closed" can read Initial.status directly
+ * without pulling the whole thread.
  *
  * @property Application $Application
  * @property ApplicationStage $ApplicationStage
@@ -32,7 +36,49 @@ App::uses('AppModel', 'Model');
  */
 class Capa extends AppModel {
 
-    public $actsAs = array('Containable');
+    public $actsAs = array('Containable', 'Search.Searchable');
+
+    // Powers the filter form on the dedicated CAPA section
+    // (app/Controller/CapasController.php / app/View/Capas/manager_index.ctp)
+    // - same Search.Searchable + Search.Prg pattern used by Sae/Budget/
+    // AuditTrail elsewhere in this app.
+    public $filterArgs = array(
+        'reference_no' => array('type' => 'like', 'encode' => true),
+        'protocol_no' => array('type' => 'query', 'method' => 'findByProtocolNo', 'encode' => true),
+        'reviewer_user_id' => array('type' => 'value'),
+        'status' => array('type' => 'value'),
+        'range' => array('type' => 'expression', 'method' => 'makeRangeCondition', 'field' => 'Capa.created BETWEEN ? AND ?'),
+        'start_date' => array('type' => 'query', 'method' => 'dummy'),
+        'end_date' => array('type' => 'query', 'method' => 'dummy'),
+    );
+
+    public function dummy($data = array())
+    {
+        return array('1' => '1');
+    }
+
+    public function makeRangeCondition($data = array())
+    {
+        if (!empty($data['start_date'])) {
+            $start_date = date('Y-m-d', strtotime($data['start_date']));
+        } else {
+            $start_date = date('Y-m-d', strtotime('2012-05-01'));
+        }
+        if (!empty($data['end_date'])) {
+            $end_date = date('Y-m-d', strtotime($data['end_date']));
+        } else {
+            $end_date = date('Y-m-d');
+        }
+        return array($start_date, $end_date);
+    }
+
+    public function findByProtocolNo($data = array())
+    {
+        return array($this->alias . '.application_id' => $this->Application->find('list', array(
+            'conditions' => array('Application.protocol_no LIKE' => '%' . $data['protocol_no'] . '%'),
+            'fields' => array('id', 'id'),
+        )));
+    }
 
     public $belongsTo = array(
         'Application' => array(

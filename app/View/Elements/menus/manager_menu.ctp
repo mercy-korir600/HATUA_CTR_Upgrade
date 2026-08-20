@@ -25,7 +25,7 @@
             array('controller' => 'applications', 'action'=>'workflow', 'manager' => true ), array('escape' => false ));
             ?>
        </li>
-       <li class="dropdown <?php echo $this->fetch('SAE') ?> <?php echo $this->fetch('SI') ?> <?php echo $this->fetch('PF') ?> <?php echo $this->fetch('CIOM') ?> <?php echo $this->fetch('DEV') ?>">
+       <li class="dropdown <?php echo $this->fetch('SAE') ?> <?php echo $this->fetch('SI') ?> <?php echo $this->fetch('PF') ?> <?php echo $this->fetch('CIOM') ?> <?php echo $this->fetch('DEV') ?> <?php echo $this->fetch('CAPA') ?>">
          <a data-toggle="dropdown" class="dropdown-toggle" role="button" id="drop7" href="#">
             <i class="icon-paper-clip"></i> Application data <b class="caret"></b></a>
           <ul aria-labelledby="drop7" role="menu" class="dropdown-menu">
@@ -33,6 +33,13 @@
              <?php
               echo $this->Html->link('<i class="icon-list-alt"></i> SAE',
                   array('controller' => 'saes', 'action'=>'index', 'manager' => true ), array('escape' => false ));
+              ?>
+            </li>
+          <li class="divider"></li>
+             <li>
+              <?php
+              echo $this->Html->link('<i class="icon-warning-sign"></i> CAPAs',
+                  array('controller' => 'capas', 'action'=>'index', 'manager' => true ), array('escape' => false ));
               ?>
             </li>
           <li class="divider"></li>
