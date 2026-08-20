@@ -2416,6 +2416,12 @@ class ApplicationsController extends AppController
             $note = !empty($this->request->data['Capa']['note']) ? $this->request->data['Capa']['note'] : '';
             $requestedStatus = !empty($this->request->data['Capa']['status']) ? $this->request->data['Capa']['status'] : null;
             $newStatus = in_array($requestedStatus, $validStatuses, true) ? $requestedStatus : $source['Capa']['status'];
+            // Stamped automatically the moment a row's status is saved as
+            // 'Closed' - never hand-entered - so it always reflects
+            // exactly when the closure was recorded. Cleared back to NULL
+            // if the case is reopened later (status moves off 'Closed'
+            // again), so it only ever reflects the most recent closure.
+            $closedDate = ($newStatus === 'Closed') ? date('Y-m-d H:i:s') : null;
 
             $this->Capa->create();
             $data = array('Capa' => array(
@@ -2436,14 +2442,16 @@ class ApplicationsController extends AppController
                 'days_overdue' => $source['Capa']['days_overdue'],
                 'description' => $note,
                 'status' => $newStatus,
+                'closed_date' => $closedDate,
             ));
 
             if ($this->Capa->save($data)) {
-                // Keep the 'Initial' row's own status in sync with the
-                // case's latest status, so callers that only need
-                // "is this case open/closed" (e.g. the dedicated CAPA
-                // section's filter/list) can read it directly off the
-                // Initial row without pulling the whole follow-up thread.
+                // Keep the 'Initial' row's own status (and closed_date) in
+                // sync with the case's latest status, so callers that only
+                // need "is this case open/closed - and since when" (e.g.
+                // the dedicated CAPA section's filter/list) can read it
+                // directly off the Initial row without pulling the whole
+                // follow-up thread.
                 if ($newStatus !== $source['Capa']['status']) {
                     $initial = $this->Capa->find('first', array(
                         'conditions' => array(
@@ -2455,6 +2463,7 @@ class ApplicationsController extends AppController
                     if (!empty($initial['Capa']['id'])) {
                         $this->Capa->id = $initial['Capa']['id'];
                         $this->Capa->saveField('status', $newStatus);
+                        $this->Capa->saveField('closed_date', $closedDate);
                     }
                 }
                 $this->Session->setFlash(__('Follow-up added to the CAPA.'), 'alerts/flash_success');

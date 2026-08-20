@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `capas` (
   `days_overdue` int(11) DEFAULT NULL,
   `description` text,
   `status` varchar(30) NOT NULL DEFAULT 'Open',
+  `closed_date` datetime DEFAULT NULL,
   `created` datetime DEFAULT NULL,
   `modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),

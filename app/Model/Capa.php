@@ -31,6 +31,12 @@ App::uses('AppModel', 'Model');
  * manager_add_capa_followup()), so callers that only need "is this case
  * open/closed" can read Initial.status directly without walking the tree.
  *
+ * `closed_date` is stamped automatically (never hand-entered) the moment a
+ * row's own `status` is saved as 'Closed', and cleared back to NULL if
+ * that row/case is later reopened - see manager_add_capa_followup() again,
+ * which keeps the Initial row's `closed_date` in sync alongside `status`
+ * for the same reason.
+ *
  * @property Application $Application
  * @property ApplicationStage $ApplicationStage
  * @property Review $Review

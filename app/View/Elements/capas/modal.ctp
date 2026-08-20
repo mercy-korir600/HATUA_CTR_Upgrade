@@ -66,7 +66,9 @@ if (!function_exists('_renderCapaThreadNode')) {
     <div class="modal-content">
 
       <div class="modal-header">
-        <h4 class="modal-title">CAPA <?php echo h($initial['Capa']['reference_no']); ?> <small class="muted">(<?php echo h($status); ?>)</small></h4>
+        <h4 class="modal-title">
+          CAPA <?php echo h($initial['Capa']['reference_no']); ?> <small class="muted">(<?php echo h($status); ?><?php if ($status === 'Closed' && !empty($initial['Capa']['closed_date'])): ?> on <?php echo date('d-m-Y H:i', strtotime($initial['Capa']['closed_date'])); ?><?php endif; ?>)</small>
+        </h4>
         <button type="button" class="close" data-dismiss="modal">&times;</button>
       </div>
 

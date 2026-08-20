@@ -138,6 +138,7 @@ $this->assign('CAPA', 'active');
                     <th>Protocol No.</th>
                     <th>Reviewer</th>
                     <th><?php echo $this->Paginator->sort('status'); ?></th>
+                    <th><?php echo $this->Paginator->sort('closed_date', 'Closed Date'); ?></th>
                     <th><?php echo $this->Paginator->sort('created', 'Created'); ?></th>
                     <th><?php echo $this->Paginator->sort('deadline_date', 'Deadline'); ?></th>
                     <th><?php echo $this->Paginator->sort('days_overdue', 'Days Overdue (at open)'); ?></th>
@@ -204,6 +205,7 @@ $this->assign('CAPA', 'active');
                         </td>
                         <td><?php echo h(!empty($capa['Reviewer']['name']) ? $capa['Reviewer']['name'] : 'N/A'); ?></td>
                         <td class="<?php echo $statusClass; ?>"><strong><?php echo h($status); ?></strong></td>
+                        <td><?php echo !empty($capa['Capa']['closed_date']) ? date('d-m-Y H:i', strtotime($capa['Capa']['closed_date'])) : 'N/A'; ?></td>
                         <td><?php echo date('d-m-Y', strtotime($capa['Capa']['created'])); ?></td>
                         <td><?php echo !empty($capa['Capa']['deadline_date']) ? date('d-m-Y', strtotime($capa['Capa']['deadline_date'])) : 'N/A'; ?></td>
                         <td><?php echo (int) $capa['Capa']['days_overdue']; ?></td>
