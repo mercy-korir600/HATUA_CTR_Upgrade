@@ -38,11 +38,10 @@ class CapasController extends AppController
         }
 
         $criteria = $this->Capa->parseCriteria($this->passedArgs);
-        // Only 'Initial' rows represent a CAPA case in this list - a
-        // case's follow-ups are shown inside its popup, not as their own
-        // rows here (see app/Model/Capa.php for the type='Initial' vs
-        // 'FollowUp' modelling).
-        $criteria['Capa.type'] = 'Initial';
+        // Every row (Initial AND FollowUp) is listed here now - each on
+        // its own line, with a Type column distinguishing them, so a
+        // FollowUp is just as visible/searchable as the case it belongs
+        // to (see app/View/Capas/manager_index.ctp).
 
         $this->paginate['conditions'] = $criteria;
         $this->paginate['order'] = array('Capa.created' => 'desc');

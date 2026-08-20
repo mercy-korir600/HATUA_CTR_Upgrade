@@ -22,6 +22,7 @@
 
 CREATE TABLE IF NOT EXISTS `capas` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `capa_id` int(11) DEFAULT NULL,
   `type` varchar(20) NOT NULL DEFAULT 'Initial',
   `reference_no` varchar(50) DEFAULT NULL,
   `application_id` int(11) NOT NULL,
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS `capas` (
   `created` datetime DEFAULT NULL,
   `modified` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `idx_capas_capa_id` (`capa_id`),
   KEY `idx_capas_review_source_stage` (`review_id`,`source_stage`),
   KEY `idx_capas_application_id` (`application_id`),
   KEY `idx_capas_reviewer_user_id` (`reviewer_user_id`)

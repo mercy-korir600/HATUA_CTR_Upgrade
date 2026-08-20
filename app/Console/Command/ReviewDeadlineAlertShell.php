@@ -288,6 +288,9 @@ class ReviewDeadlineAlertShell extends AppShell
         $this->Capa->create();
         $saved = $this->Capa->save(array('Capa' => array(
             'type' => 'Initial',
+            // Explicit for readability/defensiveness - an Initial row is
+            // always a root, it has no parent (see Capa.php).
+            'capa_id' => null,
             'reference_no' => $refNo,
             'application_id' => $row['Application']['id'],
             'application_stage_id' => !empty($applicationStage['ApplicationStage']['id']) ? $applicationStage['ApplicationStage']['id'] : null,

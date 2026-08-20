@@ -15,24 +15,28 @@ App::uses('AppModel', 'Model');
  *
  *   - `type` = 'Initial'  - the auto-opened record (one per assignment;
  *                            see ReviewDeadlineAlertShell::_ensureCapa()).
+ *                            `capa_id` is NULL - it has no parent.
  *   - `type` = 'FollowUp' - a later update appended by a manager (progress
- *                            note and/or a `status` change), any number of
- *                            these per case. See ApplicationsController::
- *                            manager_add_capa_followup().
+ *                            note and/or a `status` change). `capa_id`
+ *                            points at whichever row it's replying to -
+ *                            the Initial row, OR another FollowUp row, so
+ *                            a follow-up can itself gain follow-ups (see
+ *                            buildThread() below). See
+ *                            ApplicationsController::manager_add_capa_followup().
  *
- * The case's *current* status is the `status` of the most recent row
- * (Initial or FollowUp) for that (review_id, source_stage) pair - but for
- * cheap filtering/listing (see CapasController), the 'Initial' row's own
- * `status` is ALSO kept in sync with every follow-up's status change (see
- * ApplicationsController::manager_add_capa_followup()), so callers that
- * only need "is this case open/closed" can read Initial.status directly
- * without pulling the whole thread.
+ * The case's *current* status is the `status` of the most recently-saved
+ * row anywhere in the thread - but for cheap filtering/listing (see
+ * CapasController), the 'Initial' row's own `status` is ALSO kept in sync
+ * with every follow-up's status change (see ApplicationsController::
+ * manager_add_capa_followup()), so callers that only need "is this case
+ * open/closed" can read Initial.status directly without walking the tree.
  *
  * @property Application $Application
  * @property ApplicationStage $ApplicationStage
  * @property Review $Review
  * @property User $Reviewer
  * @property User $CreatedBy
+ * @property Capa $Parent
  */
 class Capa extends AppModel {
 
@@ -106,6 +110,12 @@ class Capa extends AppModel {
             'className' => 'User',
             'foreignKey' => 'created_by_user_id',
         ),
+        // Self-reference: the row this one is a follow-up of. NULL for
+        // 'Initial' rows.
+        'Parent' => array(
+            'className' => 'Capa',
+            'foreignKey' => 'capa_id',
+        ),
     );
 
     public $validate = array(
@@ -139,4 +149,53 @@ class Capa extends AppModel {
             ),
         ),
     );
+
+    /**
+     * Arranges a flat list of Capa rows (normally one "case" - every row
+     * sharing a review_id/source_stage) into a parent/child tree via
+     * `capa_id`, so a follow-up can itself have follow-ups. Each returned
+     * node is the row's array with an added '_children' key holding its
+     * immediate children in the same shape, recursively.
+     *
+     * Rows with no parent (capa_id empty, or pointing outside this list)
+     * are returned as the top-level roots - normally exactly one, the
+     * 'Initial' row.
+     *
+     * @param array $rows Flat Capa rows, e.g. from find('all').
+     * @return array Root node(s), each with nested '_children'.
+     */
+    public function buildThread($rows)
+    {
+        $byId = array();
+        foreach ($rows as $row) {
+            $row['_children'] = array();
+            $byId[$row['Capa']['id']] = $row;
+        }
+
+        $rootIds = array();
+        foreach ($byId as $id => $row) {
+            $parentId = !empty($row['Capa']['capa_id']) ? $row['Capa']['capa_id'] : null;
+            if ($parentId && isset($byId[$parentId])) {
+                $byId[$parentId]['_children'][] = $id;
+            } else {
+                $rootIds[] = $id;
+            }
+        }
+
+        $assemble = function ($id) use (&$assemble, &$byId) {
+            $node = $byId[$id];
+            $childIds = $node['_children'];
+            $node['_children'] = array();
+            foreach ($childIds as $childId) {
+                $node['_children'][] = $assemble($childId);
+            }
+            return $node;
+        };
+
+        $roots = array();
+        foreach ($rootIds as $id) {
+            $roots[] = $assemble($id);
+        }
+        return $roots;
+    }
 }

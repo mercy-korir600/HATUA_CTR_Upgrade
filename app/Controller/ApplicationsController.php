@@ -2420,6 +2420,11 @@ class ApplicationsController extends AppController
             $this->Capa->create();
             $data = array('Capa' => array(
                 'type' => 'FollowUp',
+                // Parent pointer is whichever row was open in the modal -
+                // the Initial row, OR another FollowUp row - so a
+                // follow-up can itself gain follow-ups (see
+                // Capa::buildThread()).
+                'capa_id' => $source['Capa']['id'],
                 'reference_no' => $source['Capa']['reference_no'],
                 'application_id' => $source['Capa']['application_id'],
                 'application_stage_id' => $source['Capa']['application_stage_id'],

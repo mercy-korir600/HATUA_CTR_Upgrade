@@ -134,13 +134,14 @@ $this->assign('CAPA', 'active');
             <thead>
                 <tr>
                     <th><?php echo $this->Paginator->sort('reference_no'); ?></th>
+                    <th>Type</th>
                     <th>Protocol No.</th>
                     <th>Reviewer</th>
                     <th><?php echo $this->Paginator->sort('status'); ?></th>
-                    <th><?php echo $this->Paginator->sort('created', 'Opened'); ?></th>
+                    <th><?php echo $this->Paginator->sort('created', 'Created'); ?></th>
                     <th><?php echo $this->Paginator->sort('deadline_date', 'Deadline'); ?></th>
                     <th><?php echo $this->Paginator->sort('days_overdue', 'Days Overdue (at open)'); ?></th>
-                    <th class="actions"><?php echo __('View / Follow up'); ?></th>
+                    <th class="actions"><?php echo __('Action'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -153,9 +154,42 @@ $this->assign('CAPA', 'active');
                     } elseif ($status === 'In Progress') {
                         $statusClass = 'text-warning';
                     }
+
+                    // Every row (Initial + FollowUp) is its own line now,
+                    // but they all still share one detail modal per case -
+                    // find the case's Initial row (within the bulk-fetched
+                    // thread for this review) to use as the modal's stable
+                    // id, and to colour the trigger button by the case's
+                    // *current* status (its most recently-saved row),
+                    // not just this one row's status.
+                    $group = !empty($capasByReview[$capa['Capa']['review_id']]) ? $capasByReview[$capa['Capa']['review_id']] : array($capa);
+                    $caseInitial = $capa;
+                    foreach ($group as $groupRow) {
+                        if ($groupRow['Capa']['type'] === 'Initial') {
+                            $caseInitial = $groupRow;
+                            break;
+                        }
+                    }
+                    $caseLatest = end($group);
+                    $caseStatus = !empty($caseLatest['Capa']['status']) ? $caseLatest['Capa']['status'] : 'Open';
+                    $caseBtnClass = 'btn-danger';
+                    if ($caseStatus === 'Closed') {
+                        $caseBtnClass = 'btn-success';
+                    } elseif ($caseStatus === 'In Progress') {
+                        $caseBtnClass = 'btn-warning';
+                    }
+                    $caseModalId = 'capaModal_' . $caseInitial['Capa']['id'];
                     ?>
                     <tr>
                         <td><?php echo h($capa['Capa']['reference_no']); ?></td>
+                        <td>
+                            <?php if ($capa['Capa']['type'] === 'FollowUp'): ?>
+                                Follow-up<br>
+                                <small class="muted">of <?php echo h($capa['Capa']['reference_no']); ?></small>
+                            <?php else: ?>
+                                Initial
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php
                             if (!empty($capa['Application']['id'])) {
@@ -175,8 +209,10 @@ $this->assign('CAPA', 'active');
                         <td><?php echo (int) $capa['Capa']['days_overdue']; ?></td>
                         <td>
                             <?php
-                            echo $this->element('capas/list', array(
-                                'capas' => !empty($capasByReview[$capa['Capa']['review_id']]) ? $capasByReview[$capa['Capa']['review_id']] : array($capa),
+                            echo $this->element('capas/trigger', array(
+                                'modalId' => $caseModalId,
+                                'btnClass' => $caseBtnClass,
+                                'mode' => 'compact',
                             ));
                             ?>
                         </td>
@@ -184,6 +220,37 @@ $this->assign('CAPA', 'active');
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <?php
+        // Each case's detail modal is rendered exactly once here (outside
+        // the table, outside any <form>), regardless of how many rows
+        // (Initial + FollowUps) it has - every one of those rows' trigger
+        // buttons above targets this same modal id.
+        $renderedModals = array();
+        foreach ($capas as $capa):
+            $group = !empty($capasByReview[$capa['Capa']['review_id']]) ? $capasByReview[$capa['Capa']['review_id']] : array($capa);
+            $caseInitial = $capa;
+            foreach ($group as $groupRow) {
+                if ($groupRow['Capa']['type'] === 'Initial') {
+                    $caseInitial = $groupRow;
+                    break;
+                }
+            }
+            $caseModalId = 'capaModal_' . $caseInitial['Capa']['id'];
+            if (in_array($caseModalId, $renderedModals, true)) {
+                continue;
+            }
+            $renderedModals[] = $caseModalId;
+            $caseLatest = end($group);
+            $caseStatus = !empty($caseLatest['Capa']['status']) ? $caseLatest['Capa']['status'] : 'Open';
+            echo $this->element('capas/modal', array(
+                'modalId' => $caseModalId,
+                'initial' => $caseInitial,
+                'case' => $group,
+                'status' => $caseStatus,
+            ));
+        endforeach;
+        ?>
 
     </div>
 </div>
