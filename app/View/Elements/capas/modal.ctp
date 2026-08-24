@@ -1,8 +1,13 @@
 <?php
 /**
  * Renders one CAPA case's full detail modal - deadline/overdue info, the
- * Initial row's description, the follow-up thread, and (if the case isn't
- * Closed) the add-follow-up control. Split out of the old combined
+ * Initial row's description plus the rest of the CAPA.doc table format
+ * (root cause, corrective/preventive action, target date - all kept in
+ * sync on this row by every follow-up, see Capa.php - and "Responsible
+ * person", which is just the Reviewer association relabeled, not a
+ * stored field), the follow-up thread, and (if the case isn't Closed) the
+ * add-follow-up control, which can update root cause/corrective action/
+ * target date as well as status. Split out of the old combined
  * capas/list.ctp so it can be rendered exactly ONCE per case even when
  * every row in the case (the Initial row and every FollowUp) gets its own
  * trigger button pointing at this same modal id - see capas/trigger.ctp
@@ -26,7 +31,8 @@
  *
  * Expects:
  *   $modalId - string, matches the trigger button(s)' data-target.
- *   $initial - the case's Initial Capa row (Reviewer, CreatedBy contained).
+ *   $initial - the case's Initial Capa row (Reviewer, CreatedBy contained -
+ *              Reviewer is what "Responsible person" displays below).
  *   $case    - flat array of every row in the case (Initial + all
  *              FollowUps, any depth), oldest first.
  *   $status  - the case's current status (already resolved by the caller,
@@ -78,7 +84,30 @@ if (!function_exists('_renderCapaThreadNode')) {
           &mdash; <?php echo (int) $initial['Capa']['days_overdue']; ?> day(s) overdue when opened on
           <?php echo date('d-m-Y', strtotime($initial['Capa']['created'])); ?>.
         </small></p>
-        <p><?php echo nl2br(h($initial['Capa']['description'])); ?></p>
+        <p><strong>Description of non conformity:</strong><br><?php echo nl2br(h($initial['Capa']['description'])); ?></p>
+
+        <?php
+        // The rest of the CAPA.doc's table columns - kept in sync onto
+        // this Initial row by every follow-up (see
+        // ApplicationsController::manager_add_capa_followup()), so this
+        // always reflects the case's current detail without walking the
+        // whole thread.
+        ?>
+        <p style="margin-bottom: 4px;">
+          <strong>Root cause:</strong><br>
+          <?php echo !empty($initial['Capa']['root_cause']) ? nl2br(h($initial['Capa']['root_cause'])) : '<span class="muted">Not yet determined.</span>'; ?>
+        </p>
+        <p style="margin-bottom: 4px;">
+          <strong>Corrective/Preventive action:</strong><br>
+          <?php echo !empty($initial['Capa']['corrective_action']) ? nl2br(h($initial['Capa']['corrective_action'])) : '<span class="muted">Not yet determined.</span>'; ?>
+        </p>
+        <p style="margin-bottom: 4px;">
+          <strong>Target date:</strong>
+          <?php echo !empty($initial['Capa']['target_date']) ? date('d-m-Y', strtotime($initial['Capa']['target_date'])) : '<span class="muted">Not set.</span>'; ?>
+          &nbsp;&middot;&nbsp;
+          <strong>Responsible person:</strong>
+          <?php echo h(!empty($initial['Reviewer']['name']) ? $initial['Reviewer']['name'] : 'N/A'); ?>
+        </p>
 
         <?php if ($followupCount > 0):
             $thread = ClassRegistry::init('Capa')->buildThread($case);
@@ -98,6 +127,19 @@ if (!function_exists('_renderCapaThreadNode')) {
           <div class="control-group">
             <label>Add follow-up</label>
             <textarea class="capa-followup-note span12" rows="2" placeholder="Progress notes, evidence received, escalation, etc."></textarea>
+          </div>
+          <div class="control-group">
+            <label>Root cause</label>
+            <textarea class="capa-followup-root-cause span12" rows="2" placeholder="Leave blank to keep the current value."><?php echo h($initial['Capa']['root_cause']); ?></textarea>
+          </div>
+          <div class="control-group">
+            <label>Corrective/Preventive action</label>
+            <textarea class="capa-followup-corrective-action span12" rows="2" placeholder="Leave blank to keep the current value."><?php echo h($initial['Capa']['corrective_action']); ?></textarea>
+          </div>
+          <div class="control-group">
+            <label>Target date</label>
+            <input type="text" class="capa-followup-target-date input-small" placeholder="dd-mm-yyyy"
+                   value="<?php echo !empty($initial['Capa']['target_date']) ? date('d-m-Y', strtotime($initial['Capa']['target_date'])) : ''; ?>">
           </div>
           <div class="control-group">
             <label>Status</label>
@@ -138,6 +180,9 @@ if (!function_exists('_renderCapaThreadNode')) {
       var capaId = $btn.data('capa-id');
       var note = $body.find('.capa-followup-note').val();
       var status = $body.find('.capa-followup-status').val();
+      var rootCause = $body.find('.capa-followup-root-cause').val();
+      var correctiveAction = $body.find('.capa-followup-corrective-action').val();
+      var targetDate = $body.find('.capa-followup-target-date').val();
 
       $.ajax({
         url: '<?php echo $this->Html->url(array('controller' => 'applications', 'action' => 'manager_add_capa_followup')); ?>',
@@ -145,7 +190,10 @@ if (!function_exists('_renderCapaThreadNode')) {
         data: {
           'data[Capa][id]': capaId,
           'data[Capa][note]': note,
-          'data[Capa][status]': status
+          'data[Capa][status]': status,
+          'data[Capa][root_cause]': rootCause,
+          'data[Capa][corrective_action]': correctiveAction,
+          'data[Capa][target_date]': targetDate
         },
         beforeSend: function() {
           $btn.prop('disabled', true).text('Saving...');

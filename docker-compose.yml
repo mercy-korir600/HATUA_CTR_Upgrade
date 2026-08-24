@@ -21,15 +21,42 @@ services:
       - redis
 
   db:
-    image: mysql:5.7.42
+    # ctr.sql is now a full dump taken from an actual 8.0.42 server (see its
+    # header) and uses utf8mb3 as a table charset - that name is only
+    # understood as of MySQL 8.0.28; mysql:5.7.42 doesn't recognize it at
+    # all and the import would fail outright on the very first CREATE TABLE
+    # that uses it. Match the dump's origin instead of trying to
+    # down-translate 69 tables' worth of DDL by hand.
+    image: mysql:8.0.42
     platform: linux/amd64
     environment:
       MYSQL_ROOT_PASSWORD: hatua.
       MYSQL_DATABASE: ctr
+    # MySQL 8 authenticates new accounts (including root, on first init)
+    # with caching_sha2_password by default. The `web` container's PHP
+    # 5.6 pdo_mysql/mysqlnd driver predates that plugin and cannot
+    # authenticate with it - it would connect to the container fine but
+    # every DB query from the app would fail. Force the older plugin the
+    # app's driver actually understands.
+    #
+    # Separately: MySQL 8's server-wide default collation is
+    # utf8mb4_0900_ai_ci, which didn't exist yet when PHP 5.6's mysqlnd was
+    # built - mysqlnd keeps its own compiled-in charset/collation table for
+    # the handshake, doesn't recognize collation id 255, and refuses the
+    # connection with "Server sent charset unknown to the client" before
+    # app code (database.php's `encoding` setting, currently unset) ever
+    # gets a chance to run SET NAMES. utf8mb4_general_ci is an old
+    # collation mysqlnd has always known, so pin the server to that instead
+    # - this only changes the *connection* default, not any table's own
+    # DEFAULT CHARSET (each table in ctr.sql already declares its own).
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
     ports:
       - "3310:3306"
     volumes:
-      - db_data:/var/lib/mysql
+      - ctr_db_data:/var/lib/mysql
       - ./ctr.sql:/docker-entrypoint-initdb.d/ctr.sql:ro
 
   phpmyadmin:
@@ -49,4 +76,4 @@ services:
     platform: linux/amd64
 
 volumes:
-  db_data:
+  ctr_db_data:

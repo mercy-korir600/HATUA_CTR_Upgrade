@@ -1,13 +1,13 @@
 <?php
 /**
  * Renders the CAPA "case(s)" tied to a single reviewer assignment (one
- * Review row) as a trigger button (capas/trigger.ctp, verbose mode) plus
- * its detail modal (capas/modal.ctp), kept together here since each case
- * only ever appears once on the page at this call site. The dedicated
- * CAPA section (app/View/Capas/manager_index.ctp) renders trigger and
- * modal separately instead - it lists every row of a case on its own
- * line, so a shared case needs many trigger buttons but only ONE modal;
- * rendering both together per row there would create duplicate modal ids.
+ * Review row) as a link (capas/trigger.ctp, verbose mode) to that case's
+ * dedicated detail page (app/View/Capas/manager_view.ctp) - one link per
+ * case, since each case only ever appears once on the page at this call
+ * site. The dedicated CAPA section (app/View/Capas/manager_index.ctp)
+ * renders its own links the same way, via the same element, since it
+ * lists every row of a case on its own line and needs many links pointing
+ * at that one shared case page.
  *
  * A case is a small group of `capas` rows sharing the same review_id: one
  * `type` = 'Initial' row (auto-opened by ReviewDeadlineAlertShell) plus
@@ -44,12 +44,11 @@ if (!empty($capas)):
             $btnClass = 'btn-warning';
         }
         $followupCount = count($case) - 1;
-        $modalId = 'capaModal_' . $initial['Capa']['id'];
 ?>
     <p style="margin: 4px 0;">
       <?php
       echo $this->element('capas/trigger', array(
-          'modalId' => $modalId,
+          'capaId' => $initial['Capa']['id'],
           'btnClass' => $btnClass,
           'mode' => 'verbose',
           'referenceNo' => $initial['Capa']['reference_no'],
@@ -58,12 +57,6 @@ if (!empty($capas)):
       ));
       ?>
     </p>
-    <?php
-    echo $this->element('capas/modal', array(
-        'modalId' => $modalId,
-        'initial' => $initial,
-        'case' => $case,
-        'status' => $status,
-    ));
+<?php
     endforeach;
 endif;

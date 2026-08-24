@@ -1,8 +1,13 @@
 <?php
-$header = array('id' => '#', 
-    'reference_no' => 'Reference_No', 'type' => 'Type', 'protocol_no' => 'Protocol No', 'reviewer' => 'Reviewer',
+// 'reviewer' is labelled "Responsible Person" here - per the CAPA.doc
+// format, that's just the reviewer whose missed deadline opened the
+// case, not a separately stored value (see Capa.php).
+$header = array('id' => '#',
+    'reference_no' => 'Reference_No', 'type' => 'Type', 'protocol_no' => 'Protocol No', 'reviewer' => 'Responsible Person',
     'status' => 'Status', 'closed_date' => 'Closed Date', 'opened_date' => 'Opened Date', 'deadline_date' => 'Deadline Date',
-    'days_overdue' => 'Days Overdue At Open', 'description' => 'Description',
+    'days_overdue' => 'Days Overdue At Open', 'description' => 'Description of Non Conformity',
+    'root_cause' => 'Root Cause', 'corrective_action' => 'Corrective/Preventive Action',
+    'target_date' => 'Target Date',
 );
 
 echo implode(',', $header) . "\n";
@@ -21,6 +26,9 @@ foreach ($capas as $capa):
         'deadline_date' => !empty($capa['Capa']['deadline_date']) ? date('Y-m-d', strtotime($capa['Capa']['deadline_date'])) : '',
         'days_overdue' => (int) $capa['Capa']['days_overdue'],
         'description' => $capa['Capa']['description'],
+        'root_cause' => $capa['Capa']['root_cause'],
+        'corrective_action' => $capa['Capa']['corrective_action'],
+        'target_date' => !empty($capa['Capa']['target_date']) ? date('Y-m-d', strtotime($capa['Capa']['target_date'])) : '',
     );
     $row = array();
     foreach ($values as $val) {

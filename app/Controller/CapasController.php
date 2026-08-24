@@ -7,10 +7,12 @@ App::uses('Sanitize', 'Utility');
  * Dedicated listing/reference section for CAPA (Corrective and Preventive
  * Action) cases - one row per reviewer assignment that missed its
  * Review-stage deadline. Only `Capa.type = 'Initial'` rows are listed here
- * (one per case, by definition); each case's full follow-up thread is
- * reachable from the same popup used on the application view - see
- * app/View/Elements/capas/list.ctp - so this page stays a scannable index
- * rather than duplicating that detail.
+ * (one per case, by definition); each case's full detail/follow-up thread
+ * lives on its own dedicated page now (view()/manager_view() below,
+ * app/View/Capas/manager_view.ctp) - linked from here, and from the same
+ * element used on the application view (app/View/Elements/capas/list.ctp)
+ * - so this page stays a scannable index rather than duplicating that
+ * detail.
  *
  * Filter by reviewer, status, reference/protocol number, or date opened
  * (Search.Prg + Capa::$filterArgs - same pattern as Sae/Budget/AuditTrail
@@ -96,6 +98,56 @@ class CapasController extends AppController
     public function manager_index()
     {
         $this->index();
+    }
+
+    /**
+     * A single CAPA "case"'s own dedicated page - full detail (description,
+     * root cause, corrective/preventive action, target date, responsible
+     * person) plus its whole follow-up thread and, if still open, the
+     * add-follow-up form (posted to
+     * ApplicationsController::manager_add_capa_followup(), which redirects
+     * back here via $this->referer() - see that method). Replaces the old
+     * capas/modal.ctp popup, which was cramped for a table this wide - see
+     * app/View/Capas/manager_view.ctp.
+     *
+     * $id is the case's 'Initial' row id - the same id capas/trigger.ctp
+     * has always kept as the case's stable identity (formerly used to key
+     * the modal's DOM id; now used to build this page's URL instead).
+     */
+    public function view($id = null)
+    {
+        $initial = $this->Capa->find('first', array(
+            'conditions' => array('Capa.id' => $id, 'Capa.type' => 'Initial'),
+            'contain' => array('Application', 'Reviewer', 'CreatedBy'),
+        ));
+        if (empty($initial)) {
+            $this->Session->setFlash(__('CAPA case not found.'), 'alerts/flash_error');
+            $this->redirect(array('action' => 'index', 'manager' => true));
+        }
+
+        // Same case-grouping key used everywhere else (review_id +
+        // source_stage - see Capa.php) - oldest first, so the Initial row
+        // is index 0 and Capa::buildThread() can hang every follow-up off
+        // it in reply order.
+        $case = $this->Capa->find('all', array(
+            'conditions' => array(
+                'Capa.review_id' => $initial['Capa']['review_id'],
+                'Capa.source_stage' => $initial['Capa']['source_stage'],
+            ),
+            'contain' => array('CreatedBy'),
+            'order' => array('Capa.created' => 'ASC'),
+        ));
+        $latest = end($case);
+        $status = !empty($latest['Capa']['status']) ? $latest['Capa']['status'] : 'Open';
+
+        $this->set('initial', $initial);
+        $this->set('case', $case);
+        $this->set('status', $status);
+    }
+
+    public function manager_view($id = null)
+    {
+        $this->view($id);
     }
 
     private function csv_export($capas = '')

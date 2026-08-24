@@ -1,0 +1,18 @@
+# Scheduled tasks for the ctr Docker container, run under supervisord's
+# [program:cron] (see docker/supervisord.conf). This is the container
+# equivalent of setup_review_deadline_alert.sh / setup_weekly_reminder.sh,
+# which set up systemd timers for the bare-metal deployment - there's no
+# systemd inside this container, so cron fills the same role at the same
+# schedule.
+#
+# `. /etc/container.env` sources the DB_*/REDIS_* variables docker-compose
+# gave this container (dumped by docker/entrypoint.sh at startup) - cron
+# jobs don't inherit them otherwise. Output goes to app/tmp/logs rather
+# than /var/log so the www-data user cron runs these as can actually write
+# to it (app/tmp is chowned www-data in the Dockerfile; /var/log is not).
+#
+# This file must end with a blank line - cron.d requires it.
+
+0 7 * * *   www-data . /etc/container.env; cd /var/www/html && ./app/Console/cake review_deadline_alert >> /var/www/html/app/tmp/logs/review_deadline_alert.log 2>&1
+0 6 * * 1   www-data . /etc/container.env; cd /var/www/html && ./app/Console/cake weekly_reviewer_reminder_task >> /var/www/html/app/tmp/logs/reviewer_weekly_reminder.log 2>&1
+

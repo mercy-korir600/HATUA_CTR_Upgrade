@@ -36,7 +36,7 @@ sudo chmod +x "$SCRIPT_PATH"
 echo "Creating /etc/systemd/system/$SERVICE_NAME..."
 cat <<EOF | sudo tee /etc/systemd/system/$SERVICE_NAME > /dev/null
 [Unit]
-Description=Run CakePHP Review stage deadline alert engine (50%/70%/100%/overdue + CAPA)
+Description=Run CakePHP Review stage deadline alert engine (Day1/14/21/28/overdue + CAPA)
 After=network.target
 
 [Service]
@@ -46,8 +46,8 @@ ExecStart=$SCRIPT_PATH
 EOF
 
 # === Create systemd timer ===
-# Percentage tiers are day-granularity (of a 30-day SLA), so once/day is
-# sufficient - the shell itself is idempotent if the timer ever double-fires.
+# Tiers are day-granularity (of a 28-day SLA - Day 1/14/21/28), so once/day
+# is sufficient - the shell itself is idempotent if the timer ever double-fires.
 echo "Creating /etc/systemd/system/$TIMER_NAME..."
 cat <<EOF | sudo tee /etc/systemd/system/$TIMER_NAME > /dev/null
 [Unit]

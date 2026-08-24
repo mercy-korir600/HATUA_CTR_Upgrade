@@ -1,13 +1,14 @@
 <?php
 /**
- * Renders the button that opens a CAPA case's detail modal (see
- * capas/modal.ctp, which must be rendered elsewhere on the same page for
- * this button's data-target to resolve to anything). Split out of the old
- * combined capas/list.ctp so a case's modal can be rendered exactly once
- * while every row belonging to it (the Initial row AND each of its
- * FollowUps) still gets its own trigger button pointing at that same
- * modal - see app/View/Capas/manager_index.ctp, which now lists every row
- * of a case individually instead of just the Initial row.
+ * Renders a link to a CAPA case's dedicated detail page (see
+ * app/Controller/CapasController.php::view()/manager_view() and
+ * app/View/Capas/manager_view.ctp - a full page rather than a popup, so
+ * there's room for the whole record and its follow-up thread at once).
+ * Split out of the old combined capas/list.ctp so every row belonging to
+ * a case (the Initial row AND each of its FollowUps) can still get its
+ * own link pointing at that one shared case - see
+ * app/View/Capas/manager_index.ctp, which lists every row of a case
+ * individually instead of just the Initial row.
  *
  * Two display modes:
  *   'verbose' (default) - descriptive label with reference no, status,
@@ -22,8 +23,8 @@
  *              "View" button.
  *
  * Expects:
- *   $modalId       - string, must match the target modal's id (see
- *                     capas/modal.ctp).
+ *   $capaId        - id of the case's Initial Capa row - the page this
+ *                     links to is /manager/capas/view/{$capaId}.
  *   $btnClass      - Bootstrap button class for the case's current status
  *                     (btn-danger/btn-warning/btn-success).
  *   $mode          - 'verbose' (default) or 'compact'.
@@ -32,12 +33,16 @@
  *   $followupCount - number of follow-ups in the case (verbose mode only).
  */
 $mode = !empty($mode) ? $mode : 'verbose';
-?>
-<button type="button" class="btn btn-mini <?php echo $btnClass; ?>" data-toggle="modal" data-target="#<?php echo $modalId; ?>">
-  <?php if ($mode === 'compact'): ?>
-    <i class="icon-eye-open"></i> View
-  <?php else: ?>
-    <i class="icon-warning-sign icon-white"></i>
-    CAPA <?php echo h($referenceNo); ?> &middot; <?php echo h($status); ?><?php if (!empty($followupCount)): ?> &middot; <?php echo $followupCount; ?> follow-up<?php echo $followupCount === 1 ? '' : 's'; ?><?php endif; ?>
-  <?php endif; ?>
-</button>
+if ($mode === 'compact') {
+    $label = '<i class="icon-eye-open"></i> View';
+} else {
+    $label = '<i class="icon-warning-sign icon-white"></i> CAPA ' . h($referenceNo) . ' &middot; ' . h($status);
+    if (!empty($followupCount)) {
+        $label .= ' &middot; ' . $followupCount . ' follow-up' . ($followupCount === 1 ? '' : 's');
+    }
+}
+echo $this->Html->link(
+    $label,
+    array('controller' => 'capas', 'action' => 'view', $capaId, 'manager' => true),
+    array('class' => 'btn btn-mini ' . $btnClass, 'escape' => false)
+);

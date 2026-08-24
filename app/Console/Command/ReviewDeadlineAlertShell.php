@@ -26,17 +26,30 @@ App::uses('CakeEmail', 'Network/Email');
  * recommend adding a real `accepted_date` column to `reviews` as a
  * follow-up once this is validated in practice.
  *
- * Escalation, from the accepted date, over a self::SLA_DAYS window (default
- * 30 days - mirrors the existing "danger" color threshold that
- * ApplicationsController::stages() already uses for this stage):
+ * Escalation, from the accepted date, over a self::SLA_DAYS window (28
+ * days, and the exact Day numbers below - not a percentage of the window -
+ * mirror the CAPA.doc business requirement's reminder schedule verbatim):
  *
- *   - 50% of the window elapsed   -> one-time reminder
- *   - 70% of the window elapsed   -> one-time reminder
- *   - 100% (the deadline itself)  -> reminder, then repeated once per day
- *   - past 100% (deadline lapsed) -> a CAPA record is opened (once, on the
- *                                     first day it's overdue), and the daily
- *                                     reminder keeps firing until the
- *                                     reviewer actually submits.
+ *   - Day 1  (the day of acceptance itself)     -> one-time notice: "you
+ *                                                    have 28 days to
+ *                                                    finalize your review"
+ *   - Day 14 (14 days elapsed)                  -> one-time reminder: "14
+ *                                                    days remaining"
+ *   - Day 21 (21 days elapsed)                  -> one-time reminder:
+ *                                                    "only 7 days remaining"
+ *   - Day 28 (the deadline itself)              -> reminder ("due today"),
+ *                                                    then repeated once per day
+ *   - past Day 28 (deadline lapsed)              -> a CAPA record is opened
+ *                                                    (once, on the first day
+ *                                                    it's overdue), and the
+ *                                                    daily reminder keeps
+ *                                                    firing until the
+ *                                                    reviewer actually submits.
+ *
+ * Each tier is checked with ">=" rather than "==" (see _processReview()),
+ * so a day cron misses (downtime, a double-fire, etc.) is caught up on the
+ * next run instead of silently skipped - the one-time AuditTrail guard
+ * still stops it from being sent twice.
  *
  * A reviewer is considered done once a Review row with
  * type='reviewer_comment' and status='submitted' exists for them on that
@@ -45,8 +58,8 @@ App::uses('CakeEmail', 'Network/Email');
  *
  * Idempotency: every reminder sent is logged to AuditTrail (foreign_key =
  * Review.id, model = 'Review Deadline Reminder <tier>'). One-time tiers
- * (50%/70%) check AuditTrail for *any* prior send; the daily tier
- * (100%/overdue) checks for a send *today* so it naturally repeats once a
+ * (Day 1/14/21) check AuditTrail for *any* prior send; the daily tier
+ * (Day 28/overdue) checks for a send *today* so it naturally repeats once a
  * day. CAPA creation is guarded both by an application-level existence
  * check and by a UNIQUE KEY on (review_id, source_stage) in `capas`, so
  * re-running this shell (e.g. if cron double-fires) is always safe.
@@ -61,9 +74,12 @@ class ReviewDeadlineAlertShell extends AppShell
     public $uses = array('Review', 'Application', 'ApplicationStage', 'User', 'Message', 'AuditTrail', 'Notification', 'Capa');
 
     /**
-     * SLA window for the Review stage, in calendar days.
+     * SLA window for the Review stage, in calendar days - matches the
+     * CAPA.doc reminder schedule (Day 1/14/21/28), which is written
+     * against a 28-day window ("you have 28 days...", 14 remaining at Day
+     * 14, 7 remaining at Day 21, due at Day 28).
      */
-    const SLA_DAYS = 30;
+    const SLA_DAYS = 28;
 
     protected $_messages = array();
 
@@ -73,9 +89,10 @@ class ReviewDeadlineAlertShell extends AppShell
 
         $this->_messages = $this->Message->find('list', array(
             'conditions' => array('Message.name' => array(
-                'reviewer_deadline_50', 'reviewer_deadline_50_subject',
-                'reviewer_deadline_70', 'reviewer_deadline_70_subject',
-                'reviewer_deadline_100', 'reviewer_deadline_100_subject',
+                'reviewer_deadline_day1', 'reviewer_deadline_day1_subject',
+                'reviewer_deadline_day14', 'reviewer_deadline_day14_subject',
+                'reviewer_deadline_day21', 'reviewer_deadline_day21_subject',
+                'reviewer_deadline_day28', 'reviewer_deadline_day28_subject',
                 'reviewer_deadline_overdue', 'reviewer_deadline_overdue_subject',
             )),
             'fields' => array('Message.name', 'Message.content'),
@@ -87,7 +104,8 @@ class ReviewDeadlineAlertShell extends AppShell
         // uses, so either layout works with the lookups below.
         $subjects = $this->Message->find('list', array(
             'conditions' => array('Message.name' => array(
-                'reviewer_deadline_50', 'reviewer_deadline_70', 'reviewer_deadline_100', 'reviewer_deadline_overdue',
+                'reviewer_deadline_day1', 'reviewer_deadline_day14', 'reviewer_deadline_day21',
+                'reviewer_deadline_day28', 'reviewer_deadline_overdue',
             )),
             'fields' => array('Message.name', 'Message.subject'),
         ));
@@ -148,7 +166,7 @@ class ReviewDeadlineAlertShell extends AppShell
         $deadline = clone $accepted;
         $deadline->modify('+' . self::SLA_DAYS . ' days');
         $daysOverdue = ($today > $deadline) ? (int)$today->diff($deadline)->format('%a') : 0;
-        $percent = (self::SLA_DAYS > 0) ? ($elapsedDays / self::SLA_DAYS) * 100 : 0;
+        $daysRemaining = max(0, self::SLA_DAYS - $elapsedDays);
 
         $variables = array(
             'protocol_link' => Router::url(array(
@@ -162,25 +180,29 @@ class ReviewDeadlineAlertShell extends AppShell
             'sla_days' => self::SLA_DAYS,
             'deadline_date' => $deadline->format('jS F Y'),
             'days_overdue' => $daysOverdue,
+            'days_remaining' => $daysRemaining,
         );
 
         if ($today > $deadline) {
-            // Past 100%: keep reminding daily, and make sure a CAPA is open.
+            // Past Day 28: keep reminding daily, and make sure a CAPA is open.
             $this->_sendReminder('overdue', 'Review Deadline Overdue Reminder', true, $review, $row, $variables,
                 'reviewer_deadline_overdue', 'reviewer_deadline_overdue_subject');
             $this->_ensureCapa($review, $row, $deadline, $daysOverdue);
         } elseif ($today == $deadline) {
-            // Exactly 100%: the deadline has arrived but not yet lapsed.
-            $this->_sendReminder('100%', 'Review Deadline Reminder 100%', true, $review, $row, $variables,
-                'reviewer_deadline_100', 'reviewer_deadline_100_subject');
-        } elseif ($percent >= 70) {
-            $this->_sendReminder('70%', 'Review Deadline Reminder 70%', false, $review, $row, $variables,
-                'reviewer_deadline_70', 'reviewer_deadline_70_subject');
-        } elseif ($percent >= 50) {
-            $this->_sendReminder('50%', 'Review Deadline Reminder 50%', false, $review, $row, $variables,
-                'reviewer_deadline_50', 'reviewer_deadline_50_subject');
+            // Day 28: the deadline has arrived but not yet lapsed - "due today".
+            $this->_sendReminder('Day 28', 'Review Deadline Reminder Day28', true, $review, $row, $variables,
+                'reviewer_deadline_day28', 'reviewer_deadline_day28_subject');
+        } elseif ($elapsedDays >= 21) {
+            $this->_sendReminder('Day 21', 'Review Deadline Reminder Day21', false, $review, $row, $variables,
+                'reviewer_deadline_day21', 'reviewer_deadline_day21_subject');
+        } elseif ($elapsedDays >= 14) {
+            $this->_sendReminder('Day 14', 'Review Deadline Reminder Day14', false, $review, $row, $variables,
+                'reviewer_deadline_day14', 'reviewer_deadline_day14_subject');
+        } elseif ($elapsedDays >= 0) {
+            $this->_sendReminder('Day 1', 'Review Deadline Reminder Day1', false, $review, $row, $variables,
+                'reviewer_deadline_day1', 'reviewer_deadline_day1_subject');
         } else {
-            $this->out("- Review #{$review['id']} ({$row['Application']['protocol_no']}): {$elapsedDays}/" . self::SLA_DAYS . " days elapsed, under 50%, nothing to send.");
+            $this->out("- Review #{$review['id']} ({$row['Application']['protocol_no']}): {$elapsedDays}/" . self::SLA_DAYS . " days elapsed, nothing to send.");
         }
     }
 
@@ -300,9 +322,22 @@ class ReviewDeadlineAlertShell extends AppShell
             'deadline_date' => $deadline->format('Y-m-d'),
             'days_overdue' => $daysOverdue,
             'status' => 'Open',
+            // Description of non conformity (per the CAPA.doc table
+            // format) - known and auto-filled the moment the deadline
+            // lapses. Root cause and the corrective/preventive action
+            // can't be known yet - they're filled in via a follow-up once
+            // someone investigates (see ApplicationsController::
+            // manager_add_capa_followup()). `target_date` (the target for
+            // completing that action) likewise starts blank for a manager
+            // to set. There's no `responsible_person` field to set here -
+            // that's just `reviewer_user_id`/the Reviewer association,
+            // relabeled "Responsible person" in the CAPA views.
             'description' => 'Reviewer ' . $row['User']['name'] . ' did not submit their review for application '
                 . $row['Application']['protocol_no'] . ' within the ' . self::SLA_DAYS . '-day SLA (deadline was '
                 . $deadline->format('jS F Y') . '; now ' . $daysOverdue . ' day(s) overdue).',
+            'root_cause' => null,
+            'corrective_action' => null,
+            'target_date' => null,
         )));
 
         if ($saved) {

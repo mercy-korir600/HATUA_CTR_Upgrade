@@ -28,24 +28,31 @@ $this->assign('CAPA', 'active');
                     <td>
                         <?php
                         echo $this->Form->input('reference_no', array(
-                            'div' => false, 'placeholder' => 'CAPA/ECCT.../2026/..',
-                            'class' => 'span12', 'label' => array('class' => 'required', 'text' => 'Reference No.'),
+                            'div' => false,
+                            'placeholder' => 'CAPA/ECCT.../2026/..',
+                            'class' => 'span12',
+                            'label' => array('class' => 'required', 'text' => 'Reference No.'),
                         ));
                         ?>
                     </td>
                     <td>
                         <?php
                         echo $this->Form->input('protocol_no', array(
-                            'div' => false, 'placeholder' => 'ECCT/20..',
-                            'class' => 'span12', 'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'),
+                            'div' => false,
+                            'placeholder' => 'ECCT/20..',
+                            'class' => 'span12',
+                            'label' => array('class' => 'required', 'text' => 'ECCT Reference No.'),
                         ));
                         ?>
                     </td>
                     <td>
                         <?php
                         echo $this->Form->input('reviewer_user_id', array(
-                            'type' => 'select', 'div' => false, 'empty' => 'All Reviewers',
-                            'class' => 'span12', 'options' => $reviewers,
+                            'type' => 'select',
+                            'div' => false,
+                            'empty' => 'All Reviewers',
+                            'class' => 'span12',
+                            'options' => $reviewers,
                             'label' => array('class' => 'required', 'text' => 'Reviewer'),
                         ));
                         ?>
@@ -53,7 +60,9 @@ $this->assign('CAPA', 'active');
                     <td>
                         <?php
                         echo $this->Form->input('status', array(
-                            'type' => 'select', 'div' => false, 'empty' => 'Any Status',
+                            'type' => 'select',
+                            'div' => false,
+                            'empty' => 'Any Status',
                             'class' => 'span12',
                             'options' => array('Open' => 'Open', 'In Progress' => 'In Progress', 'Closed' => 'Closed'),
                             'label' => array('class' => 'required', 'text' => 'Status'),
@@ -63,14 +72,20 @@ $this->assign('CAPA', 'active');
                     <td colspan="2">
                         <?php
                         echo $this->Form->input('start_date', array(
-                            'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index',
-                            'after' => '-to-', 'label' => array('class' => 'required', 'text' => 'Opened Between'),
+                            'div' => false,
+                            'type' => 'text',
+                            'class' => 'input-small unauthorized_index',
+                            'after' => '-to-',
+                            'label' => array('class' => 'required', 'text' => 'Opened Between'),
                             'placeHolder' => 'Start Date',
                         ));
                         echo $this->Form->input('end_date', array(
-                            'div' => false, 'type' => 'text', 'class' => 'input-small unauthorized_index',
+                            'div' => false,
+                            'type' => 'text',
+                            'class' => 'input-small unauthorized_index',
                             'after' => '<a style="font-weight:normal" onclick="$(\'.unauthorized_index\').val(\'\');" ><em class="accordion-toggle">clear!</em></a>',
-                            'label' => false, 'placeHolder' => 'End Date',
+                            'label' => false,
+                            'placeHolder' => 'End Date',
                         ));
                         ?>
                     </td>
@@ -79,8 +94,11 @@ $this->assign('CAPA', 'active');
                     <td>
                         <?php
                         echo $this->Form->input('pages', array(
-                            'div' => false, 'type' => 'select', 'label' => array('text' => 'Per Page'),
-                            'empty' => true, 'options' => $page_options,
+                            'div' => false,
+                            'type' => 'select',
+                            'label' => array('text' => 'Per Page'),
+                            'empty' => true,
+                            'options' => $page_options,
                         ));
                         ?>
                     </td>
@@ -89,8 +107,10 @@ $this->assign('CAPA', 'active');
                     <td>
                         <?php
                         echo $this->Form->button('<i class="icon-search icon-white"></i> Search', array(
-                            'class' => 'btn btn-primary', 'div' => false,
-                            'formnovalidate' => 'formnovalidate', 'style' => array('margin-bottom: 5px'),
+                            'class' => 'btn btn-primary',
+                            'div' => false,
+                            'formnovalidate' => 'formnovalidate',
+                            'style' => array('margin-bottom: 5px'),
                         ));
                         ?>
                     </td>
@@ -133,11 +153,18 @@ $this->assign('CAPA', 'active');
         <table class="table table-bordered table-striped">
             <thead>
                 <tr>
+                     <th><?php echo $this->Paginator->sort('#'); ?></th>
                     <th><?php echo $this->Paginator->sort('reference_no'); ?></th>
-                    <th>Type</th>
-                    <th>Protocol No.</th>
-                    <th>Reviewer</th>
+                    <th><?php echo $this->Paginator->sort('type'); ?></th>
+                    <th><?php echo $this->Paginator->sort('protocol_no'); ?></th>
+                    <?php // Responsible person, per the CAPA.doc format, is just the
+                    // reviewer whose missed deadline opened the case - not a
+                    // separate stored value (see Capa.php) - so this is the
+                    // existing Reviewer column, relabeled; not sortable since
+                    // there's no such column to sort on. ?>
+                    <th>Responsible Person</th>
                     <th><?php echo $this->Paginator->sort('status'); ?></th>
+                    <th><?php echo $this->Paginator->sort('target_date', 'Target Date'); ?></th>
                     <th><?php echo $this->Paginator->sort('closed_date', 'Closed Date'); ?></th>
                     <th><?php echo $this->Paginator->sort('created', 'Created'); ?></th>
                     <th><?php echo $this->Paginator->sort('deadline_date', 'Deadline'); ?></th>
@@ -146,8 +173,13 @@ $this->assign('CAPA', 'active');
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($capas as $capa): ?>
+                <?php 
+                $count=0;
+                foreach ($capas as $capa):
+                 $count++;
+                ?>
                     <?php
+                   
                     $status = !empty($capa['Capa']['status']) ? $capa['Capa']['status'] : 'Open';
                     $statusClass = 'text-error';
                     if ($status === 'Closed') {
@@ -157,12 +189,12 @@ $this->assign('CAPA', 'active');
                     }
 
                     // Every row (Initial + FollowUp) is its own line now,
-                    // but they all still share one detail modal per case -
+                    // but they all still share one dedicated case page -
                     // find the case's Initial row (within the bulk-fetched
-                    // thread for this review) to use as the modal's stable
-                    // id, and to colour the trigger button by the case's
-                    // *current* status (its most recently-saved row),
-                    // not just this one row's status.
+                    // thread for this review) to link to that page, and to
+                    // colour the trigger button by the case's *current*
+                    // status (its most recently-saved row), not just this
+                    // one row's status.
                     $group = !empty($capasByReview[$capa['Capa']['review_id']]) ? $capasByReview[$capa['Capa']['review_id']] : array($capa);
                     $caseInitial = $capa;
                     foreach ($group as $groupRow) {
@@ -179,9 +211,9 @@ $this->assign('CAPA', 'active');
                     } elseif ($caseStatus === 'In Progress') {
                         $caseBtnClass = 'btn-warning';
                     }
-                    $caseModalId = 'capaModal_' . $caseInitial['Capa']['id'];
                     ?>
                     <tr>
+                        <td><?php echo $count; ?> </td>
                         <td><?php echo h($capa['Capa']['reference_no']); ?></td>
                         <td>
                             <?php if ($capa['Capa']['type'] === 'FollowUp'): ?>
@@ -205,6 +237,7 @@ $this->assign('CAPA', 'active');
                         </td>
                         <td><?php echo h(!empty($capa['Reviewer']['name']) ? $capa['Reviewer']['name'] : 'N/A'); ?></td>
                         <td class="<?php echo $statusClass; ?>"><strong><?php echo h($status); ?></strong></td>
+                        <td><?php echo !empty($capa['Capa']['target_date']) ? date('d-m-Y', strtotime($capa['Capa']['target_date'])) : 'N/A'; ?></td>
                         <td><?php echo !empty($capa['Capa']['closed_date']) ? date('d-m-Y H:i', strtotime($capa['Capa']['closed_date'])) : 'N/A'; ?></td>
                         <td><?php echo date('d-m-Y', strtotime($capa['Capa']['created'])); ?></td>
                         <td><?php echo !empty($capa['Capa']['deadline_date']) ? date('d-m-Y', strtotime($capa['Capa']['deadline_date'])) : 'N/A'; ?></td>
@@ -212,7 +245,7 @@ $this->assign('CAPA', 'active');
                         <td>
                             <?php
                             echo $this->element('capas/trigger', array(
-                                'modalId' => $caseModalId,
+                                'capaId' => $caseInitial['Capa']['id'],
                                 'btnClass' => $caseBtnClass,
                                 'mode' => 'compact',
                             ));
@@ -222,37 +255,6 @@ $this->assign('CAPA', 'active');
                 <?php endforeach; ?>
             </tbody>
         </table>
-
-        <?php
-        // Each case's detail modal is rendered exactly once here (outside
-        // the table, outside any <form>), regardless of how many rows
-        // (Initial + FollowUps) it has - every one of those rows' trigger
-        // buttons above targets this same modal id.
-        $renderedModals = array();
-        foreach ($capas as $capa):
-            $group = !empty($capasByReview[$capa['Capa']['review_id']]) ? $capasByReview[$capa['Capa']['review_id']] : array($capa);
-            $caseInitial = $capa;
-            foreach ($group as $groupRow) {
-                if ($groupRow['Capa']['type'] === 'Initial') {
-                    $caseInitial = $groupRow;
-                    break;
-                }
-            }
-            $caseModalId = 'capaModal_' . $caseInitial['Capa']['id'];
-            if (in_array($caseModalId, $renderedModals, true)) {
-                continue;
-            }
-            $renderedModals[] = $caseModalId;
-            $caseLatest = end($group);
-            $caseStatus = !empty($caseLatest['Capa']['status']) ? $caseLatest['Capa']['status'] : 'Open';
-            echo $this->element('capas/modal', array(
-                'modalId' => $caseModalId,
-                'initial' => $caseInitial,
-                'case' => $group,
-                'status' => $caseStatus,
-            ));
-        endforeach;
-        ?>
 
     </div>
 </div>

@@ -2396,9 +2396,13 @@ class ApplicationsController extends AppController
      * a NEW `capas` row with type='FollowUp', copying the case's fixed
      * fields (application/review/reviewer/stage) from the row the manager
      * was looking at - see Capa.php for why follow-ups live in the same
-     * table instead of a child one. Manager-side only for now, posted
-     * from the CAPA list on manager_view - see
-     * app/View/Elements/capas/list.ctp.
+     * table instead of a child one. Manager-side only for now, posted as a
+     * plain form from the case's own dedicated page - see
+     * app/View/Capas/manager_view.ctp (which is linked to from
+     * app/View/Elements/capas/list.ctp and app/View/Capas/manager_index.ctp
+     * via app/View/Elements/capas/trigger.ctp) - which is why this simply
+     * redirects back to $this->referer() below rather than rendering
+     * anything itself.
      */
     public function manager_add_capa_followup()
     {
@@ -2423,6 +2427,21 @@ class ApplicationsController extends AppController
             // again), so it only ever reflects the most recent closure.
             $closedDate = ($newStatus === 'Closed') ? date('Y-m-d H:i:s') : null;
 
+            // The remaining CAPA.doc columns (Root cause / Corrective-
+            // Preventive action / Target date) are filled in progressively
+            // by the manager investigating the case, not known at
+            // auto-open time - each one is optional on a follow-up submit
+            // and, when left blank, simply carries forward the case's
+            // current value rather than blanking it out. ("Responsible
+            // person", the doc's last column, has no field here at all -
+            // it's just the Reviewer association relabeled - see Capa.php.)
+            $rootCause = isset($this->request->data['Capa']['root_cause']) && $this->request->data['Capa']['root_cause'] !== ''
+                ? $this->request->data['Capa']['root_cause'] : $source['Capa']['root_cause'];
+            $correctiveAction = isset($this->request->data['Capa']['corrective_action']) && $this->request->data['Capa']['corrective_action'] !== ''
+                ? $this->request->data['Capa']['corrective_action'] : $source['Capa']['corrective_action'];
+            $targetDate = !empty($this->request->data['Capa']['target_date'])
+                ? date('Y-m-d', strtotime($this->request->data['Capa']['target_date'])) : $source['Capa']['target_date'];
+
             $this->Capa->create();
             $data = array('Capa' => array(
                 'type' => 'FollowUp',
@@ -2441,30 +2460,37 @@ class ApplicationsController extends AppController
                 'deadline_date' => $source['Capa']['deadline_date'],
                 'days_overdue' => $source['Capa']['days_overdue'],
                 'description' => $note,
+                'root_cause' => $rootCause,
+                'corrective_action' => $correctiveAction,
+                'target_date' => $targetDate,
                 'status' => $newStatus,
                 'closed_date' => $closedDate,
             ));
 
             if ($this->Capa->save($data)) {
-                // Keep the 'Initial' row's own status (and closed_date) in
-                // sync with the case's latest status, so callers that only
-                // need "is this case open/closed - and since when" (e.g.
-                // the dedicated CAPA section's filter/list) can read it
-                // directly off the Initial row without pulling the whole
-                // follow-up thread.
-                if ($newStatus !== $source['Capa']['status']) {
-                    $initial = $this->Capa->find('first', array(
-                        'conditions' => array(
-                            'Capa.review_id' => $source['Capa']['review_id'],
-                            'Capa.source_stage' => $source['Capa']['source_stage'],
-                            'Capa.type' => 'Initial',
-                        ),
-                    ));
-                    if (!empty($initial['Capa']['id'])) {
-                        $this->Capa->id = $initial['Capa']['id'];
+                // Keep the 'Initial' row's own status/closed_date AND the
+                // rest of the case's latest detail (root cause, corrective/
+                // preventive action, target date) in sync with this
+                // follow-up, so callers that only need "the case's current
+                // detail" (e.g. the dedicated CAPA section's list/CSV
+                // export) can read it directly off the Initial row without
+                // walking the whole follow-up thread.
+                $initial = $this->Capa->find('first', array(
+                    'conditions' => array(
+                        'Capa.review_id' => $source['Capa']['review_id'],
+                        'Capa.source_stage' => $source['Capa']['source_stage'],
+                        'Capa.type' => 'Initial',
+                    ),
+                ));
+                if (!empty($initial['Capa']['id'])) {
+                    $this->Capa->id = $initial['Capa']['id'];
+                    if ($newStatus !== $source['Capa']['status']) {
                         $this->Capa->saveField('status', $newStatus);
                         $this->Capa->saveField('closed_date', $closedDate);
                     }
+                    $this->Capa->saveField('root_cause', $rootCause);
+                    $this->Capa->saveField('corrective_action', $correctiveAction);
+                    $this->Capa->saveField('target_date', $targetDate);
                 }
                 $this->Session->setFlash(__('Follow-up added to the CAPA.'), 'alerts/flash_success');
             } else {

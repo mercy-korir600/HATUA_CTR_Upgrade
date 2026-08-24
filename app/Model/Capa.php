@@ -3,12 +3,40 @@ App::uses('AppModel', 'Model');
 /**
  * Capa Model
  *
- * Minimal CAPA (Corrective and Preventive Action) record. For now this is
- * raised automatically by ReviewDeadlineAlertShell when a reviewer misses
- * the Review-stage submission deadline - kept intentionally small (per
- * request) so it just references the application and the reviewer plus
- * enough basic detail to act on. Extend with root-cause, corrective action,
- * verification, closure-date fields etc. as the CAPA process is fleshed out.
+ * CAPA (Corrective and Preventive Action) record. Raised automatically by
+ * ReviewDeadlineAlertShell when a reviewer misses the Review-stage
+ * submission deadline. Field set mirrors the CAPA table format from the
+ * CAPA.doc business requirement - Description of non conformity | Root
+ * cause | Corrective/preventive action | Status | Target date |
+ * Responsible person - plus the bookkeeping this app needs (reference no.,
+ * which application/review/reviewer, follow-up threading):
+ *
+ *   - `description`        - Description of non conformity. Auto-filled
+ *                             on the Initial row; a FollowUp's own
+ *                             `description` instead holds that follow-up's
+ *                             progress note (see manager_add_capa_followup()).
+ *   - `root_cause`          - Root cause. NULL on the auto-opened Initial
+ *                             row (nobody has investigated yet) - filled
+ *                             in via a follow-up.
+ *   - `corrective_action`   - Corrective/preventive action. Same as above.
+ *   - `status`              - Open / In Progress / Closed.
+ *   - `target_date`         - Target date for completing the corrective/
+ *                             preventive action. Distinct from
+ *                             `deadline_date`, which is the original
+ *                             Review-stage SLA deadline that was missed.
+ *
+ * "Responsible person" (the doc's last column) has no column of its own -
+ * it's just `reviewer_user_id`/the Reviewer association below, relabeled
+ * "Responsible Person" wherever the CAPA views display it (see
+ * app/View/Capas/manager_view.ctp, app/View/Capas/manager_index.ctp,
+ * csv_export.ctp). The reviewer whose missed deadline opened the case is
+ * exactly who needs to act to close it, so a second, separately-tracked
+ * "who's responsible" value would just be duplicate data that could drift
+ * out of sync with it.
+ *
+ * root_cause/corrective_action/target_date are plain columns (not User
+ * associations) - simple values matching what the source document
+ * specifies, not something that needs to resolve against another table.
  *
  * One CAPA "case" per reviewer assignment is modelled as a small group of
  * rows sharing the same (review_id, source_stage) - not a separate table:
@@ -17,19 +45,23 @@ App::uses('AppModel', 'Model');
  *                            see ReviewDeadlineAlertShell::_ensureCapa()).
  *                            `capa_id` is NULL - it has no parent.
  *   - `type` = 'FollowUp' - a later update appended by a manager (progress
- *                            note and/or a `status` change). `capa_id`
- *                            points at whichever row it's replying to -
+ *                            note and/or a `status` change, and/or an
+ *                            update to root cause / corrective action /
+ *                            target date). `capa_id` points at whichever
+ *                            row it's replying to -
  *                            the Initial row, OR another FollowUp row, so
  *                            a follow-up can itself gain follow-ups (see
  *                            buildThread() below). See
  *                            ApplicationsController::manager_add_capa_followup().
  *
- * The case's *current* status is the `status` of the most recently-saved
- * row anywhere in the thread - but for cheap filtering/listing (see
- * CapasController), the 'Initial' row's own `status` is ALSO kept in sync
- * with every follow-up's status change (see ApplicationsController::
- * manager_add_capa_followup()), so callers that only need "is this case
- * open/closed" can read Initial.status directly without walking the tree.
+ * The case's *current* detail (status, root cause, corrective action,
+ * target date) is that of the most recently-saved row anywhere in the
+ * thread - but for cheap filtering/listing (see
+ * CapasController), the 'Initial' row's own copy of each of those fields
+ * is ALSO kept in sync with every follow-up (see ApplicationsController::
+ * manager_add_capa_followup()), so callers that only need "the case's
+ * current detail" can read it directly off the Initial row without
+ * walking the tree.
  *
  * `closed_date` is stamped automatically (never hand-entered) the moment a
  * row's own `status` is saved as 'Closed', and cleared back to NULL if
