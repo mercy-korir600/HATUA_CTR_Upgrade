@@ -1,92 +1,155 @@
 <?php
 	$this->assign('Users', 'active');
+     $this->Html->css('user_admin_edit', null, array('inline' => false)); 
 ?>
 
 <div class="row-fluid">
 	<div class="span12">
 		<div class="page-header">
 			<div class="styled_title"><h3>Edit <?php echo $this->request->data['User']['name'];?></h3></div>
-		</div>
-	<?php
-		echo $this->Session->flash();
-
-		echo $this->Form->create('User', array(
-			'class' => 'form-horizontal',
-			 'inputDefaults' => array(
-				'div' => array('class' => 'control-group'),
-				'label' => array('class' => 'control-label'),
-				'between' => '<div class="controls">',
-				'after' => '</div>',
-				'class' => '',
-				'format' => array('before', 'label', 'between', 'input', 'after','error'),
-				'error' => array('attributes' => array('class' => 'controls help-block')),
-			 ),
-		));
-	?>
-
-
-
-	<div class="row-fluid">
-		<div class="span6">
-			<?php
-				echo $this->Form->input('id');
-				echo $this->Form->input('group_id');
-				echo $this->Form->input('username',
-					array('label' => array('class' => 'control-label required', 'text' => 'Username <span class="sterix">*</span>'),));
-				echo $this->Form->input('password',
-					array('label' => array('class' => 'control-label required', 'text' => 'Password <span class="sterix">*</span>'),));
-				echo $this->Form->input('confirm_password', array(
-						'type' => 'password',
-						'label' => array('class' => 'control-label required', 'text' => 'Confirm Password <span class="sterix">*</span>'), ));
-				echo $this->Form->input('name', array('label' => array('class' => 'control-label', 'text' => 'Name'),));
-				echo $this->Form->input('email', array(
-					'type' => 'email',
-					'div' => array('class' => 'control-group required'),
-					'label' => array('class' => 'control-label required', 'text' => 'E-MAIL ADDRESS <span class="sterix">*</span>')
-				));
-				echo $this->Form->input('phone_no',
-					array('label' => array('class' => 'control-label required', 'text' => 'Phone Number <span class="sterix">*</span>'),));
-				echo $this->Form->input('is_active');
-
-				?>
-		</div><!--/span-->
-		<div class="span6">
-			<?php
-				echo $this->Form->input('name_of_institution', array(
-					'label' => array('class' => 'control-label', 'text' => 'Name of Institution'),
-				));
-				echo $this->Form->input('institution_physical', array(
-					'label' => array('class' => 'control-label', 'text' => 'Physical Address'),
-					'after'=>'<p class="help-block"> Road, street.. </p></div>',
-				));
-				echo $this->Form->input('institution_address', array('label' => array('class' => 'control-label', 'text' => 'Institution Address'),));
-				echo $this->Form->input('institution_contact', array('label' => array('class' => 'control-label', 'text' => 'Institution Contacts'),));
-				echo $this->Form->input('county_id', array(
-									'label' => array('class' => 'control-label required', 'text' => 'County'),
-									'empty' => true, 'between' => '<div class="controls ui-widget">',
-								));
-				echo $this->Form->input('country_id', array(
-					'empty' => true,
-					'label' => array('class' => 'control-label required', 'text' => 'Country <span class="sterix">*</span>'), ));
-				?>
-		</div><!--/span-->
-	</div><!--/row-->
-	 <hr>
-
-	<?php
-		echo $this->Form->input('bot_stop', array(
-								'div' => array('style' => 'display:none')
-							));
-		echo $this->Form->end(array(
-			'label' => 'Submit',
-			'value' => 'Save',
-			'class' => 'btn btn-primary',
-			'id' => 'ApplicationSaveChanges',
-			'div' => array(
-				'class' => 'form-actions',
-			)
-		));
-	?>
+		</div>                                                                                                                                                               
+                                                                                                                                                                             
+    <?php                                                                                                                                                                                                                                                                                                          
+  $formDefaults = array(                                                                                                                                                   
+        'class' => 'form-horizontal',
+        'inputDefaults' => array(
+            'div' => array('class' => 'control-group'),
+            'label' => array('class' => 'control-label'),
+            'between' => '<div class="controls">',
+            'after' => '</div>',
+            'class' => '',
+            'format' => array('before', 'label', 'between', 'input', 'after', 'error'),
+            'error' => array('attributes' => array('class' => 'controls help-block')),
+        ),
+    );                                                                                                                                                                     
+    ?>                                                                                                                                                                       
+                                                                                                                                                                             
+    <div class="row-fluid edit-user-section">                                                                                                                                
+                                                                                                                                                                                                                                                                                                     
+        <div class="span4">                                                                                                                                                  
+            <?php echo $this->Form->create('User', $formDefaults); ?>                                                                                                        
+            <fieldset class="well">                                                                                                                                          
+                <legend> Personal Information</legend>                                                                                                                     
+                <?php    
+				 echo $this->Form->input('id');                                                                                                                           
+                    echo $this->Form->input('username', array(                                                                                                               
+                        'label' => array('class' => 'control-label required', 'text' => 'Username <span class="sterix">*</span>')                                            
+                    ));                                                                                                                                                      
+                    echo $this->Form->input('id');                                                                                                                           
+                    echo $this->Form->input('name', array(                                                                                                                   
+                        'label' => array('class' => 'control-label', 'text' => 'Name')                                                                                       
+                    ));                                                                                                                                                      
+                    echo $this->Form->input('email', array(                                                                                                                  
+                        'type' => 'email',                                                                                                                                   
+                        'div' => array('class' => 'control-group required'),                                                                                                 
+                        'label' => array('class' => 'control-label required', 'text' => 'E-MAIL ADDRESS <span class="sterix">*</span>')                                      
+                    ));                                                                                                                                                      
+                    echo $this->Form->input('phone_no', array(                                                                                                               
+                        'label' => array('class' => 'control-label required', 'text' => 'Phone Number <span class="sterix">*</span>')                                        
+                    ));                                                                                                                                                      
+                ?>                                                                                                                                                           
+                <?php                                                                                                                                                        
+                    echo $this->Form->end(array(                                                                                                                             
+                        'label' => 'Submit',                                                                                                                     
+                        'class' => 'btn btn-primary',                                                                                                                        
+                        'div' => array('class' => 'form-actions')                                                                                                            
+                    ));                                                                                                                                                      
+                ?>                                                                                                                                                           
+            </fieldset>                                                                                                                                                      
+        </div>                                                                                                                                    
+                                                                                                        
+        <div class="span4">                                                                                                                                                  
+            <?php echo $this->Form->create('User', $formDefaults); ?>                                                                                                        
+            <fieldset class="well">                                                                                                                                          
+                <legend> Access & Institution</legend>                                                                                                                     
+                <?php                                                                                                                                                        
+                    echo $this->Form->input('id');                                                                                                                           
+                                                                                                                                                    
+                    echo $this->Form->input('group_id', array(                                                                                                               
+                        'label' => array('class' => 'control-label required', 'text' => 'Group / Role <span class="sterix">*</span>'),                                       
+                        'empty' => true                                                                                                                                      
+                    ));                                                                                                                                                      
+                                                                                                                                                                             
+                    if (isset($this->request->data['User']['user_type'])) {                                                                                                  
+                        echo $this->Form->input('user_type', array(                                                                                                          
+                            'label' => array('class' => 'control-label', 'text' => 'User Type')                                                                              
+                        ));                                                                                                                                                  
+                    }                                                                                                                                                        
+                                                                                                                                                                             
+                    if (isset($this->request->data['User']['public_health_program'])) {                                                                                      
+                        echo $this->Form->input('public_health_program', array(                                                                                              
+                            'label' => array('class' => 'control-label', 'text' => 'Public Health Program')                                                                  
+                        ));                                                                                                                                                  
+                    }                                                                                                                                                        
+                                                                                                                                                                             
+                                                                                                                                                                    
+                                                                                                                                                                             
+                    echo $this->Form->input('is_active', array(                                                                                                              
+                        'label' => array('class' => 'control-label', 'text' => 'Account Active')                                                                             
+                    ));                                                                                                                                                      
+                                                                                                                                                                             
+                    echo '<hr>';                                                                                                                                                                                                                                                                         
+                    echo $this->Form->input('name_of_institution', array(                                                                                                    
+                        'label' => array('class' => 'control-label', 'text' => 'Name of Institution')                                                                        
+                    ));                                                                                                                                                      
+                    echo $this->Form->input('institution_physical', array(                                                                                                   
+                        'label' => array('class' => 'control-label', 'text' => 'Physical Address'),                                                                          
+                        'after' => '<p class="help-block"> Road, street.. </p></div>'                                                                                        
+                    ));                                                                                                                                                      
+                    echo $this->Form->input('institution_address', array(                                                                                                    
+                        'label' => array('class' => 'control-label', 'text' => 'Institution Address')                                                                        
+                    ));                                                                                                                                                      
+                    echo $this->Form->input('institution_contact', array(                                                                                                    
+                        'label' => array('class' => 'control-label', 'text' => 'Institution Contacts')                                                                       
+                    ));    
+					 echo $this->Form->input('county_id', array(                                                                                                              
+                        'label' => array('class' => 'control-label required', 'text' => 'County'),                                                                           
+                        'empty' => true,                                                                                                                                     
+                        'between' => '<div class="controls ui-widget">'                                                                                                      
+                    ));                                                                                                                                                       
+                    echo $this->Form->input('country_id', array(                                                                                                             
+                        'empty' => true,                                                                                                                                     
+                        'label' => array('class' => 'control-label required', 'text' => 'Country <span class="sterix">*</span>')                                             
+                    ));                                                                                                                                                      
+                ?>                                                                                                                                                           
+                <?php                                                                                                                                                        
+                    echo $this->Form->end(array(                                                                                                                             
+                        'label' => 'Submit',                                                                                                                  
+                        'class' => 'btn btn-success',                                                                                                                        
+                        'div' => array('class' => 'form-actions')                                                                                                            
+                    ));                                                                                                                                                      
+                ?>                                                                                                                                                           
+            </fieldset>                                                                                                                                                      
+        </div>                                                                                                                                     
+                                                                                                                                                                                                                                                                                               
+        <div class="span4">                                                                                                                                                  
+            <?php echo $this->Form->create('User', $formDefaults); ?>                                                                                                        
+            <fieldset class="well">                                                                                                                                          
+                <legend> Change Password</legend>                                                                                                                                                                                                                                                                         
+                <?php                                                                                                                                                        
+                                                                                                                                                                       
+                    echo $this->Form->input('password', array(                                                                                                               
+                        'value' => '',                                                                                                                                       
+                        'required' => false,                                                                                                                                 
+                        'label' => array('class' => 'control-label', 'text' => 'New Password')                                                                               
+                    ));                                                                                                                                                      
+                    echo $this->Form->input('confirm_password', array(                                                                                                       
+                        'type' => 'password',                                                                                                                                
+                        'required' => false,                                                                                                                                 
+                        'label' => array('class' => 'control-label', 'text' => 'Confirm New Password')                                                                       
+                    ));                                                                                                                                                      
+                ?>                                                                                                                                                           
+                <?php                                                                                                                                                        
+                    echo $this->Form->end(array(                                                                                                                             
+                        'label' => 'Update Password',                                                                                                                        
+                        'class' => 'btn btn-warning',                                                                                                                        
+                        'div' => array('class' => 'form-actions')                                                                                                            
+                    ));                                                                                                                                                      
+                ?>                                                                                                                                                           
+            </fieldset>                                                                                                                                                      
+        </div>
+    </div>                                                                                                                                                                            
+        
 	</div>
 </div>
 

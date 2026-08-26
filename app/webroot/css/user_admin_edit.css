@@ -1,0 +1,52 @@
+ .edit-user-section .well {                                                                                                                                             
+        box-sizing: border-box;                                                                                                                                              
+        margin-bottom: 20px;                                                                                                                                                 
+        border-radius: 6px;                                                                                                                                                  
+        background-color: #fdfdfd;                                                                                                                                           
+        padding: 15px;                                                                                                                                                       
+      }                
+	   .edit-user-section legend {                                                                                                                                        
+            border-bottom: none !important;                                                                                                                                  
+            margin-bottom: 15px !important;                                                                                                                                  
+            padding-bottom: 0 !important;                                                                                                                                    
+          }                                                                                                                                                         
+      .edit-user-section .control-group {                                                                                                                                    
+        display: flex !important;                                                                                                                                            
+        align-items: center !important;                                                                                                                                      
+        margin-bottom: 12px !important;                                                                                                                                      
+      }                                                                                                                                                                      
+      .edit-user-section .control-label {                                                                                                                                    
+        float: none !important;                                                                                                                                              
+        width: 38% !important;                                                                                                             
+        text-align: right !important;                                                                                                        
+        padding-right: 10px !important;                                                                                                                                      
+        margin-bottom: 0 !important;                                                                                                                                         
+        font-weight: 600;                                                                                                                                                    
+        box-sizing: border-box !important;                                                                                                                                   
+      }                                                                                                                                                                      
+      .edit-user-section .controls {                                                                                                                                         
+        margin-left: 0 !important;                                                                                                                                           
+        width: 62% !important;                                                                                                            
+        box-sizing: border-box !important;                                                                                                                                   
+      }                                                                                                                                                                      
+      .edit-user-section input[type="text"],                                                                                                                                 
+      .edit-user-section input[type="password"],                                                                                                                             
+      .edit-user-section input[type="email"],                                                                                                                                
+      .edit-user-section select,                                                                                                                                             
+      .edit-user-section textarea,                                                                                                                                           
+      .edit-user-section .ui-combobox-input {                                                                                                                                
+        width: 100% !important;                                                                                                                                              
+        box-sizing: border-box !important;                                                                                                                                   
+        height: 32px !important;                                                                                                                                             
+      }                                                                                                                                                                      
+       .edit-user-section .form-actions {
+            padding-top: 10px !important;
+            margin-top: 15px;
+            background: transparent !important;
+            border-top: none !important;
+            text-align: center;
+          }                                                                                                                                                                   
+      .edit-user-section .btn {                                                                                                                                              
+        width: 100% !important;                                                                                                                                              
+        box-sizing: border-box !important;                                                                                                                                   
+      }                   
