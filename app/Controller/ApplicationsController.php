@@ -2644,8 +2644,11 @@ class ApplicationsController extends AppController
         } else {
             $application = $this->Application->find('first', array(
                 'conditions' => array('Application.id' => $id),
-                'contain' => array('Review' => array('conditions' => array('Review.user_id' => $this->Auth->User('id')))),
+                'contain' => array('Review' => array('conditions' => array('Review.user_id' => $this->Auth->User('id'))),
+                 'InvestigatorContact',                                                                                                
+                'SiteDetail' => array('County') ),
             ));
+              $this->set('counties', $this->Application->SiteDetail->County->find('list')); 
             $this->set('application', $application);
             $this->render('reviewer_minimal_view');
         }
@@ -4113,8 +4116,11 @@ class ApplicationsController extends AppController
         } else {
             $application = $this->Application->find('first', array(
                 'conditions' => array('Application.id' => $id),
-                'contain' => array('Review' => array('conditions' => array('Review.user_id' => $this->Auth->User('id')))),
+                'contain' => array('Review' => array('conditions' => array('Review.user_id' => $this->Auth->User('id'))),
+                 'InvestigatorContact',                                                                                                
+                'SiteDetail' => array('County')  ),
             ));
+             $this->set('counties', $this->Application->SiteDetail->County->find('list')); 
             $this->set('application', $application);
             $this->render('reviewer_minimal_view');
         }
