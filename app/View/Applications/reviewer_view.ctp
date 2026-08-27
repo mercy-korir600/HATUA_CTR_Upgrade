@@ -242,8 +242,7 @@ $(function() {
       }
   });
 
-  //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
-  // 1. Handle main side tabs (Application / My Reviews / Manager Reviews)                                                        
+  //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh                                                       
       var $mainTabs = $('.tabbable.tabs-left > .nav.nav-tabs a[data-toggle="tab"]');                                                  
       $mainTabs.on('click', function (e) {                                                                                            
           e.preventDefault();                                                                                                         
@@ -254,8 +253,7 @@ $(function() {
           var id = $(e.target).attr("href");                                                                                          
           localStorage.setItem('reviewerMainTab', id);                                                                                
       });                                                                                                                             
-                                                                                                                                      
-      // 2. If viewing/editing a review, auto-switch to Tab 2 ("My Reviews") & auto-scroll                                            
+                                                                                                                                                                                  
       var defaultMainTab = null;                                                                                                      
       <?php if (isset($this->params['named']['rreview_view']) || isset($this->request->query['rreview_view'])) { ?>                   
         defaultMainTab = '#tab2';                                                                                                     

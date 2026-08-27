@@ -771,7 +771,7 @@ $(function() {
   });
 
   var defaultMainTab = null;
-  <?php if (isset($this->params['named']['rreview_view'])) { ?>
+  <?php if (isset($this->params['named']['rreview_view']) || isset($this->request->query['rreview_view']) || !empty($this->request->params['named']['rreview_view'])) { ?>
     defaultMainTab = '#tab2';
   <?php } ?>
 
@@ -781,6 +781,13 @@ $(function() {
 
   if (defaultMainTab && $mainTabs.filter('[href="' + defaultMainTab + '"]').length) {
       $mainTabs.filter('[href="' + defaultMainTab + '"]').tab('show');
+       setTimeout(function() {                                                                                                   
+              if ($('#rreview_tab').length) {                                                                                       
+                  $('html, body').animate({                                                                                         
+                      scrollTop: $('#rreview_tab').offset().top - 20
+                  }, 400);
+              }
+          }, 100);
   } else {
       var savedMainTab = localStorage.getItem('internalReviewerMainTab');
       if (savedMainTab && $mainTabs.filter('[href="' + savedMainTab + '"]').length) {
