@@ -401,6 +401,33 @@ class ReviewsController extends AppController
         $application = $this->Application->find('first', array(
             'conditions' => array('Application.id' => $application_id),
         ));
+         $existingReview = $this->Review->find('first', array(                                                                     
+                'conditions' => array(                                                                                                
+                    'Review.application_id' => $application_id,                                                                       
+                    'Review.user_id' => $this->Auth->User('id'),                                                                      
+                    'Review.type' => 'reviewer_comment',                                                                              
+                    'Review.assessment_type' => $review_type,                                                                         
+                ),                                                                                                                    
+                'fields' => array('Review.id', 'Review.status'),                                                                      
+                'order' => array('Review.modified' => 'desc', 'Review.id' => 'desc'),                                                 
+                'contain' => array()                                                                                                  
+            ));                                                                                                                       
+                                                                                                                                      
+            if (!empty($existingReview['Review']['id'])) {                                                                            
+                if ($existingReview['Review']['status'] === 'Unsubmitted') {                                                          
+                    $this->Session->setFlash(                                                                                         
+                        __('You already have an unsubmitted %s assessment in progress. Continuing existing review.',                  
+  ucfirst($review_type)),                                                                                                             
+                        'alerts/flash_info'                                                                                           
+                    );                                                                                                                
+                } else {                                                                                                              
+                    $this->Session->setFlash(                                                                                         
+                        __('You have already submitted a %s assessment for this application.', ucfirst($review_type)),                
+                        'alerts/flash_info'                                                                                           
+                    );                                                                                                                
+                }                                                                                                                     
+                $this->redirect($this->_buildApplicationViewRedirect($application_id, $existingReview['Review']['id']));              
+            }                                                                                                                                                  
 
         $this->loadModel('ReviewQuestion');
         $all_questions = $this->ReviewQuestion->find('all', array('conditions' => array('ReviewQuestion.review_type' => $review_type), 'order' => array('ReviewQuestion.question_number' => 'asc')));

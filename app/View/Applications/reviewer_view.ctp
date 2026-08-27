@@ -243,6 +243,39 @@ $(function() {
   });
 
   //https://stackoverflow.com/questions/18999501/bootstrap-3-keep-selected-tab-on-page-refresh
+  // 1. Handle main side tabs (Application / My Reviews / Manager Reviews)                                                        
+      var $mainTabs = $('.tabbable.tabs-left > .nav.nav-tabs a[data-toggle="tab"]');                                                  
+      $mainTabs.on('click', function (e) {                                                                                            
+          e.preventDefault();                                                                                                         
+          $(this).tab('show');                                                                                                        
+      });                                                                                                                             
+                                                                                                                                      
+      $mainTabs.on("shown", function (e) {                                                                                            
+          var id = $(e.target).attr("href");                                                                                          
+          localStorage.setItem('reviewerMainTab', id);                                                                                
+      });                                                                                                                             
+                                                                                                                                      
+      // 2. If viewing/editing a review, auto-switch to Tab 2 ("My Reviews") & auto-scroll                                            
+      var defaultMainTab = null;                                                                                                      
+      <?php if (isset($this->params['named']['rreview_view']) || isset($this->request->query['rreview_view'])) { ?>                   
+        defaultMainTab = '#tab2';                                                                                                     
+      <?php } ?>                                                                                                                      
+                                                                                                                                      
+      if (defaultMainTab && $mainTabs.filter('[href="' + defaultMainTab + '"]').length) {                                             
+          $mainTabs.filter('[href="' + defaultMainTab + '"]').tab('show');                                                            
+          setTimeout(function() {                                                                                                     
+              if ($('#rreview_tab').length) {                                                                                         
+                  $('html, body').animate({                                                                                           
+                      scrollTop: $('#rreview_tab').offset().top - 20                                                                  
+                  }, 400);                                                                                                            
+              }                                                                                                                       
+          }, 100);                                                                                                                    
+      } else {                                                                                                                        
+          var savedMainTab = localStorage.getItem('reviewerMainTab');                                                                 
+          if (savedMainTab && $mainTabs.filter('[href="' + savedMainTab + '"]').length) {                                             
+              $mainTabs.filter('[href="' + savedMainTab + '"]').tab('show');                                                          
+          }                                                                                                                           
+      }                           
   //from mcaz
   $('#reviewer_tab a').click(function (e) {
       e.preventDefault();
