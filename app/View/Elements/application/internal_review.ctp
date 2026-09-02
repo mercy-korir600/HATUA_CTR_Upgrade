@@ -224,44 +224,76 @@ $buildComparisonPayloadForReview = function ($reviewEntry) use (
   <hr class="soften" style="margin: 10px 0px;">
 </div>
 
-<div class="row-fluid">
-  <div class="span3">
-    <?php
-    echo $this->Html->link(
-      __('<i class="icon-stethoscope"></i> Add Clinical Assessment'),
-      array('internalreviewer' => true, 'controller' => 'reviews', 'action' => 'add', $application['Application']['id'], 'clinical'),
-      array('escape' => false, 'class' => 'btn btn-primary')
-    );
-    ?>
-  </div>
-  <div class="span3">
-    <?php
-    echo $this->Html->link(
-      __('<i class="icon-tint"></i> Add Non-Clinical Assessment'),
-      array('internalreviewer' => true, 'controller' => 'reviews', 'action' => 'add', $application['Application']['id'], 'non-clinical'),
-      array('escape' => false, 'class' => 'btn btn-success')
-    );
-    ?>
-  </div>
-  <div class="span3">
-    <?php
-    echo $this->Html->link(
-      __('<i class="icon-medkit"></i> Add Quality Assessment'),
-      array('internalreviewer' => true, 'controller' => 'reviews', 'action' => 'add', $application['Application']['id'], 'quality'),
-      array('escape' => false, 'class' => 'btn btn-info')
-    );
-    ?>
-  </div>
-  <div class="span3">
-    <?php
-    echo $this->Html->link(
-      __('<i class="icon-list-ol"></i> Add Statistical Assessment'),
-      array('internalreviewer' => true, 'controller' => 'reviews', 'action' => 'add', $application['Application']['id'], 'statistical'),
-      array('escape' => false, 'class' => 'btn btn-warning')
-    );
-    ?>
-  </div>
-</div>
+ <?php                                                                                                                           
+        $myAssessments = array();                                                                                                   
+        $sourceReviewList = !empty($allReviewList) ? $allReviewList : (!empty($application['Review']) ? $application['Review'] :    
+  array());                                                                                                                         
+        foreach ($sourceReviewList as $rev) {                                                                                       
+          if (!empty($rev['assessment_type']) && $rev['type'] === 'reviewer_comment') {                                             
+            $t = $rev['assessment_type'];                                                                                           
+            if (!isset($myAssessments[$t]) || $rev['status'] === 'Unsubmitted') {                                                   
+              $myAssessments[$t] = $rev;                                                                                            
+            }                                                                                                                       
+          }                                                                                                                         
+        }                                                                                                                           
+                                                                                                                                    
+        $assessmentButtons = array(                                                                                                 
+          'clinical' => array(                                                                                                      
+            'label' => 'Clinical Assessment',                                                                                       
+            'icon'  => 'icon-stethoscope',                                                                                          
+            'class' => 'btn-primary'                                                                                                
+          ),                                                                                                                        
+          'non-clinical' => array(                                                                                                  
+            'label' => 'Non-Clinical Assessment',                                                                                   
+            'icon'  => 'icon-tint',                                                                                                 
+            'class' => 'btn-success'                                                                                                
+          ),                                                                                                                        
+          'quality' => array(                                                                                                       
+            'label' => 'Quality Assessment',                                                                                        
+            'icon'  => 'icon-medkit',                                                                                               
+            'class' => 'btn-info'                                                                                                   
+          ),                                                                                                                        
+          'statistical' => array(                                                                                                   
+            'label' => 'Statistical Assessment',                                                                                    
+            'icon'  => 'icon-list-ol',                                                                                              
+            'class' => 'btn-warning'                                                                                                
+          )                                                                                                                         
+        );                                                                                                                          
+        ?>                                                                                                                          
+                                                                                                                                    
+        <div class="row-fluid">                                                                                                     
+          <?php foreach ($assessmentButtons as $typeKey => $btnConfig): ?>                                                          
+            <div class="span3">                                                                                                     
+              <?php                                                                                                                 
+              if (isset($myAssessments[$typeKey])) {                                                                                
+                $existing = $myAssessments[$typeKey];                                                                               
+                if ($existing['status'] === 'Unsubmitted') {                                                                        
+                  echo $this->Html->link(                                                                                           
+                    __('<i class="icon-edit"></i> Edit %s ', $btnConfig['label']),    
+                    array('internalreviewer' => true, 'action' => 'view', $application['Application']['id'], 'rreview_view' =>      
+  $existing['id']),                                                                                                                 
+                    array('escape' => false, 'class' => 'btn ' . $btnConfig['class'] . ' btn-block')                                
+                  );                                                                                                                
+                } else {                                                                                                            
+                  echo $this->Html->link(                                                                                           
+                    __('<i class="icon-check"></i> View %s', $btnConfig['label']),
+                    array('internalreviewer' => true, 'action' => 'view', $application['Application']['id'], 'rreview_view' =>      
+  $existing['id']),                                                                                                                 
+                    array('escape' => false, 'class' => 'btn btn-block')                                                            
+                  );                                                                                                                
+                }                                                                                                                   
+              } else {                                                                                                              
+                echo $this->Html->link(                                                                                             
+                  __('<i class="%s"></i> Add %s', $btnConfig['icon'], $btnConfig['label']),                                         
+                  array('internalreviewer' => true, 'controller' => 'reviews', 'action' => 'add', $application['Application']['id'],
+  $typeKey),
+                  array('escape' => false, 'class' => 'btn ' . $btnConfig['class'] . ' btn-block btn-add-assessment')
+                );
+              }
+              ?>
+            </div>
+          <?php endforeach; ?>
+        </div>                       
 <br>
 
 <br>
