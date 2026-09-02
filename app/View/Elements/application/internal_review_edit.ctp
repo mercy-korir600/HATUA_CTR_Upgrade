@@ -31,7 +31,11 @@ $renderComparisonBlock = function ($comparisonText) {
     . '</div>';
 };
 ?>
-
+ <style>                                                                                                                                                                                                
+      .tab-content, .tab-pane {                                                                                                                                                                            
+        overflow: visible !important;                                                                                                                                                                      
+      }                                                                                                                                                                                                    
+    </style>
 <h3 style="text-align: center;"><?php echo ucfirst($rreview['assessment_type']); ?> Assessment Form</h3>
 <hr class="soften" style="margin: 10px 0px;">
 
@@ -126,8 +130,8 @@ if ($this->Session->read('Auth.User.id') == $rreview['user_id'] and $rreview['st
   ));
   echo $this->Form->input('Review.' . $akey . '.id', array('value' => $rreview['id'], 'type' => 'hidden'));
 ?>
-  <div class="row-fluid">
-    <div class="span12">
+  <div class="row-fluid" style="display: flex; align-items: stretch; overflow: visible;">                                                                                                              
+        <div class="span10" style="float: none; width: 83%; margin-left: 0;">  
       <table class="table table-bordered table-condensed">
         <tbody>
           <tr>
@@ -320,32 +324,36 @@ if ($this->Session->read('Auth.User.id') == $rreview['user_id'] and $rreview['st
         </tbody>
       </table>
 
-      <div class="well controls">
-        <?php
-        echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(
-          'name' => 'saveChanges',
-          'class' => 'btn btn-success mapop',
-          'id' => 'rreviewSaveChanges',
-          'title' => 'Save & continue editing',
-          'data-content' => 'Save changes to form without submitting it.
-                                          The form will still be available for further editing.',
-          'div' => false,
-        ));
-        ?>
-        <?php
-        echo $this->Form->button('<i class="icon-rocket"></i> Submit', array(
-          'name' => 'submitReport',
-          'onclick' => "return confirm('Are you sure you wish to submit the protocol rreview report?');",
-          'class' => 'btn btn-primary mapop',
-          'id' => 'rreviewSubmitReport',
-          'title' => 'Save and Submit Report',
-          'data-content' => 'Submit report for peer review and approval.',
-          'div' => false,
-        ));
-        ?>
-      </div>
-    </div>
-  </div>
+       </div>                                                                                                                     
+       <div class="span2" style="float: none; width: 15%; margin-left: 2%;">                                                                                                                              
+           <div style="position: -webkit-sticky; position: sticky; top: calc(50vh - 90px) !important; z-index: 100;">                                                                                         
+            <div class="well" style="padding: 12px 10px; background-color: #f7f7f7; border: 1px solid #d5d5d5; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">                  
+              <?php                                                                                                                                                        
+              echo $this->Form->button('<i class="icon-save"></i> Save Changes', array(                                                                                    
+                'name' => 'saveChanges',                                                                                                                                   
+                'class' => 'btn btn-success btn-block mapop',                                                                                                              
+                'id' => 'rreviewSaveChanges',                                                                                                                              
+                'title' => 'Save & continue editing',                                                                                                                      
+                'data-content' => 'Save changes to form without submitting it. The form will still be available for further editing.',                                     
+                'div' => false,                                                                                                                                            
+              ));                                                                                                                                                          
+              ?>                                                                                                                                                           
+              <hr style="margin: 10px 0;">                                                                                                                                  
+              <?php                                                                                                                                                        
+              echo $this->Form->button('<i class="icon-rocket"></i> Submit', array(                                                                                        
+                'name' => 'submitReport',                                                                                                                                  
+                'onclick' => "return confirm('Are you sure you wish to submit the protocol review report?');",                                                             
+                'class' => 'btn btn-primary btn-block mapop',                                                                                                              
+                'id' => 'rreviewSubmitReport',                                                                                                                             
+                'title' => 'Save and Submit Report',
+                'data-content' => 'Submit report for peer review and approval.',
+                'div' => false,
+              ));
+              ?>
+            </div>
+          </div>
+        </div>
+      </div> 
 
 <?php
   echo $this->Form->end();
