@@ -936,6 +936,10 @@ public function internalreviewer_add_review_internal()
     {
         $this->add_internal_review_response();
     }
+     public function internalreviewer_add_internal_review_response()
+        {
+            $this->add_internal_review_response();
+        }
 
     /**
      * manager_edit method
