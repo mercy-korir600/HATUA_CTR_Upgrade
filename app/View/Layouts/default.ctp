@@ -49,6 +49,7 @@ $cakeDescription = __d('cake_dev', 'Pharmacy and Poisons Board');
   echo $this->Html->css('assets/css/sequence');
   echo $this->Html->css('assets/css/style2');
   echo $this->Html->css('assets/color/default2');
+   echo $this->Html->css('assessment');
 
   // echo $this->Html->script('jquery-1.8.3');
   echo $this->Html->script('jquery-1.9.1');
