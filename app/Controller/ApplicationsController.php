@@ -2633,6 +2633,24 @@ class ApplicationsController extends AppController
                 'conditions' => array('Application.id' => $id),
                 'contain' => $contains
             ));
+             $currentUserId = (int)$this->Auth->User('id');                                                                                                                                                                                                   
+                $managerUserIds = $this->Application->User->find('list', array(                                                                                                                                                                                  
+                    'conditions' => array('User.group_id' => array(1, 2)),                                                                                                                                                                
+                    'fields' => array('User.id', 'User.id')                                                                                                                                                                                                      
+                ));                                                                                                                                                                                                                                              
+                if (!empty($application['ManagerReview'])) {                                                                                                                                                                                                     
+                    foreach ($application['ManagerReview'] as $mKey => $mReview) {                                                                                                                                                                               
+                        if (!empty($mReview['InternalComment'])) {                                                                                                                                                                                               
+                            $application['ManagerReview'][$mKey]['InternalComment'] = array_values(array_filter(                                                                                                                                                 
+                                $mReview['InternalComment'],                                                                                                                                                                                                     
+                                function ($comment) use ($currentUserId, $managerUserIds) {                                                                                                                                                                      
+                                    $authorId = !empty($comment['user_id']) ? (int)$comment['user_id'] : 0;                                                                                                                                                  
+                                    return ($authorId === $currentUserId || in_array($authorId, $managerUserIds));                                                                                                                                               
+                                }                                                                                                                                                                                                                                
+                            ));                                                                                                                                                                                                                                  
+                        }                                                                                                                                                                                                                                        
+                    }                                                                                                                                                                                                                                            
+                }               
             $this->set('counties', $this->Application->SiteDetail->County->find('list'));
             $this->set('application', $application);
             if ($application['Application']['deactivated']) {
@@ -4103,6 +4121,24 @@ class ApplicationsController extends AppController
                 'conditions' => array('Application.id' => $id),
                 'contain' => $contains
             ));
+             $currentUserId = (int)$this->Auth->User('id');                                                                                                                                                                                                   
+                $managerUserIds = $this->Application->User->find('list', array(                                                                                                                                                                                  
+                    'conditions' => array('User.group_id' => array(1, 2)),                                                                                                                                                        
+                    'fields' => array('User.id', 'User.id')                                                                                                                                                                                                      
+                ));                                                                                                                                                                                                                                              
+                if (!empty($application['ManagerReview'])) {                                                                                                                                                                                                     
+                    foreach ($application['ManagerReview'] as $mKey => $mReview) {                                                                                                                                                                               
+                        if (!empty($mReview['InternalComment'])) {                                                                                                                                                                                               
+                            $application['ManagerReview'][$mKey]['InternalComment'] = array_values(array_filter(                                                                                                                                                 
+                                $mReview['InternalComment'],                                                                                                                                                                                                     
+                                function ($comment) use ($currentUserId, $managerUserIds) {                                                                                                                                                                      
+                                    $authorId = !empty($comment['user_id']) ? (int)$comment['user_id'] : 0;                                                                                                                                                   
+                                    return ($authorId === $currentUserId || in_array($authorId, $managerUserIds));                                                                                                                                               
+                                }                                                                                                                                                                                                                                
+                            ));                                                                                                                                                                                                                                  
+                        }                                                                                                                                                                                                                                        
+                    }                                                                                                                                                                                                                                            
+                }             
             $priorInternalFeedback = $this->_buildPriorInternalFeedback($id, (int) $this->Auth->User('id'));
             $this->set('counties', $this->Application->SiteDetail->County->find('list'));
             $this->set('application', $application);
@@ -4192,7 +4228,7 @@ class ApplicationsController extends AppController
                     ),
                     'order' => array('ReviewAnswer.question_number' => 'ASC', 'ReviewAnswer.id' => 'ASC')
                 ),
-                'InternalComment' => array('Attachment')
+                // 'InternalComment' => array('Attachment')
             ),
             'order' => array('Review.created' => 'ASC', 'Review.id' => 'ASC')
         ));
