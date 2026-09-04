@@ -731,10 +731,18 @@
                         </div>
                         <div class="span4 lefty">
                         <?php  
-                            // if(!empty($rid)) 
+                           if (!empty($rid) && !empty($rid['id'])) {  
                                echo $this->element('comments/add', [
                                          'model' => ['model_id' => $application['Application']['id'], 'foreign_key' => $rid['id'],   
-                                                     'model' => 'Review', 'category' => 'internal', 'url' => 'add_internal_review_response']]) 
+                                                     'model' => 'Review', 'category' => 'internal', 'url' => 'add_internal_review_response']]);
+                                                     } else {                                                                                                                                                                                                                                                 
+                     ?>                                                                                                                                                                                                                                                           
+                       <div class="alert alert-info" style="margin-top: 15px;">                                                                                                                                                                                             
+                      <i class="icon-info-sign"></i>                                                                                                                                                                                                                   
+                     <strong>Note:</strong> Comments cannot be added at this time because no manager review/feedback record has been created for this application yet.                                                                                                
+                       </div>                                                                                                                                                                                                                                               
+                    <?php                                                                                                                                                                                                                                                        
+                       }     
                         ?>
                         </div>
                       </div>
