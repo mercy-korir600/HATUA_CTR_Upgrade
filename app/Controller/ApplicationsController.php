@@ -4139,7 +4139,7 @@ class ApplicationsController extends AppController
                         }                                                                                                                                                                                                                                        
                     }                                                                                                                                                                                                                                            
                 }             
-            $priorInternalFeedback = $this->_buildPriorInternalFeedback($id, (int) $this->Auth->User('id'));
+           $priorInternalFeedback = array();                                                                                                                                                                                                                
             $this->set('counties', $this->Application->SiteDetail->County->find('list'));
             $this->set('application', $application);
             $this->set('priorInternalFeedback', $priorInternalFeedback);
