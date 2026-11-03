@@ -2191,9 +2191,21 @@
               </tr>
               <tr>
                 <td class="table-label required table-noline">
-                  <p>Address <span class="sterix">*</span></p>
+                  <p>Physical Address <span class="sterix">*</span></p>
                 </td>
-                <td class="table-noline"><?php echo $organization['address'] ?></td>
+                <td class="table-noline"><?php echo !empty($organization['physical_address']) ? $organization['physical_address'] : $organization['address'] ?></td>
+              </tr>
+              <tr>
+                <td class="table-label table-noline">
+                  <p>Postal Address</p>
+                </td>
+                <td class="table-noline"><?php echo !empty($organization['postal_address']) ? $organization['postal_address'] : '' ?></td>
+              </tr>
+              <tr>
+                <td class="table-label table-noline">
+                  <p>Email Address</p>
+                </td>
+                <td class="table-noline"><?php echo !empty($organization['email_address']) ? $organization['email_address'] : '' ?></td>
               </tr>
               <tr>
                 <td class="table-label required table-noline">

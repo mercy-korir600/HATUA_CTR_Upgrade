@@ -621,10 +621,23 @@ class UsersController extends AppController
      */
     public function register()
     {
+        $allowedGroups = array(5, 7, 11, 12, 13, 14);
+        $registrationRoles = array(
+            5 => 'Principal Investigator',
+            7 => 'Study Monitor',
+            11 => 'Sponsor',
+            12 => 'Contract Research Organization (CRO)',
+            13 => 'Pharmacovigilance (PV)',
+            14 => 'Pharmaceutical Industry'
+        );
 
         if ($this->request->is('post')) {
             $this->User->create();
-            $this->request->data['User']['group_id'] = 5;
+            $selectedGroupId = isset($this->request->data['User']['group_id']) ? (int)$this->request->data['User']['group_id'] : 5;
+            if (!in_array($selectedGroupId, $allowedGroups, true)) {
+                $selectedGroupId = 5;
+            }
+            $this->request->data['User']['group_id'] = $selectedGroupId;
             $this->request->data['User']['emailed'] = 1;
             $this->request->data['User']['activation_key'] = $this->Auth->password($this->request->data['User']['email']);
             $this->User->Behaviors->attach('Tools.Captcha');
@@ -652,7 +665,13 @@ class UsersController extends AppController
         $counties = $this->User->County->find('list', array('order' => 'County.county_name ASC'));
         $this->set(compact('counties'));
         $countries = $this->User->Country->find('list', array('order' => 'Country.name ASC'));
-        $this->set(compact('countries'));
+        $this->set(compact('countries', 'registrationRoles'));
+    }
+
+    public function dashboard()
+    {
+        $this->applicant_dashboard();
+        $this->render('applicant_dashboard');
     }
 
     public function activate_account($activation_key = null)
@@ -942,6 +961,9 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Reviews/manager_summary');
         $this->Acl->allow($group, 'controllers/Reviews/manager_download_assessment');
         $this->Acl->allow($group, 'controllers/Reviews/manager_download_summary');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_exit_report');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_exit');
+        $this->Acl->allow($group, 'controllers/Reviews/manager_download_exit_summary');
         $this->Acl->allow($group, 'controllers/Users/manager_dashboard');
         $this->Acl->allow($group, 'controllers/Users/profile');
         $this->Acl->allow($group, 'controllers/Users/edit');
@@ -1011,6 +1033,9 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Reviews/reviewer_summary');
         $this->Acl->allow($group, 'controllers/Reviews/reviewer_download_assessment');
         $this->Acl->allow($group, 'controllers/Reviews/reviewer_download_summary');
+        $this->Acl->allow($group, 'controllers/Reviews/reviewer_exit_report');
+        $this->Acl->allow($group, 'controllers/Reviews/reviewer_exit');
+        $this->Acl->allow($group, 'controllers/Reviews/reviewer_download_exit_summary');
         $this->Acl->allow($group, 'controllers/Users/reviewer_dashboard');
         $this->Acl->allow($group, 'controllers/Users/profile');
         $this->Acl->allow($group, 'controllers/Users/edit');
@@ -1177,11 +1202,35 @@ class UsersController extends AppController
         $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_summary');
         $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_download_assessment');
         $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_download_summary');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_exit_report');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_exit');
+        $this->Acl->allow($group, 'controllers/Reviews/internalreviewer_download_exit_summary');
         $this->Acl->allow($group, 'controllers/Users/internalreviewer_dashboard');
         $this->Acl->allow($group, 'controllers/Users/profile');
         $this->Acl->allow($group, 'controllers/Users/edit');
         $this->Acl->allow($group, 'controllers/Comments');
         $this->Acl->allow($group, 'controllers/MeetingDates');
+
+        //Allow Sponsor, CRO, PV, Pharma Industry
+        foreach (array(11, 12, 13, 14) as $gid) {
+            $group->id = $gid;
+            $this->Acl->deny($group, 'controllers');
+            $this->Acl->allow($group, 'controllers/Applications/applicant_index');
+            $this->Acl->allow($group, 'controllers/Applications/applicant_view');
+            $this->Acl->allow($group, 'controllers/Applications/applicant_edit');
+            $this->Acl->allow($group, 'controllers/Applications/index');
+            $this->Acl->allow($group, 'controllers/Applications/view');
+            $this->Acl->allow($group, 'controllers/Applications/stages');
+            $this->Acl->allow($group, 'controllers/Attachments/download');
+            $this->Acl->allow($group, 'controllers/Attachments/applicant_download');
+            $this->Acl->allow($group, 'controllers/Notifications');
+            $this->Acl->allow($group, 'controllers/Users/applicant_dashboard');
+            $this->Acl->allow($group, 'controllers/Users/dashboard');
+            $this->Acl->allow($group, 'controllers/Users/profile');
+            $this->Acl->allow($group, 'controllers/Users/edit');
+            $this->Acl->allow($group, 'controllers/Comments');
+        }
+
         echo "all done";
         exit;
     }

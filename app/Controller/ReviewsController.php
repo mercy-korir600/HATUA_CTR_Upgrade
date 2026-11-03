@@ -747,6 +747,35 @@ class ReviewsController extends AppController
         $this->summary($id, $application_id);
     }
 
+    public function exit_report($id = null, $application_id = null)
+    {
+        $this->summary($id, $application_id);
+    }
+    public function manager_exit_report($id = null, $application_id = null)
+    {
+        $this->exit_report($id, $application_id);
+    }
+    public function reviewer_exit_report($id = null, $application_id = null)
+    {
+        $this->exit_report($id, $application_id);
+    }
+    public function internalreviewer_exit_report($id = null, $application_id = null)
+    {
+        $this->exit_report($id, $application_id);
+    }
+    public function manager_exit($id = null, $application_id = null)
+    {
+        $this->exit_report($id, $application_id);
+    }
+    public function reviewer_exit($id = null, $application_id = null)
+    {
+        $this->exit_report($id, $application_id);
+    }
+    public function internalreviewer_exit($id = null, $application_id = null)
+    {
+        $this->exit_report($id, $application_id);
+    }
+
     public function reviewer_edit()
     {
         if ($this->request->is('post')) {
@@ -1004,6 +1033,31 @@ class ReviewsController extends AppController
         $this->download_summary($id);
     }
     public function internalreviewer_download_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+
+    public function download_exit_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+    public function manager_download_exit_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+    public function inspector_download_exit_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+    public function applicant_download_exit_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+    public function reviewer_download_exit_summary($id = null)
+    {
+        $this->download_summary($id);
+    }
+    public function internalreviewer_download_exit_summary($id = null)
     {
         $this->download_summary($id);
     }

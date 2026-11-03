@@ -58,6 +58,7 @@
 	Router::connect('/pv', array('controller' => 'users', 'action' => 'dashboard', 'pv' => true));
 	//PHARMA INDUSTRY USER ROUTING: DASHBOARD PAGE
 	Router::connect('/pharmaindustry', array('controller' => 'users', 'action' => 'dashboard', 'pharmaindustry' => true));
+	Router::connect('/reviews/exit/*', array('controller' => 'reviews', 'action' => 'exit_report'));
  
 /**
  * Load all plugin routes.  See the CakePlugin documentation on 

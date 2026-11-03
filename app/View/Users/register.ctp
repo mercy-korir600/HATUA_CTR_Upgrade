@@ -31,6 +31,20 @@
       <?php
         echo $this->Form->input('username',
           array('label' => array('class' => 'control-label required', 'text' => 'Username <span class="sterix">*</span>'),));
+        echo $this->Form->input('group_id', array(
+          'type' => 'select',
+          'options' => isset($registrationRoles) ? $registrationRoles : array(
+            5 => 'Principal Investigator',
+            7 => 'Study Monitor',
+            11 => 'Sponsor',
+            12 => 'Contract Research Organization (CRO)',
+            13 => 'Pharmacovigilance (PV)',
+            14 => 'Pharmaceutical Industry'
+          ),
+          'empty' => false,
+          'default' => 5,
+          'label' => array('class' => 'control-label required', 'text' => 'Registration Role <span class="sterix">*</span>'),
+        ));
         echo $this->Form->input('password',
           array('label' => array('class' => 'control-label required', 'text' => 'Password <span class="sterix">*</span>'),));
         echo $this->Form->input('confirm_password', array(

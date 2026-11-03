@@ -43,7 +43,7 @@ $(function() {
 			new_organization.prop('id', 'organization_multi'+intId).prop('class', 'organization-group');
 			new_organization.prepend($('<p  class="topper" id="OrganizationLabel{i}">{i} additional organizations</p> \
 										<span class="badge badge-info">{i}</span> '.replace(/{i}/g, intId)));
-			new_organization.find(':text, textarea').each(function() {
+			new_organization.find(':input[type="text"], :input[type="email"], textarea').each(function() {
 				$(this).val('');
 				$(this).parent().parent().prop('class', 'control-group required').find('.help-block').remove();
 				var fore = $(this).parent().parent().find('label').attr('for');

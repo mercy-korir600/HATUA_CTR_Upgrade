@@ -12,6 +12,35 @@ class NotificationShell extends Shell
 {
   public $uses = array('User', 'Application', 'Amendment', 'AuditTrail', 'Review', 'Notification', 'Message');
 
+  private function getPrimaryInvestigatorContact($application = array())
+  {
+    if (empty($application['InvestigatorContact']) || !is_array($application['InvestigatorContact'])) {
+      return array();
+    }
+
+    foreach ($application['InvestigatorContact'] as $contact) {
+      if (!empty($contact['investigator_role']) && strtolower($contact['investigator_role']) === 'principal') {
+        return $contact;
+      }
+    }
+
+    return reset($application['InvestigatorContact']);
+  }
+
+  private function getInvestigatorFullName($investigator = array())
+  {
+    if (empty($investigator) || !is_array($investigator)) {
+      return null;
+    }
+
+    $given = isset($investigator['given_name']) ? trim($investigator['given_name']) : '';
+    $middle = isset($investigator['middle_name']) ? trim($investigator['middle_name']) : '';
+    $family = isset($investigator['family_name']) ? trim($investigator['family_name']) : '';
+    $fullName = trim($given . ' ' . $middle . ' ' . $family);
+
+    return ($fullName !== '') ? $fullName : null;
+  }
+
   public function perform()
   {
     $this->initialize();
@@ -126,9 +155,8 @@ class NotificationShell extends Shell
 
       $user = $application['User'];
       //PRINCIPAL INVESTIGATOR
-      $multiArray = $application['InvestigatorContact'];
-      $firstEntry = reset($multiArray);
-      $name = $firstEntry['given_name'] . ' ' . $firstEntry['family_name'];
+      $principalInvestigator = $this->getPrimaryInvestigatorContact($application);
+      $name = !empty($principalInvestigator) ? $this->getInvestigatorFullName($principalInvestigator) : '';
       $billDesc = "Principal Investigator: " . $name . "<br>Study Title: " . $application['Application']['short_title'];
       $this->log('initiated report', $user, 'e-citizen-initiate-user');
 

@@ -45,8 +45,17 @@
 			'label' => array('class' => 'control-label required', 'text' => 'Name of contact person'),
 			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
 		));
-		echo $this->Form->input('Organization.0.address', array(
-			'label' => array('class' => 'control-label required', 'text' => 'Address'),
+		echo $this->Form->input('Organization.0.physical_address', array(
+			'label' => array('class' => 'control-label required', 'text' => 'Physical Address <span class="sterix">*</span>'),
+			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
+		));
+		echo $this->Form->input('Organization.0.postal_address', array(
+			'label' => array('class' => 'control-label', 'text' => 'Postal Address'),
+			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
+		));
+		echo $this->Form->input('Organization.0.email_address', array(
+			'type' => 'email',
+			'label' => array('class' => 'control-label', 'text' => 'Email Address'),
 			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
 		));
 		echo $this->Form->input('Organization.0.telephone_number', array(
@@ -386,8 +395,17 @@
 			'label' => array('class' => 'control-label required', 'text' => 'Name of contact person'),
 			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
 		));
-		echo $this->Form->input('Organization.'.$i.'.address', array(
-			'label' => array('class' => 'control-label required', 'text' => 'Address'),
+		echo $this->Form->input('Organization.'.$i.'.physical_address', array(
+			'label' => array('class' => 'control-label required', 'text' => 'Physical Address <span class="sterix">*</span>'),
+			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
+		));
+		echo $this->Form->input('Organization.'.$i.'.postal_address', array(
+			'label' => array('class' => 'control-label', 'text' => 'Postal Address'),
+			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
+		));
+		echo $this->Form->input('Organization.'.$i.'.email_address', array(
+			'type' => 'email',
+			'label' => array('class' => 'control-label', 'text' => 'Email Address'),
 			'placeholder' => ' ' , 'class' => 'input-xxlarge organizations_f'
 		));
 		echo $this->Form->input('Organization.'.$i.'.telephone_number', array(

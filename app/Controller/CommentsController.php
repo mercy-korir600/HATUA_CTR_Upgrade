@@ -199,13 +199,18 @@ class CommentsController extends AppController
                 $message = $this->Message->find('first', array('conditions' => array('name' => 'manager_si_feedback')));
                 $this->loadModel('SiteInspection');
                 $sae = $this->SiteInspection->find('first', array(
-                    'contain' => array(),
+                    'contain' => array('Application'),
                     'conditions' => array('SiteInspection.id' => $this->request->data['Comment']['foreign_key'])
                 ));
 
+                $recipientUserIds = array($sae['SiteInspection']['user_id']);
+                if (!empty($sae['Application']['user_id'])) {
+                    $recipientUserIds[] = $sae['Application']['user_id'];
+                }
+
                 $users = $this->Comment->User->find('all', array(
                     'contain' => array(),
-                    'conditions' => array('OR' => array('User.id' => $sae['SiteInspection']['user_id'], 'User.group_id' => array(2, 6)))
+                    'conditions' => array('OR' => array('User.id' => $recipientUserIds, 'User.group_id' => array(2, 6)))
                 ));
                 foreach ($users as $user) {
                     if ($user['User']['group_id'] == 2) $actioner =  'manager';
@@ -255,13 +260,18 @@ class CommentsController extends AppController
                 $message = $this->Message->find('first', array('conditions' => array('name' => 'manager_si_feedback')));
                 $this->loadModel('SiteInspection');
                 $sae = $this->SiteInspection->find('first', array(
-                    'contain' => array(),
+                    'contain' => array('Application'),
                     'conditions' => array('SiteInspection.id' => $this->request->data['Comment']['foreign_key'])
                 ));
 
+                $recipientUserIds = array($sae['SiteInspection']['user_id']);
+                if (!empty($sae['Application']['user_id'])) {
+                    $recipientUserIds[] = $sae['Application']['user_id'];
+                }
+
                 $users = $this->Comment->User->find('all', array(
                     'contain' => array(),
-                    'conditions' => array('OR' => array('User.id' => $sae['SiteInspection']['user_id'], 'User.group_id' => array(2, 6)))
+                    'conditions' => array('OR' => array('User.id' => $recipientUserIds, 'User.group_id' => array(2, 6)))
                 ));
                 foreach ($users as $user) {
                     if ($user['User']['group_id'] == 2) $actioner =  'manager';

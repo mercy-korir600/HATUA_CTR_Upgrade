@@ -93,10 +93,10 @@
   ?>
 
   <ul id="assessment_tab" class="nav nav-tabs">
-    <?php if($redir !== 'applicant') { ?><li class="active"><a href="#assessment_form">Assessment Form</a></li> <?php } ?>
-    <li><a href="#summary_report">Summary Report</a></li>
-    <?php if($redir !== 'applicant') { ?><li><a href="#internal_comments">Internal Comments (<?php echo count($site_inspection['InternalComment']); ?>)</a></li> <?php } ?>
-    <li><a href="#external_comments">PI Comments (<?php echo count($site_inspection['ExternalComment']); ?>)</a></li>
+    <?php if($redir !== 'applicant') { ?><li class="active"><a href="#assessment_form" data-toggle="tab">Assessment Form</a></li> <?php } ?>
+    <li class="<?php echo ($redir === 'applicant') ? 'active' : ''; ?>"><a href="#summary_report" data-toggle="tab">Summary Report</a></li>
+    <?php if($redir !== 'applicant') { ?><li><a href="#internal_comments" data-toggle="tab">Internal Comments (<?php echo count($site_inspection['InternalComment']); ?>)</a></li> <?php } ?>
+    <li><a href="#external_comments" data-toggle="tab">PI Comments (<?php echo count($site_inspection['ExternalComment']); ?>)</a></li>
   </ul>
 
   <div class="tab-content">
@@ -112,7 +112,7 @@
       </div>
     </div>
     <?php } ?>
-    <div class="tab-pane" id="summary_report">
+    <div class="tab-pane <?php echo ($redir === 'applicant') ? 'active' : ''; ?>" id="summary_report">
       <div style="position: relative; border-top: 1px solid #ddd;">  
         <?php
           echo $this->Html->link(__('<i class="icon-download-alt"></i> Download PDF'),

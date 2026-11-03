@@ -43,8 +43,33 @@ class Organization extends AppModel {
 		'address' => array(
             'notEmpty' => array(
                 'rule'     => 'notEmpty',
-                'required' => true,
+                'required' => false,
+                'allowEmpty' => true,
                 'message'  => 'Organizations : Please enter the organization address'
+            ),
+        ),
+		'physical_address' => array(
+            'notEmpty' => array(
+                'rule'     => 'notEmpty',
+                'required' => false,
+                'allowEmpty' => true,
+                'message'  => 'Organizations : Please enter the organization physical address'
+            ),
+        ),
+		'postal_address' => array(
+            'notEmpty' => array(
+                'rule'     => 'notEmpty',
+                'required' => false,
+                'allowEmpty' => true,
+                'message'  => 'Organizations : Please enter the organization postal address'
+            ),
+        ),
+		'email_address' => array(
+            'email' => array(
+                'rule'     => 'email',
+                'required' => false,
+                'allowEmpty' => true,
+                'message'  => 'Organizations : Please enter a valid organization email address'
             ),
         ),
 		'telephone_number' => array(
@@ -152,6 +177,19 @@ class Organization extends AppModel {
 			return !empty($field['other_duties_specify']);
 		}
 		return true;
+	}
+
+	public function beforeSave($options = array()) {
+		if (isset($this->data['Organization']['physical_address']) && !empty($this->data['Organization']['physical_address'])) {
+			if (empty($this->data['Organization']['address'])) {
+				$this->data['Organization']['address'] = $this->data['Organization']['physical_address'];
+			}
+		} elseif (isset($this->data['Organization']['address']) && !empty($this->data['Organization']['address'])) {
+			if (empty($this->data['Organization']['physical_address'])) {
+				$this->data['Organization']['physical_address'] = $this->data['Organization']['address'];
+			}
+		}
+		return parent::beforeSave($options);
 	}
 	
 		

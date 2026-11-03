@@ -14,7 +14,7 @@ class ActiveInspectorsController extends AppController
      */
     public $scaffold;
 
-    public $uses = array('ActiveInspector', 'Application', 'AuditTrail', 'User');
+    public $uses = array('ActiveInspector', 'Application', 'AuditTrail', 'User', 'SiteInspection', 'SiteQuestion');
 
     public function beforeFilter()
     {
@@ -115,6 +115,15 @@ class ActiveInspectorsController extends AppController
 
                 if ($this->ActiveInspector->saveMany($this->request->data)) {
 
+                    // Auto-generate inspection checklist if none exists yet for this protocol
+                    $existingInspection = $this->SiteInspection->find('first', array(
+                        'conditions' => array('SiteInspection.application_id' => $id),
+                        'contain' => array()
+                    ));
+                    if (empty($existingInspection)) {
+                        $this->_autoGenerateInspectionChecklist($id);
+                    }
+
                     //end stages
 
                     CakeResque::enqueue('default', 'NotificationShell', array('newAppNotifyInspector', $this->request->data));
@@ -134,6 +143,82 @@ class ActiveInspectorsController extends AppController
         $users = $this->ActiveInspector->User->find('list');
         $applications = $this->ActiveInspector->Application->find('list');
         $this->set(compact('users', 'applications'));
+    }
+
+    private function _autoGenerateInspectionChecklist($application_id)
+    {
+        $application = $this->Application->find('first', array(
+            'conditions' => array('Application.id' => $application_id),
+            'contain' => array('InvestigatorContact')
+        ));
+        if (empty($application)) {
+            return false;
+        }
+
+        $all_questions = $this->SiteQuestion->find('all');
+        $answers = array();
+        foreach ($all_questions as $question) {
+            $answers[] = array(
+                'question_type' => $question['SiteQuestion']['question_type'],
+                'question_number' => $question['SiteQuestion']['question_number'],
+                'question' => $question['SiteQuestion']['question']
+            );
+        }
+
+        $trial = "";
+        $inspection_country = "";
+        $investigators = "";
+        $co_investigators = "";
+        $trial .= ($application['Application']['trial_human_pharmacology'] == 1) ? "Human pharmacology (Phase I) : \n" : null;
+        $trial .= ($application['Application']['trial_administration_humans'] == 1) ? "First administration to humans\n" : null;
+        $trial .= ($application['Application']['trial_bioequivalence_study'] == 1) ? "Bioequivalence study\n" : null;
+        $trial .= ($application['Application']['trial_other'] == 1) ? "Other : " . $application['Application']['trial_other_specify'] : null;
+        $trial .= ($application['Application']['trial_therapeutic_exploratory'] == 1) ? "Therapeutic exploratory (Phase II)\n" : null;
+        $trial .= ($application['Application']['trial_therapeutic_confirmatory'] == 1) ? "Therapeutic confirmatory (Phase III)\n" : null;
+        $trial .= ($application['Application']['trial_therapeutic_use'] == 1) ? "Therapeutic use (Phase IV)\n" : null;
+        $inspection_country .= ($application['Application']['single_site_member_state'] == 'Yes') ? "Kenya\n" : null;
+        $inspection_country .= ($application['Application']['multiple_sites_member_state'] == 'Yes') ? "Kenya\n" : null;
+        $inspection_country .= $application['Application']['multi_country_list'];
+        $investigators = $application['Application']['investigator1_given_name'] . " " . $application['Application']['investigator1_family_name'] .
+            "\nTel: " . $application['Application']['investigator1_telephone'] .
+            "\nEmail: " . $application['Application']['investigator1_email'];
+        if (!empty($application['InvestigatorContact'])) {
+            foreach ($application['InvestigatorContact'] as $key => $value) {
+                $co_investigators .= ($key + 1) . " " . $value['given_name'] . " " . $value['family_name'] . " Email: " . $value['email'] . "\n";
+            }
+        }
+        $count = $this->SiteInspection->find('count', array('conditions' => array(
+            'SiteInspection.created BETWEEN ? and ?' => array(date("Y-01-01 00:00:00"), date("Y-m-d H:i:s"))
+        )));
+        $count++;
+        $count = ($count < 10) ? "0$count" : $count;
+        $data = array(
+            'application_id' => $application_id,
+            'user_id' => $this->Auth->User('id'),
+            'study_title' => $application['Application']['study_title'],
+            'protocol_no' => $application['Application']['protocol_no'],
+            'reference_no' => 'SI/' . date('Y') . '/' . $count,
+            'trial_phase' => $trial,
+            'investigators' => $investigators,
+            'co_investigators' => $co_investigators,
+            'inspection_country' => $inspection_country
+        );
+
+        $this->SiteInspection->create();
+        if ($this->SiteInspection->saveAssociated(array('SiteInspection' => $data, 'SiteAnswer' => $answers))) {
+            $audit = array(
+                'AuditTrail' => array(
+                    'foreign_key' => $application_id,
+                    'model' => 'SiteInspection',
+                    'message' => 'Inspection checklist auto-generated for protocol ' . $application['Application']['protocol_no'] . ' on inspector assignment by ' . $this->Auth->User('username'),
+                    'ip' => $application['Application']['protocol_no']
+                )
+            );
+            $this->AuditTrail->create();
+            $this->AuditTrail->save($audit);
+            return true;
+        }
+        return false;
     }
 
     public function manager_revoke($id = null, $application_id)
